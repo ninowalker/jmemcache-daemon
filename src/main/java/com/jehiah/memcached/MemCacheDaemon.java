@@ -12,6 +12,7 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
 /**
+ * The actual daemon - responsible for the binding and configuration of the network configuration.
  */
 public class MemCacheDaemon {
 
@@ -29,6 +30,11 @@ public class MemCacheDaemon {
     public MemCacheDaemon() {
     }
 
+    /**
+     * Bind the network connection and start the network processing threads.
+     *
+     * @throws IOException
+     */
     public void start() throws IOException {
         SocketAcceptor acceptor = new SocketAcceptor(16, Executors.newCachedThreadPool() );
         SocketAcceptorConfig defaultConfig = acceptor.getDefaultConfig();

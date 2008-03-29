@@ -21,7 +21,7 @@ import static java.lang.String.valueOf;
 import static java.lang.Integer.*;
 
 /**
- * The heart of the daemon, responsible for binding the network connection, handling the creation and destruction
+ * The heart of the daemon, responsible for handling the creation and destruction of network
  * sessions, keeping cache statistics, and (most importantly) processing inbound (parsed) commands and then passing on
  * a response message for output.
  */

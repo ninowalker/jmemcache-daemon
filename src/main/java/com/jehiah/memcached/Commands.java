@@ -3,7 +3,6 @@ package com.jehiah.memcached;
 /**
  */
 public interface Commands {
-
     String GET = "GET".intern();
     String DELETE = "DELETE".intern();
     String DECR = "DECR".intern();
