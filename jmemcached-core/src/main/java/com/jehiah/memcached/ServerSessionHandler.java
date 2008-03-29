@@ -12,6 +12,8 @@ package com.jehiah.memcached;
 import org.apache.mina.common.IdleStatus;
 import org.apache.mina.common.IoHandler;
 import org.apache.mina.common.IoSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
@@ -26,6 +28,8 @@ import static java.lang.Integer.*;
  * a response message for output.
  */
 public final class ServerSessionHandler implements IoHandler {
+
+    final Logger logger = LoggerFactory.getLogger(ServerSessionHandler.class);
 
     public String version;
     public int curr_items;
@@ -75,7 +79,7 @@ public final class ServerSessionHandler implements IoHandler {
         session.setAttribute("sess_id", valueOf(conn));
         curr_conns++;
         if (this.verbose) {
-            System.out.println(session.getAttribute("sess_id") + " CONNECTED");
+            logger.info(session.getAttribute("sess_id") + " CONNECTED");
         }
     }
 
@@ -100,7 +104,7 @@ public final class ServerSessionHandler implements IoHandler {
     public void sessionClosed(IoSession session) {
         curr_conns--;
         if (this.verbose) {
-            System.out.println(session.getAttribute("sess_id") + " DIS-CONNECTED");
+            logger.info(session.getAttribute("sess_id") + " DIS-CONNECTED");
         }
     }
 
@@ -127,7 +131,7 @@ public final class ServerSessionHandler implements IoHandler {
             for (int i = 0; i < cmdKeysSize; i++) {
                 log.append(" ").append(command.keys.get(i));
             }
-            System.err.println(log.toString());
+            logger.info(log.toString());
         }
 
         ResponseMessage r = new ResponseMessage();
@@ -178,7 +182,7 @@ public final class ServerSessionHandler implements IoHandler {
             r.out.putString(flush_all(time), ENCODER);
         } else {
             r.out.putString("ERROR\r\n", ENCODER);
-            System.err.println("error");
+            logger.error("error; unrecognized command: " + cmd);
         }
         session.write(r);
     }
@@ -191,7 +195,7 @@ public final class ServerSessionHandler implements IoHandler {
      */
     public void messageSent(IoSession session, Object message) {
         if (this.verbose) {
-            System.out.println(session.getAttribute("sess_id") + " SENT");
+            logger.info(session.getAttribute("sess_id") + " SENT");
         }
     }
 
@@ -212,7 +216,7 @@ public final class ServerSessionHandler implements IoHandler {
      */
     public void exceptionCaught(IoSession session, Throwable cause) {
         // close the connection on exceptional situation
-        System.err.println(session.getAttribute("sess_id") + " EXCEPTION" + cause.getMessage() + "\r\n");
+        logger.error(session.getAttribute("sess_id") + " EXCEPTION", cause);
         cause.printStackTrace();
         session.close();
     }
@@ -295,7 +299,7 @@ public final class ServerSessionHandler implements IoHandler {
             return "NOT_FOUND\r\n";
         }
         if (e.expire != 0 && e.expire < Now()) {
-            //System.out.println("FOUND BUT EXPIRED");
+            //logger.info("FOUND BUT EXPIRED");
             get_misses += 1;//update stats
             return "NOT_FOUND\r\n";
         }

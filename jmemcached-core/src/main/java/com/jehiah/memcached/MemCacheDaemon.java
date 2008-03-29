@@ -6,6 +6,8 @@ import org.apache.mina.filter.codec.ProtocolCodecFilter;
 import org.apache.mina.transport.socket.nio.SocketAcceptor;
 import org.apache.mina.transport.socket.nio.SocketAcceptorConfig;
 import org.apache.mina.transport.socket.nio.SocketSessionConfig;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -15,6 +17,8 @@ import java.util.concurrent.Executors;
  * The actual daemon - responsible for the binding and configuration of the network configuration.
  */
 public class MemCacheDaemon {
+
+    final Logger logger = LoggerFactory.getLogger(MemCacheDaemon.class);
 
     public static String memcachedVersion = "0.2-SNAPSHOT";
 
@@ -49,7 +53,7 @@ public class MemCacheDaemon {
         ProtocolCodecFactory codec = new MemcachedProtocolCodecFactory();
         acceptor.getFilterChain().addFirst("protocolFilter", new ProtocolCodecFilter(codec));
 
-        System.err.println("Listening on " + String.valueOf(addr.getHostName()) + ":" + this.port);
+        logger.info("Listening on " + String.valueOf(addr.getHostName()) + ":" + this.port);
     }
 
     public static void setMemcachedVersion(String memcachedVersion) {

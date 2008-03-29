@@ -120,6 +120,10 @@ public class Main {
         MemCacheDaemon daemon = new MemCacheDaemon();
         LRUCacheDelegate cacheDelegate = new LRUCacheDelegate(max_size, max_size, 1024000);
         daemon.setCacheDelegate(cacheDelegate);
+        daemon.setAddr(addr);
+        daemon.setIdleTime(idle);
+        daemon.setPort(port);
+        daemon.setVerbose(verbose);
         daemon.start();
     }
 
