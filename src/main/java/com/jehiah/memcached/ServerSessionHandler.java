@@ -20,7 +20,13 @@ import java.util.Iterator;
 import static java.lang.String.valueOf;
 import static java.lang.Integer.*;
 
+/**
+ * The heart of the daemon, responsible for binding the network connection, handling the creation and destruction
+ * sessions, keeping cache statistics, and (most importantly) processing inbound (parsed) commands and then passing on
+ * a response message for output.
+ */
 public final class ServerSessionHandler implements IoHandler {
+
     public String version;
     public int curr_items;
     public int total_items;
@@ -41,6 +47,14 @@ public final class ServerSessionHandler implements IoHandler {
 
     public static CharsetEncoder ENCODER  = Charset.forName("US-ASCII").newEncoder();
 
+    /**
+     * Construct the server session handler
+     *
+     * @param cache the cache to use
+     * @param memcachedVersion the version string to return to clients
+     * @param verbosity verbosity level for debugging
+     * @param idle how long sessions can be idle for
+     */
     public ServerSessionHandler(Cache cache, String memcachedVersion, boolean verbosity, int idle) {
         initStats();
         this.cache = cache;
@@ -51,13 +65,12 @@ public final class ServerSessionHandler implements IoHandler {
         this.idle_limit = idle;
     }
 
-
-
-    public int Now() {
-        return (int) (System.currentTimeMillis() / 1000);
-    }
-
-    public void sessionCreated(IoSession session) throws Exception {
+    /**
+     * Handle the creation of a new protocol session.
+     *
+     * @param session the MINA session object
+     */
+    public void sessionCreated(IoSession session) {
         int conn = total_conns++;
         session.setAttribute("sess_id", valueOf(conn));
         curr_conns++;
@@ -66,6 +79,11 @@ public final class ServerSessionHandler implements IoHandler {
         }
     }
 
+    /**
+     * Handle the opening of a new session.
+     *
+     * @param session the MINA session object
+     */
     public void sessionOpened(IoSession session) {
         if (this.idle_limit > 0) {
             session.setIdleTime(IdleStatus.BOTH_IDLE, this.idle_limit);
@@ -74,6 +92,11 @@ public final class ServerSessionHandler implements IoHandler {
         session.setAttribute("waiting_for", 0);
     }
 
+    /**
+     * Handle the closing of a session.
+     *
+     * @param session the MINA session object
+     */
     public void sessionClosed(IoSession session) {
         curr_conns--;
         if (this.verbose) {
@@ -81,6 +104,13 @@ public final class ServerSessionHandler implements IoHandler {
         }
     }
 
+    /**
+     * Handle the reception of an inbound command, which has already been pre-processed by the CommandDecoder.
+     *
+     * @param session the MINA session
+     * @param message the message itself
+     * @throws CharacterCodingException
+     */
     public void messageReceived(IoSession session, Object message) throws CharacterCodingException {
         CommandMessage command = (CommandMessage) message;
         String cmd = command.cmd;
@@ -153,17 +183,33 @@ public final class ServerSessionHandler implements IoHandler {
         session.write(r);
     }
 
+    /**
+     * Called on message delivery.
+     *
+     * @param session the MINA session
+     * @param message the message sent
+     */
     public void messageSent(IoSession session, Object message) {
         if (this.verbose) {
             System.out.println(session.getAttribute("sess_id") + " SENT");
         }
     }
 
+    /**
+     * Triggered when a session has gone idle.
+     * @param session the MINA session
+     * @param status the idle status
+     */
     public void sessionIdle(IoSession session, IdleStatus status) {
         // disconnect an idle client
         session.close();
     }
 
+    /**
+     * Triggered when an exception is caught by the protocol handler
+     * @param session the MINA session
+     * @param cause the exception
+     */
     public void exceptionCaught(IoSession session, Throwable cause) {
         // close the connection on exceptional situation
         System.err.println(session.getAttribute("sess_id") + " EXCEPTION" + cause.getMessage() + "\r\n");
@@ -171,16 +217,23 @@ public final class ServerSessionHandler implements IoHandler {
         session.close();
     }
 
-    public String delete(String keystring, int time) {
-        if (is_there(keystring)) {
+    /**
+     * Handle the deletion of an item from the cache.
+     *
+     * @param key the key for the item
+     * @param time only delete the element if time (time in seconds)
+     * @return the message response
+     */
+    protected String delete(String key, int time) {
+        if (is_there(key)) {
             if (time != 0) {
-                MCElement el = this.cache.get(keystring);
+                MCElement el = this.cache.get(key);
                 if (el.expire == 0 || el.expire > (Now() + time)) {
                     el.expire = Now() + time; // update the expire time
-                    this.cache.put(keystring, el);
+                    this.cache.put(key, el);
                 }// else it expire before the time we were asked to expire it
             } else {
-                this.cache.remove(keystring); // just remove it
+                this.cache.remove(key); // just remove it
             }
             return "DELETED\r\n";
         } else {
@@ -188,8 +241,13 @@ public final class ServerSessionHandler implements IoHandler {
         }
     }
 
-    // add is oposite of replace
-    public String add(MCElement e) {
+    /**
+     * Add an element to the cache
+     *
+     * @param e the element to add
+     * @return the message response string
+     */
+    protected String add(MCElement e) {
         if (is_there(e.keystring)) {
             return "NOT_STORED\r\n";
         } else {
@@ -197,8 +255,13 @@ public final class ServerSessionHandler implements IoHandler {
         }
     }
 
-    // replace is oposite of add
-    public String replace(MCElement e) {
+    /**
+     * Replace an element in the cache
+     *
+     * @param e the element to replace
+     * @return the message response string
+     */
+    protected String replace(MCElement e) {
         if (is_there(e.keystring)) {
             return set(e);
         } else {
@@ -206,15 +269,27 @@ public final class ServerSessionHandler implements IoHandler {
         }
     }
 
-    public String set(MCElement e) {
+    /**
+     * Set an element in the cache
+     *
+     * @param e the element to set
+     * @return the message response string
+     */
+    protected String set(MCElement e) {
         set_cmds += 1;//update stats
         this.cache.put(e.keystring, e);
         return "STORED\r\n";
     }
 
-    public String get_add(String keystring, int mod) {
-        // TODO make this threadsafe by cooperating more directly with the cache
-        MCElement e = this.cache.get(keystring);
+    /**
+     * Increment an (integer) element inthe cache
+     * @param key the key to increment
+     * @param mod the amount to add to the value
+     * @return the message response
+     */
+    protected String get_add(String key, int mod) {
+        // TODO make this atomic by cooperating more directly with the cache
+        MCElement e = this.cache.get(key);
         if (e == null) {
             get_misses += 1;//update stats
             return "NOT_FOUND\r\n";
@@ -224,6 +299,7 @@ public final class ServerSessionHandler implements IoHandler {
             get_misses += 1;//update stats
             return "NOT_FOUND\r\n";
         }
+        // TODO handle parse failure!
         int old_val = parseInt(new String(e.data)) + mod; // change value
         if (old_val < 0) {
             old_val = 0;
@@ -234,17 +310,25 @@ public final class ServerSessionHandler implements IoHandler {
         return valueOf(old_val) + "\r\n"; // return new value
     }
 
-    /*
-      * this.cache.containsKey() would work except it doesn't check the expire time
-      */
-    public boolean is_there(String keystring) {
-        MCElement e = this.cache.get(keystring);
+
+    /**
+     * Check whether an element is in the cache and non-expired
+     * @param key the key for the element to lookup
+     * @return whether the element is in the cache and is live
+     */
+    protected boolean is_there(String key) {
+        MCElement e = this.cache.get(key);
         return e != null && !(e.expire != 0 && e.expire < Now());
     }
 
-    public MCElement get(String keystring) {
+    /**
+     * Get an element from the cache
+     * @param key the key for the element to lookup
+     * @return the element, or 'null' in case of cache miss.
+     */
+    protected MCElement get(String key) {
         get_cmds += 1;//updates stats
-        MCElement e = this.cache.get(keystring);
+        MCElement e = this.cache.get(key);
         if (e == null) {
             get_misses += 1;//update stats
             return null;
@@ -259,7 +343,18 @@ public final class ServerSessionHandler implements IoHandler {
         return e;
     }
 
-    public void initStats() {
+
+    /**
+     * @return the current time in seconds (from epoch), used for expiries, etc.
+     */
+    protected final int Now() {
+        return (int) (System.currentTimeMillis() / 1000);
+    }
+
+    /**
+     * Initialize all statistic counters
+     */
+    protected void initStats() {
         curr_items = 0;
         total_items = 0;
         curr_bytes = 0;
@@ -270,7 +365,12 @@ public final class ServerSessionHandler implements IoHandler {
         bytes_written = 0;
     }
 
-    public String stat(String arg) {
+    /**
+     * Return runtime statistics
+     * @param arg additional arguments to the stats command
+     * @return the full command response
+     */
+    protected String stat(String arg) {
 
         StringBuilder builder = new StringBuilder();
 
@@ -310,14 +410,87 @@ public final class ServerSessionHandler implements IoHandler {
         return builder.toString();
     }
 
-    public String flush_all() {
+    /**
+     * Flush all cache entries
+     * @return command response
+     */
+    protected String flush_all() {
         return flush_all(0);
     }
 
-    public String flush_all(int expire) {
+    /**
+     * Flush all cache entries with a timestamp after a given expiration time
+     * @param expire the flush time in seconds
+     * @return command response
+     */
+    protected String flush_all(int expire) {
+        // TODO implement this, it isn't right... but how to handle efficiently? (don't want to linear scan entire cache)
         this.cache.flushAll();
 
         return "OK\r\n";
     }
 
+    public String getVersion() {
+        return version;
+    }
+
+    public int getCurr_items() {
+        return curr_items;
+    }
+
+    public int getTotal_items() {
+        return total_items;
+    }
+
+    public int getCurr_conns() {
+        return curr_conns;
+    }
+
+    public int getTotal_conns() {
+        return total_conns;
+    }
+
+    public int getGet_cmds() {
+        return get_cmds;
+    }
+
+    public int getSet_cmds() {
+        return set_cmds;
+    }
+
+    public int getGet_hits() {
+        return get_hits;
+    }
+
+    public int getGet_misses() {
+        return get_misses;
+    }
+
+    public int getStarted() {
+        return started;
+    }
+
+    public static long getBytes_read() {
+        return bytes_read;
+    }
+
+    public static long getBytes_written() {
+        return bytes_written;
+    }
+
+    public static long getCurr_bytes() {
+        return curr_bytes;
+    }
+
+    public int getIdle_limit() {
+        return idle_limit;
+    }
+
+    public boolean isVerbose() {
+        return verbose;
+    }
+
+    public Cache getCache() {
+        return cache;
+    }
 }

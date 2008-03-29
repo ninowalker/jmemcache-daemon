@@ -17,6 +17,9 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * MINA MessageEncoder responsible for writing a ResponseMessage into the network stream.
+ */
 public class ResponseEncoder implements MessageEncoder {
 
     private static final Set<Class<ResponseMessage>> TYPES;
