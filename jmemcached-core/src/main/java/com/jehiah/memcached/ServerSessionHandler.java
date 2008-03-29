@@ -19,6 +19,8 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.util.Iterator;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import static java.lang.String.valueOf;
 import static java.lang.Integer.*;
 
@@ -52,6 +54,13 @@ public final class ServerSessionHandler implements IoHandler {
     public static CharsetEncoder ENCODER  = Charset.forName("US-ASCII").newEncoder();
 
     /**
+     * Read-write lock allows maximal concurrency, since readers can share access;
+     * only writers need sole access.
+     */
+    private final ReadWriteLock cacheReadWriteLock;
+
+
+    /**
      * Construct the server session handler
      *
      * @param cache the cache to use
@@ -63,10 +72,12 @@ public final class ServerSessionHandler implements IoHandler {
         initStats();
         this.cache = cache;
 
-        this.started = Now();
-        this.version = memcachedVersion;
-        this.verbose = verbosity;
-        this.idle_limit = idle;
+        started = Now();
+        version = memcachedVersion;
+        verbose = verbosity;
+        idle_limit = idle;
+
+        cacheReadWriteLock = new ReentrantReadWriteLock();
     }
 
     /**
@@ -229,19 +240,25 @@ public final class ServerSessionHandler implements IoHandler {
      * @return the message response
      */
     protected String delete(String key, int time) {
-        if (is_there(key)) {
-            if (time != 0) {
-                MCElement el = this.cache.get(key);
-                if (el.expire == 0 || el.expire > (Now() + time)) {
-                    el.expire = Now() + time; // update the expire time
-                    this.cache.put(key, el);
-                }// else it expire before the time we were asked to expire it
+        try {
+            startCacheWrite();
+
+            if (is_there(key)) {
+                if (time != 0) {
+                    MCElement el = this.cache.get(key);
+                    if (el.expire == 0 || el.expire > (Now() + time)) {
+                        el.expire = Now() + time; // update the expire time
+                        this.cache.put(key, el);
+                    }// else it expire before the time we were asked to expire it
+                } else {
+                    this.cache.remove(key); // just remove it
+                }
+                return "DELETED\r\n";
             } else {
-                this.cache.remove(key); // just remove it
+                return "NOT_FOUND\r\n";
             }
-            return "DELETED\r\n";
-        } else {
-            return "NOT_FOUND\r\n";
+        } finally {
+            finishCacheWrite();
         }
     }
 
@@ -252,10 +269,15 @@ public final class ServerSessionHandler implements IoHandler {
      * @return the message response string
      */
     protected String add(MCElement e) {
-        if (is_there(e.keystring)) {
-            return "NOT_STORED\r\n";
-        } else {
-            return set(e);
+        try {
+            startCacheRead();
+            if (is_there(e.keystring)) {
+                return "NOT_STORED\r\n";
+            } else {
+                return set(e);
+            }
+        } finally {
+            finishCacheRead();
         }
     }
 
@@ -266,10 +288,15 @@ public final class ServerSessionHandler implements IoHandler {
      * @return the message response string
      */
     protected String replace(MCElement e) {
-        if (is_there(e.keystring)) {
-            return set(e);
-        } else {
-            return "NOT_STORED\r\n";
+        try {
+            startCacheRead();
+            if (is_there(e.keystring)) {
+                return set(e);
+            } else {
+                return "NOT_STORED\r\n";
+            }
+        } finally {
+            finishCacheRead();
         }
     }
 
@@ -280,9 +307,14 @@ public final class ServerSessionHandler implements IoHandler {
      * @return the message response string
      */
     protected String set(MCElement e) {
-        set_cmds += 1;//update stats
-        this.cache.put(e.keystring, e);
-        return "STORED\r\n";
+        try {
+            startCacheWrite();
+            set_cmds += 1;//update stats
+            this.cache.put(e.keystring, e);
+            return "STORED\r\n";
+        } finally {
+            finishCacheWrite();
+        }
     }
 
     /**
@@ -292,26 +324,30 @@ public final class ServerSessionHandler implements IoHandler {
      * @return the message response
      */
     protected String get_add(String key, int mod) {
-        // TODO make this atomic by cooperating more directly with the cache
-        MCElement e = this.cache.get(key);
-        if (e == null) {
-            get_misses += 1;//update stats
-            return "NOT_FOUND\r\n";
+        try {
+            startCacheWrite();
+            MCElement e = this.cache.get(key);
+            if (e == null) {
+                get_misses += 1;//update stats
+                return "NOT_FOUND\r\n";
+            }
+            if (e.expire != 0 && e.expire < Now()) {
+                //logger.info("FOUND BUT EXPIRED");
+                get_misses += 1;//update stats
+                return "NOT_FOUND\r\n";
+            }
+            // TODO handle parse failure!
+            int old_val = parseInt(new String(e.data)) + mod; // change value
+            if (old_val < 0) {
+                old_val = 0;
+            } // check for underflow
+            e.data = valueOf(old_val).getBytes(); // toString
+            e.data_length = e.data.length;
+            this.cache.put(e.keystring, e); // save new value
+            return valueOf(old_val) + "\r\n"; // return new value
+        } finally {
+            finishCacheWrite();
         }
-        if (e.expire != 0 && e.expire < Now()) {
-            //logger.info("FOUND BUT EXPIRED");
-            get_misses += 1;//update stats
-            return "NOT_FOUND\r\n";
-        }
-        // TODO handle parse failure!
-        int old_val = parseInt(new String(e.data)) + mod; // change value
-        if (old_val < 0) {
-            old_val = 0;
-        } // check for underflow
-        e.data = valueOf(old_val).getBytes(); // toString
-        e.data_length = e.data.length;
-        this.cache.put(e.keystring, e); // save new value
-        return valueOf(old_val) + "\r\n"; // return new value
     }
 
 
@@ -321,8 +357,13 @@ public final class ServerSessionHandler implements IoHandler {
      * @return whether the element is in the cache and is live
      */
     protected boolean is_there(String key) {
-        MCElement e = this.cache.get(key);
+        try {
+            startCacheRead();
+            MCElement e = this.cache.get(key);
         return e != null && !(e.expire != 0 && e.expire < Now());
+        } finally {
+            finishCacheRead();
+        }
     }
 
     /**
@@ -332,19 +373,27 @@ public final class ServerSessionHandler implements IoHandler {
      */
     protected MCElement get(String key) {
         get_cmds += 1;//updates stats
-        MCElement e = this.cache.get(key);
-        if (e == null) {
-            get_misses += 1;//update stats
-            return null;
-        }
-        if (e.expire != 0 && e.expire < Now()) {
-            get_misses += 1;//update stats
 
-            // TODO shouldn't this actually remove the item from cache since it's expired?
-            return null;
+        try {
+            startCacheRead();
+            MCElement e = this.cache.get(key);
+
+
+            if (e == null) {
+                get_misses += 1;//update stats
+                return null;
+            }
+            if (e.expire != 0 && e.expire < Now()) {
+                get_misses += 1;//update stats
+
+                // TODO shouldn't this actually remove the item from cache since it's expired?
+                return null;
+            }
+            get_hits += 1;//update stats
+            return e;
+        } finally {
+            finishCacheRead();
         }
-        get_hits += 1;//update stats
-        return e;
     }
 
 
@@ -397,9 +446,14 @@ public final class ServerSessionHandler implements IoHandler {
         builder.append("STAT total_connections ").append(valueOf(total_conns)).append("\r\n");
         builder.append("STAT time ").append(valueOf(Now())).append("\r\n");
         builder.append("STAT uptime ").append(valueOf(Now() - this.started)).append("\r\n");
-        builder.append("STAT cur_items ").append(valueOf(this.cache.count())).append("\r\n");
-        builder.append("STAT limit_maxbytes ").append(valueOf(this.cache.maxSize())).append("\r\n");
-        builder.append("STAT current_bytes ").append(valueOf(this.cache.size())).append("\r\n");
+        try {
+            startCacheRead();
+            builder.append("STAT cur_items ").append(valueOf(this.cache.count())).append("\r\n");
+            builder.append("STAT limit_maxbytes ").append(valueOf(this.cache.maxSize())).append("\r\n");
+            builder.append("STAT current_bytes ").append(valueOf(this.cache.size())).append("\r\n");
+        } finally {
+            finishCacheRead();
+        }
         builder.append("STAT free_bytes ").append(valueOf(Runtime.getRuntime().freeMemory())).append("\r\n");
 
         // stuff we know nothing about
@@ -419,6 +473,7 @@ public final class ServerSessionHandler implements IoHandler {
      * @return command response
      */
     protected String flush_all() {
+
         return flush_all(0);
     }
 
@@ -429,10 +484,56 @@ public final class ServerSessionHandler implements IoHandler {
      */
     protected String flush_all(int expire) {
         // TODO implement this, it isn't right... but how to handle efficiently? (don't want to linear scan entire cache)
-        this.cache.flushAll();
-
+        try {
+            startCacheWrite();
+            this.cache.flushAll();
+        } finally {
+            finishCacheWrite();
+        }
         return "OK\r\n";
     }
+
+    /**
+     * Blocks of code in which the contents of the cache
+     * are examined in any way must be surrounded by calls to <code>startRead</code>
+     * and <code>finishRead</code>. See documentation for ReadWriteLock.
+     */
+    private void startCacheRead() {
+        cacheReadWriteLock.readLock().lock();
+
+    }
+
+    /**
+     * Blocks of code in which the contents of the cache
+     * are examined in any way must be surrounded by calls to <code>startRead</code>
+     * and <code>finishRead</code>. See documentation for ReadWriteLock.
+     */
+    private void finishCacheRead() {
+        cacheReadWriteLock.readLock().unlock();
+    }
+
+
+    /**
+     * Blocks of code in which the contents of the cache
+     * are changed in any way must be surrounded by calls to <code>startWrite</code> and
+     * <code>finishWrite</code>. See documentation for ReadWriteLock.
+     * protect the higher layers from implementation details.
+     */
+    private void startCacheWrite() {
+        cacheReadWriteLock.writeLock().lock();
+
+    }
+
+    /**
+     * Blocks of code in which the contents of the cache
+     * are changed in any way must be surrounded by calls to <code>startWrite</code> and
+     * <code>finishWrite</code>. See documentation for ReadWriteLock.
+     */
+    private void finishCacheWrite() {
+        cacheReadWriteLock.writeLock().unlock();
+    }
+
+
 
     public String getVersion() {
         return version;
@@ -497,4 +598,5 @@ public final class ServerSessionHandler implements IoHandler {
     public Cache getCache() {
         return cache;
     }
+
 }

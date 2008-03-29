@@ -5,11 +5,12 @@ import java.util.Iterator;
 /**
  * Interface for a cache usable by the daemon.
  *
- * All read and write operations _must_ be thread safe at the cache level since it is almost
- * guaranteed that concurrent writes will be made to the cache, and the caller does not
- * manage locking on the cache.
+ * Read and write operations need not be thread safe as the caller (ServerSessionHandler) establishes
+ * its own locks.
  */
 public interface Cache {
+
+
     /**
      * Retrieve an element from the cache.  The retriever is responsible for counting hits,
      * managing expirations, etc.
@@ -26,6 +27,7 @@ public interface Cache {
      * @param el the element to place in the cache
      */
     void put(String keystring, MCElement el);
+
 
     /**
      * Remove an entry from the cache

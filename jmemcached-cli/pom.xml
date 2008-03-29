@@ -4,7 +4,7 @@
     <artifactId>memcached-cli</artifactId>
     <packaging>jar</packaging>
     <version>0.2-SNAPSHOT</version>
-    <name>JMemCacheD</name>
+    <name>JMemCacheD Command Line Interface</name>
 
     <build>
         <plugins>

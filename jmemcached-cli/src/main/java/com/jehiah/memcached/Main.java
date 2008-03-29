@@ -18,6 +18,11 @@ import org.apache.commons.cli.*;
 import java.net.InetSocketAddress;
 
 
+/**
+ * Command line interface to the Java memcache daemon.
+ *
+ * Arguments in general parallel those of the C implementation.
+ */
 public class Main {
 
     public static void main(String[] args) throws Exception {

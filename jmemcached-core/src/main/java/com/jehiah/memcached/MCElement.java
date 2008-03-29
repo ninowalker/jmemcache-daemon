@@ -11,6 +11,9 @@ package com.jehiah.memcached;
 
 import java.io.Serializable;
 
+/**
+ * Represents information about a cache entry.
+ */
 public final class MCElement implements Serializable {
     public int expire = 0;
     public String flags;
