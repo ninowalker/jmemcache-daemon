@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * MINA MessageDecoderAdapter responsible for parsing inbound lines from the memcached protocol session.
  */
 public final class CommandDecoder extends MessageDecoderAdapter {
 
@@ -22,17 +23,29 @@ public final class CommandDecoder extends MessageDecoderAdapter {
     public static CharsetDecoder DECODER  = Charset.forName("US-ASCII").newDecoder();
 
     private static final int WORD_BUFFER_INIT_SIZE = 16;
+
     private static final String SESSION_STATUS = "sessionStatus";
 
+    /**
+     * Possible states that the current session is in.
+     */
     enum SessionState {
         ERROR,
-        SET_WAIT_LINE,
+        WAITING_FOR_DATA,
         READY
     }
 
+    /**
+     * Object for holding the current session status.
+     */
     final class SessionStatus implements Serializable {
+        // the state the session is in
         public SessionState state;
+
+        // if we are waiting for more data, how much?
         public int bytesNeeded;
+
+        // the current working command
         public CommandMessage cmd;
 
         SessionStatus(SessionState state) {
@@ -46,20 +59,45 @@ public final class CommandDecoder extends MessageDecoderAdapter {
         }
     }
 
+    /**
+     * Checks the specified buffer is decodable by this decoder.
+     *
+     * In our case checks the session state to see if we are waiting for data.  If we are, make sure
+     * that we actually have all the data we need.
+     *
+     * @return {@link #OK} if this decoder can decode the specified buffer.
+     *         {@link #NOT_OK} if this decoder cannot decode the specified buffer.
+     *         {@link #NEED_DATA} if more data is required to determine if the
+     *         specified buffer is decodable ({@link #OK}) or not decodable
+     *         {@link #NOT_OK}.
+     */
     public final MessageDecoderResult decodable(IoSession session, ByteBuffer in) {
         // ask the session for its state,
         SessionStatus sessionStatus = (SessionStatus) session.getAttribute(SESSION_STATUS);
-        if (sessionStatus != null &&  sessionStatus.state == SET_WAIT_LINE) {
+        if (sessionStatus != null &&  sessionStatus.state == WAITING_FOR_DATA) {
             if (in.remaining() <= sessionStatus.bytesNeeded)
                 return MessageDecoderResult.NEED_DATA;
         }
         return MessageDecoderResult.OK;
     }
 
+    /**
+     * Actually decodes inbound data from the memcached protocol session.
+     *
+     * MINA invokes {@link #decode(IoSession, ByteBuffer, ProtocolDecoderOutput)}
+     * method with read data, and then the decoder implementation puts decoded
+     * messages into {@link ProtocolDecoderOutput}.
+     *
+     * @return {@link #OK} if finished decoding messages successfully.
+     *         {@link #NEED_DATA} if you need more data to finish decoding current message.
+     *         {@link #NOT_OK} if you cannot decode current message due to protocol specification violation.
+     *
+     * @throws Exception if the read data violated protocol specification
+     */
     public final MessageDecoderResult decode(IoSession session, ByteBuffer in, ProtocolDecoderOutput out) throws Exception {
         SessionStatus sessionStatus = (SessionStatus) session.getAttribute(SESSION_STATUS);
         SessionStatus returnedSessionStatus;
-        if (sessionStatus != null && sessionStatus.state == SET_WAIT_LINE) {
+        if (sessionStatus != null && sessionStatus.state == WAITING_FOR_DATA) {
             if (in.remaining() < sessionStatus.bytesNeeded)
                 return MessageDecoderResult.NEED_DATA;
 
@@ -107,6 +145,15 @@ public final class CommandDecoder extends MessageDecoderAdapter {
     }
 
 
+    /**
+     * Process an individual completel protocol line and either passes the command for processing by the
+     * session handler, or (in the case of SET-type commands) partially parses the command and sets the session into
+     * a state to wait for additional data.
+     * @param parts the (originally space separated) parts of the command
+     * @param session the MINA IoSession
+     * @param out the MINA protocol decoder output to pass our command on to
+     * @return the session status we want to set the session to
+     */
     private SessionStatus processLine(List<String> parts, IoSession session, ProtocolDecoderOutput out) {
         if (parts.isEmpty())
             return new SessionStatus(READY);
@@ -133,7 +180,7 @@ public final class CommandDecoder extends MessageDecoderAdapter {
             }
             cmd.element.data_length = size;
 
-            return new SessionStatus(SET_WAIT_LINE, size, cmd);
+            return new SessionStatus(WAITING_FOR_DATA, size, cmd);
 
         } else if (cmd.cmd == Commands.GET ||
                 cmd.cmd == Commands.INCR ||
@@ -154,6 +201,15 @@ public final class CommandDecoder extends MessageDecoderAdapter {
 
     }
 
+    /**
+     * Handles the continuation of a SET/ADD/REPLACE command with the data it was waiting for.
+     *
+     * @param session the MINA IoSession
+     * @param out the MINA protocol decoder output which we signal with the completed command
+     * @param state the current session status (unused)
+     * @param remainder the bytes picked up
+     * @return the new status to set the session to
+     */
     private SessionStatus continueSet(IoSession session, ProtocolDecoderOutput out, SessionStatus state, byte[] remainder) {
         state.cmd.element.data = remainder;
 
@@ -162,6 +218,9 @@ public final class CommandDecoder extends MessageDecoderAdapter {
         return new SessionStatus(READY);
     }
 
+    /**
+     * @return the current time in seconds
+     */
     public final int Now() {
         return (int) (System.currentTimeMillis() / 1000);
     }

@@ -12,8 +12,10 @@ package com.jehiah.memcached;
 import java.io.Serializable;
 import java.util.ArrayList;
 
-public class CommandMessage implements Serializable {
-    // should be byte buffers?
+/**
+ * The payload object holding the parsed message.
+ */
+public final class CommandMessage implements Serializable {
     public String cmd;
     public MCElement element;
     public ArrayList<String> keys;

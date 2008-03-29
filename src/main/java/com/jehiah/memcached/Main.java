@@ -38,7 +38,7 @@ public class Main {
         CommandLine cmdline = parser.parse(options, args);
 
         if (cmdline.hasOption("help") || cmdline.hasOption("h")) {
-            System.out.println("Memcached Version " + MemCacheD.memcachedVersion);
+            System.out.println("Memcached Version " + MemCacheDaemon.memcachedVersion);
             System.out.println("http://jehiah.com/projects/memcached\n");
 
             HelpFormatter formatter = new HelpFormatter();
@@ -47,7 +47,7 @@ public class Main {
         }
 
         if (cmdline.hasOption("V")) {
-            System.out.println("Memcached Version " + MemCacheD.memcachedVersion);
+            System.out.println("Memcached Version " + MemCacheDaemon.memcachedVersion);
             return;
         }
 
@@ -117,7 +117,10 @@ public class Main {
         }
 
         // create daemon and start it
-        new MemCacheD(addr, port, max_size, maxBytes, idle, verbose).start();
+        MemCacheDaemon daemon = new MemCacheDaemon();
+        LRUCacheDelegate cacheDelegate = new LRUCacheDelegate(max_size, max_size, 1024000);
+        daemon.setCacheDelegate(cacheDelegate);
+        daemon.start();
     }
 
 }

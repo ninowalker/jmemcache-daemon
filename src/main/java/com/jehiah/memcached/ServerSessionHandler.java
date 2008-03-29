@@ -37,13 +37,13 @@ public final class ServerSessionHandler implements IoHandler {
 
     public int idle_limit;
     public boolean verbose;
-    protected MCCache data;
+    protected Cache cache;
 
     public static CharsetEncoder ENCODER  = Charset.forName("US-ASCII").newEncoder();
 
-    public ServerSessionHandler(MCCache cache, String memcachedVersion, boolean verbosity, int idle) {
+    public ServerSessionHandler(Cache cache, String memcachedVersion, boolean verbosity, int idle) {
         initStats();
-        this.data = cache;
+        this.cache = cache;
 
         this.started = Now();
         this.version = memcachedVersion;
@@ -174,13 +174,13 @@ public final class ServerSessionHandler implements IoHandler {
     public String delete(String keystring, int time) {
         if (is_there(keystring)) {
             if (time != 0) {
-                MCElement el = this.data.get(keystring);
+                MCElement el = this.cache.get(keystring);
                 if (el.expire == 0 || el.expire > (Now() + time)) {
                     el.expire = Now() + time; // update the expire time
-                    this.data.put(keystring, el);
+                    this.cache.put(keystring, el);
                 }// else it expire before the time we were asked to expire it
             } else {
-                this.data.remove(keystring); // just remove it
+                this.cache.remove(keystring); // just remove it
             }
             return "DELETED\r\n";
         } else {
@@ -208,12 +208,13 @@ public final class ServerSessionHandler implements IoHandler {
 
     public String set(MCElement e) {
         set_cmds += 1;//update stats
-        this.data.put(e.keystring, e);
+        this.cache.put(e.keystring, e);
         return "STORED\r\n";
     }
 
     public String get_add(String keystring, int mod) {
-        MCElement e = this.data.get(keystring);
+        // TODO make this threadsafe by cooperating more directly with the cache
+        MCElement e = this.cache.get(keystring);
         if (e == null) {
             get_misses += 1;//update stats
             return "NOT_FOUND\r\n";
@@ -229,27 +230,29 @@ public final class ServerSessionHandler implements IoHandler {
         } // check for underflow
         e.data = valueOf(old_val).getBytes(); // toString
         e.data_length = e.data.length;
-        this.data.put(e.keystring, e); // save new value
+        this.cache.put(e.keystring, e); // save new value
         return valueOf(old_val) + "\r\n"; // return new value
     }
 
     /*
-      * this.data.containsKey() would work except it doesn't check the expire time
+      * this.cache.containsKey() would work except it doesn't check the expire time
       */
     public boolean is_there(String keystring) {
-        MCElement e = this.data.get(keystring);
+        MCElement e = this.cache.get(keystring);
         return e != null && !(e.expire != 0 && e.expire < Now());
     }
 
     public MCElement get(String keystring) {
         get_cmds += 1;//updates stats
-        MCElement e = this.data.get(keystring);
+        MCElement e = this.cache.get(keystring);
         if (e == null) {
             get_misses += 1;//update stats
             return null;
         }
         if (e.expire != 0 && e.expire < Now()) {
             get_misses += 1;//update stats
+
+            // TODO shouldn't this actually remove the item from cache since it's expired?
             return null;
         }
         get_hits += 1;//update stats
@@ -272,7 +275,7 @@ public final class ServerSessionHandler implements IoHandler {
         StringBuilder builder = new StringBuilder();
 
         if (arg.equals("keys")) {
-            Iterator itr = this.data.keys();
+            Iterator itr = this.cache.keys();
             while (itr.hasNext()) {
                 builder.append("STAT key ").append(itr.next()).append("\r\n");
             }
@@ -290,9 +293,9 @@ public final class ServerSessionHandler implements IoHandler {
         builder.append("STAT total_connections ").append(valueOf(total_conns)).append("\r\n");
         builder.append("STAT time ").append(valueOf(Now())).append("\r\n");
         builder.append("STAT uptime ").append(valueOf(Now() - this.started)).append("\r\n");
-        builder.append("STAT cur_items ").append(valueOf(this.data.count())).append("\r\n");
-        builder.append("STAT limit_maxbytes ").append(valueOf(this.data.maxSize())).append("\r\n");
-        builder.append("STAT current_bytes ").append(valueOf(this.data.size())).append("\r\n");
+        builder.append("STAT cur_items ").append(valueOf(this.cache.count())).append("\r\n");
+        builder.append("STAT limit_maxbytes ").append(valueOf(this.cache.maxSize())).append("\r\n");
+        builder.append("STAT current_bytes ").append(valueOf(this.cache.size())).append("\r\n");
         builder.append("STAT free_bytes ").append(valueOf(Runtime.getRuntime().freeMemory())).append("\r\n");
 
         // stuff we know nothing about
@@ -312,7 +315,7 @@ public final class ServerSessionHandler implements IoHandler {
     }
 
     public String flush_all(int expire) {
-        this.data.flushAll();
+        this.cache.flushAll();
 
         return "OK\r\n";
     }

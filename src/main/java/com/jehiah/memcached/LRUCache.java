@@ -30,18 +30,23 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * most access are reads
  * <li> cache items are expelled when the total maximum size of the cache is
  * reached
+ * <li> a ceiling parameter is available to provide a certain amount of reserved room
+ * in the cache
  * <li> unusual: not built to handle the case of user input affecting the
  * data; only handles case of changes to the datastore eventually refreshing
  * the cache. Thus, this cache is not suitable for the case in which user
- * input must be reflected.
+ * input must be reflected.  That is: all changes to data must happen through "puts"
  * </ul>
  * <p/>
  * <p/>
- * Source: http://www.javapractices.com/Topic118.cjp
+ * Based on (heavily altered) code from original source: http://www.javapractices.com/Topic118.cjp
  */
 public final class LRUCache<ID_TYPE, ITEM_TYPE> {
 
-    private final Map<ID_TYPE, CacheEntry<ITEM_TYPE>> fItems;
+    /**
+     * Map containing the actual storage
+     */
+    private final Map<ID_TYPE, CacheEntry<ITEM_TYPE>> items;
 
     /**
      * Read-write lock allows maximal concurrency, since readers can share access;
@@ -77,7 +82,11 @@ public final class LRUCache<ID_TYPE, ITEM_TYPE> {
         this.maximumItems = maximumItems;
         this.maximumSize = maximumSize;
         this.ceilingSize = ceilingSize;
-        fItems = new LinkedHashMap<ID_TYPE, CacheEntry<ITEM_TYPE>>(INITIAL_TABLE_SIZE) {
+
+        /**
+         * Creates a linked hash map which expels old elements on declared criterion
+         */
+        items = new LinkedHashMap<ID_TYPE, CacheEntry<ITEM_TYPE>>(INITIAL_TABLE_SIZE) {
             protected boolean removeEldestEntry(Map.Entry<ID_TYPE, CacheEntry<ITEM_TYPE>> eldest) {
                 if (size + ceilingSize > maximumSize || size() > maximumItems) {
                     size -= eldest.getValue().size;
@@ -103,7 +112,7 @@ public final class LRUCache<ID_TYPE, ITEM_TYPE> {
 
         startRead();
         try {
-            return fItems.containsKey(aId);
+            return items.containsKey(aId);
         }
         finally {
             finishRead();
@@ -124,8 +133,8 @@ public final class LRUCache<ID_TYPE, ITEM_TYPE> {
         startRead();
         ITEM_TYPE result;
         try {
-            if (fItems.containsKey(aId)) {
-                result = fItems.get(aId).item;
+            if (items.containsKey(aId)) {
+                result = items.get(aId).item;
                 if (result == null) {
                     throw new IllegalStateException("Stored item should not be null. Id:" + aId);
                 }
@@ -155,13 +164,31 @@ public final class LRUCache<ID_TYPE, ITEM_TYPE> {
 
         startWrite();
         try {
-            fItems.put(aId, new CacheEntry<ITEM_TYPE>(item_size, aItem));
+            items.put(aId, new CacheEntry<ITEM_TYPE>(item_size, aItem));
             size += item_size;
         }
         finally {
             finishWrite();
         }
     }
+
+    /**
+     * Remove an entry from the cache
+     * @param key the key for the entry
+     */
+    public void remove(ID_TYPE key) {
+        startWrite();
+        try {
+            CacheEntry<ITEM_TYPE> item = items.get(key);
+            if (item != null) {
+                items.remove(key);
+                size -= item.size;
+            }
+        } finally {
+            finishWrite();
+        }
+    }
+
 
     /**
      * Start from beginning, and remove all items from the cache; if cache is
@@ -172,7 +199,7 @@ public final class LRUCache<ID_TYPE, ITEM_TYPE> {
     public void clear() {
         startWrite();
         try {
-            fItems.clear();
+            items.clear();
             size = 0;
         }
         finally {
@@ -180,28 +207,57 @@ public final class LRUCache<ID_TYPE, ITEM_TYPE> {
         }
     }
 
+    /**
+     * @return the set of all keys in the cache
+     */
     public Set<ID_TYPE> keys() {
         startRead();
         try {
-            return fItems.keySet();
+            return items.keySet();
         } finally {
             finishRead();
         }
     }
 
-    public void remove(ID_TYPE keystring) {
-        startWrite();
+    /**
+     * @return the number of entries in the cache
+     */
+    public long count() {
+        startRead();
         try {
-            CacheEntry<ITEM_TYPE> item = fItems.get(keystring);
-            if (item != null) {
-                fItems.remove(keystring);
-                size -= item.size;
-            }
+            return items.size();
         } finally {
-            finishWrite();
+            finishRead();
         }
     }
 
+    /**
+     * @return the maximum number of items in the cache
+     */
+    public int getMaximumItems() {
+        return maximumItems;
+    }
+
+    /**
+     * @return the size (in bytes) of all entries in the cache.
+     */
+    public long getSize() {
+        return size;
+    }
+
+    /**
+     * @return the maximum capacity (in bytes) of the cache
+     */
+    public long getMaximumSize() {
+        return maximumSize;
+    }
+
+    /**
+     * @return the reserved headroom/ceiling size (in bytes)
+     */
+    public long getCeilingSize() {
+        return ceilingSize;
+    }
 
 
     /**
@@ -217,6 +273,14 @@ public final class LRUCache<ID_TYPE, ITEM_TYPE> {
 
     }
 
+    /**
+     * Blocks of code in which the contents of fItems and fTimePlacedIntoCache
+     * are examined in any way must be surrounded by calls to <code>startRead</code>
+     * and <code>finishRead</code>. See documentation for ReadWriteLock.
+     * <p/>
+     * Translates the InterruptedException into a generic DataAccessException, to
+     * protect the higher layers from implementation details.
+     */
     private void finishRead() {
         readWriteLock.readLock().unlock();
     }
@@ -235,34 +299,17 @@ public final class LRUCache<ID_TYPE, ITEM_TYPE> {
 
     }
 
+    /**
+     * Blocks of code in which the contents of fItems and fTimePlacedIntoCache
+     * are changed in any way must be surrounded by calls to <code>startWrite</code> and
+     * <code>finishWrite</code>. See documentation for ReadWriteLock.
+     * <p/>
+     * Translates the InterruptedException into a generic DataAccessException, to
+     * protect the higher layers from implementation details.
+     */
     private void finishWrite() {
         readWriteLock.writeLock().unlock();
     }
 
-    //
-    public long count() {
-        startRead();
-        try {
-            return fItems.size();
-        } finally {
-            finishRead();
-        }
-    }
-
-    public long getSize() {
-        return size;
-    }
-
-    public long getMaximumSize() {
-        return maximumSize;
-    }
-
-    public long getCeilingSize() {
-        return ceilingSize;
-    }
-
-    public int getMaximumItems() {
-        return maximumItems;
-    }
 
 }
