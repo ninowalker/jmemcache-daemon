@@ -34,31 +34,22 @@ public final class ServerSessionHandler implements IoHandler {
     final Logger logger = LoggerFactory.getLogger(ServerSessionHandler.class);
 
     public String version;
-    public int curr_items;
-    public int total_items;
     public int curr_conns;
     public int total_conns;
-    public int get_cmds;
-    public int set_cmds;
-    public int get_hits;
-    public int get_misses;
     public int started;          /* when the process was started */
+
     public static long bytes_read;
     public static long bytes_written;
     public static long curr_bytes;
 
     public int idle_limit;
     public boolean verbose;
-    protected Cache cache;
 
     public static CharsetEncoder ENCODER  = Charset.forName("US-ASCII").newEncoder();
 
     /**
-     * Read-write lock allows maximal concurrency, since readers can share access;
-     * only writers need sole access.
      */
-    private final ReadWriteLock cacheReadWriteLock;
-
+    protected Cache cache;
 
     /**
      * Construct the server session handler
@@ -70,14 +61,13 @@ public final class ServerSessionHandler implements IoHandler {
      */
     public ServerSessionHandler(Cache cache, String memcachedVersion, boolean verbosity, int idle) {
         initStats();
-        this.cache = cache;
 
+        this.cache = cache;
+        
         started = Now();
         version = memcachedVersion;
         verbose = verbosity;
         idle_limit = idle;
-
-        cacheReadWriteLock = new ReentrantReadWriteLock();
     }
 
     /**
@@ -240,26 +230,8 @@ public final class ServerSessionHandler implements IoHandler {
      * @return the message response
      */
     protected String delete(String key, int time) {
-        try {
-            startCacheWrite();
-
-            if (is_there(key)) {
-                if (time != 0) {
-                    MCElement el = this.cache.get(key);
-                    if (el.expire == 0 || el.expire > (Now() + time)) {
-                        el.expire = Now() + time; // update the expire time
-                        this.cache.put(key, el);
-                    }// else it expire before the time we were asked to expire it
-                } else {
-                    this.cache.remove(key); // just remove it
-                }
-                return "DELETED\r\n";
-            } else {
-                return "NOT_FOUND\r\n";
-            }
-        } finally {
-            finishCacheWrite();
-        }
+        if (cache.delete(key, time)) return "DELETED\r\n";
+        else return "NOT_FOUND\r\n";
     }
 
     /**
@@ -269,16 +241,8 @@ public final class ServerSessionHandler implements IoHandler {
      * @return the message response string
      */
     protected String add(MCElement e) {
-        try {
-            startCacheRead();
-            if (is_there(e.keystring)) {
-                return "NOT_STORED\r\n";
-            } else {
-                return set(e);
-            }
-        } finally {
-            finishCacheRead();
-        }
+        if (cache.add(e)) return "STORED\r\n";
+        else return "NOT_STORED\r\n";
     }
 
     /**
@@ -288,16 +252,8 @@ public final class ServerSessionHandler implements IoHandler {
      * @return the message response string
      */
     protected String replace(MCElement e) {
-        try {
-            startCacheRead();
-            if (is_there(e.keystring)) {
-                return set(e);
-            } else {
-                return "NOT_STORED\r\n";
-            }
-        } finally {
-            finishCacheRead();
-        }
+        if (cache.replace(e)) return "STORED\r\n";
+        else return "NOT_STORED\r\n";
     }
 
     /**
@@ -307,14 +263,8 @@ public final class ServerSessionHandler implements IoHandler {
      * @return the message response string
      */
     protected String set(MCElement e) {
-        try {
-            startCacheWrite();
-            set_cmds += 1;//update stats
-            this.cache.put(e.keystring, e);
-            return "STORED\r\n";
-        } finally {
-            finishCacheWrite();
-        }
+        if (cache.set(e)) return "STORED\r\n";
+        else return "NOT_STORED\r\n";
     }
 
     /**
@@ -324,30 +274,11 @@ public final class ServerSessionHandler implements IoHandler {
      * @return the message response
      */
     protected String get_add(String key, int mod) {
-        try {
-            startCacheWrite();
-            MCElement e = this.cache.get(key);
-            if (e == null) {
-                get_misses += 1;//update stats
-                return "NOT_FOUND\r\n";
-            }
-            if (e.expire != 0 && e.expire < Now()) {
-                //logger.info("FOUND BUT EXPIRED");
-                get_misses += 1;//update stats
-                return "NOT_FOUND\r\n";
-            }
-            // TODO handle parse failure!
-            int old_val = parseInt(new String(e.data)) + mod; // change value
-            if (old_val < 0) {
-                old_val = 0;
-            } // check for underflow
-            e.data = valueOf(old_val).getBytes(); // toString
-            e.data_length = e.data.length;
-            this.cache.put(e.keystring, e); // save new value
-            return valueOf(old_val) + "\r\n"; // return new value
-        } finally {
-            finishCacheWrite();
-        }
+        Integer ret = cache.get_add(key, mod);
+        if (ret == null)
+            return "NOT_FOUND\r\n";
+        else
+            return valueOf(ret);
     }
 
 
@@ -357,13 +288,7 @@ public final class ServerSessionHandler implements IoHandler {
      * @return whether the element is in the cache and is live
      */
     protected boolean is_there(String key) {
-        try {
-            startCacheRead();
-            MCElement e = this.cache.get(key);
-        return e != null && !(e.expire != 0 && e.expire < Now());
-        } finally {
-            finishCacheRead();
-        }
+        return cache.is_there(key);
     }
 
     /**
@@ -372,28 +297,7 @@ public final class ServerSessionHandler implements IoHandler {
      * @return the element, or 'null' in case of cache miss.
      */
     protected MCElement get(String key) {
-        get_cmds += 1;//updates stats
-
-        try {
-            startCacheRead();
-            MCElement e = this.cache.get(key);
-
-
-            if (e == null) {
-                get_misses += 1;//update stats
-                return null;
-            }
-            if (e.expire != 0 && e.expire < Now()) {
-                get_misses += 1;//update stats
-
-                // TODO shouldn't this actually remove the item from cache since it's expired?
-                return null;
-            }
-            get_hits += 1;//update stats
-            return e;
-        } finally {
-            finishCacheRead();
-        }
+        return cache.get(key);
     }
 
 
@@ -408,12 +312,9 @@ public final class ServerSessionHandler implements IoHandler {
      * Initialize all statistic counters
      */
     protected void initStats() {
-        curr_items = 0;
-        total_items = 0;
         curr_bytes = 0;
         curr_conns = 0;
         total_conns = 0;
-        get_cmds = set_cmds = get_hits = get_misses = 0;
         bytes_read = 0;
         bytes_written = 0;
     }
@@ -428,7 +329,7 @@ public final class ServerSessionHandler implements IoHandler {
         StringBuilder builder = new StringBuilder();
 
         if (arg.equals("keys")) {
-            Iterator itr = this.cache.keys();
+            Iterator itr = this.cache.keys().iterator();
             while (itr.hasNext()) {
                 builder.append("STAT key ").append(itr.next()).append("\r\n");
             }
@@ -438,22 +339,18 @@ public final class ServerSessionHandler implements IoHandler {
 
         // stats we know
         builder.append("STAT version ").append(version).append("\r\n");
-        builder.append("STAT cmd_gets ").append(valueOf(get_cmds)).append("\r\n");
-        builder.append("STAT cmd_sets ").append(valueOf(set_cmds)).append("\r\n");
-        builder.append("STAT get_hits ").append(valueOf(get_hits)).append("\r\n");
-        builder.append("STAT get_misses ").append(valueOf(get_misses)).append("\r\n");
+        builder.append("STAT cmd_gets ").append(valueOf(cache.getGetCmds())).append("\r\n");
+        builder.append("STAT cmd_sets ").append(valueOf(cache.getSetCmds())).append("\r\n");
+        builder.append("STAT get_hits ").append(valueOf(cache.getHits)).append("\r\n");
+        builder.append("STAT get_misses ").append(valueOf(cache.getMisses)).append("\r\n");
         builder.append("STAT curr_connections ").append(valueOf(curr_conns)).append("\r\n");
         builder.append("STAT total_connections ").append(valueOf(total_conns)).append("\r\n");
         builder.append("STAT time ").append(valueOf(Now())).append("\r\n");
         builder.append("STAT uptime ").append(valueOf(Now() - this.started)).append("\r\n");
-        try {
-            startCacheRead();
-            builder.append("STAT cur_items ").append(valueOf(this.cache.count())).append("\r\n");
-            builder.append("STAT limit_maxbytes ").append(valueOf(this.cache.maxSize())).append("\r\n");
-            builder.append("STAT current_bytes ").append(valueOf(this.cache.size())).append("\r\n");
-        } finally {
-            finishCacheRead();
-        }
+
+        builder.append("STAT cur_items ").append(valueOf(this.cache.getCurrentItems())).append("\r\n");
+        builder.append("STAT limit_maxbytes ").append(valueOf(this.cache.getLimitMaxBytes())).append("\r\n");
+        builder.append("STAT current_bytes ").append(valueOf(this.cache.getCurrentBytes())).append("\r\n");
         builder.append("STAT free_bytes ").append(valueOf(Runtime.getRuntime().freeMemory())).append("\r\n");
 
         // stuff we know nothing about
@@ -472,9 +369,8 @@ public final class ServerSessionHandler implements IoHandler {
      * Flush all cache entries
      * @return command response
      */
-    protected String flush_all() {
-
-        return flush_all(0);
+    protected boolean flush_all() {
+        return cache.flush_all();
     }
 
     /**
@@ -483,120 +379,11 @@ public final class ServerSessionHandler implements IoHandler {
      * @return command response
      */
     protected String flush_all(int expire) {
-        // TODO implement this, it isn't right... but how to handle efficiently? (don't want to linear scan entire cache)
-        try {
-            startCacheWrite();
-            this.cache.flushAll();
-        } finally {
-            finishCacheWrite();
-        }
-        return "OK\r\n";
-    }
-
-    /**
-     * Blocks of code in which the contents of the cache
-     * are examined in any way must be surrounded by calls to <code>startRead</code>
-     * and <code>finishRead</code>. See documentation for ReadWriteLock.
-     */
-    private void startCacheRead() {
-        cacheReadWriteLock.readLock().lock();
-
-    }
-
-    /**
-     * Blocks of code in which the contents of the cache
-     * are examined in any way must be surrounded by calls to <code>startRead</code>
-     * and <code>finishRead</code>. See documentation for ReadWriteLock.
-     */
-    private void finishCacheRead() {
-        cacheReadWriteLock.readLock().unlock();
-    }
-
-
-    /**
-     * Blocks of code in which the contents of the cache
-     * are changed in any way must be surrounded by calls to <code>startWrite</code> and
-     * <code>finishWrite</code>. See documentation for ReadWriteLock.
-     * protect the higher layers from implementation details.
-     */
-    private void startCacheWrite() {
-        cacheReadWriteLock.writeLock().lock();
-
-    }
-
-    /**
-     * Blocks of code in which the contents of the cache
-     * are changed in any way must be surrounded by calls to <code>startWrite</code> and
-     * <code>finishWrite</code>. See documentation for ReadWriteLock.
-     */
-    private void finishCacheWrite() {
-        cacheReadWriteLock.writeLock().unlock();
+        return cache.flush_all(expire) ? "OK\r\n" : "ERROR\r\n";
     }
 
 
 
-    public String getVersion() {
-        return version;
-    }
 
-    public int getCurr_items() {
-        return curr_items;
-    }
-
-    public int getTotal_items() {
-        return total_items;
-    }
-
-    public int getCurr_conns() {
-        return curr_conns;
-    }
-
-    public int getTotal_conns() {
-        return total_conns;
-    }
-
-    public int getGet_cmds() {
-        return get_cmds;
-    }
-
-    public int getSet_cmds() {
-        return set_cmds;
-    }
-
-    public int getGet_hits() {
-        return get_hits;
-    }
-
-    public int getGet_misses() {
-        return get_misses;
-    }
-
-    public int getStarted() {
-        return started;
-    }
-
-    public static long getBytes_read() {
-        return bytes_read;
-    }
-
-    public static long getBytes_written() {
-        return bytes_written;
-    }
-
-    public static long getCurr_bytes() {
-        return curr_bytes;
-    }
-
-    public int getIdle_limit() {
-        return idle_limit;
-    }
-
-    public boolean isVerbose() {
-        return verbose;
-    }
-
-    public Cache getCache() {
-        return cache;
-    }
 
 }

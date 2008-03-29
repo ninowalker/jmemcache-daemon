@@ -29,7 +29,7 @@ public class MemCacheDaemon {
     private int idleTime;
     private InetSocketAddress addr;
     private int port;
-    private LRUCacheDelegate cacheDelegate;
+    private Cache cache;
 
     public MemCacheDaemon() {
     }
@@ -48,7 +48,7 @@ public class MemCacheDaemon {
         sessionConfig.setTcpNoDelay(true);
         defaultConfig.setThreadModel(ExecutorThreadModel.getInstance("jmemcached"));
 
-        acceptor.bind(this.addr, new ServerSessionHandler(cacheDelegate, memcachedVersion, verbose, idleTime));
+        acceptor.bind(this.addr, new ServerSessionHandler(cache, memcachedVersion, verbose, idleTime));
 
         ProtocolCodecFactory codec = new MemcachedProtocolCodecFactory();
         acceptor.getFilterChain().addFirst("protocolFilter", new ProtocolCodecFilter(codec));
@@ -84,13 +84,11 @@ public class MemCacheDaemon {
         this.port = port;
     }
 
-    public LRUCacheDelegate getCacheDelegate() {
-        return cacheDelegate;
+    public Cache getCache() {
+        return cache;
     }
 
-    public void setCacheDelegate(LRUCacheDelegate cacheDelegate) {
-        this.cacheDelegate = cacheDelegate;
+    public void setCache(Cache cache) {
+        this.cache = cache;
     }
-
-
 }

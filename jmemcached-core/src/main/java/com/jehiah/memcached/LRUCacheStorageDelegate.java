@@ -10,16 +10,17 @@
 package com.jehiah.memcached;
 
 import java.util.Iterator;
+import java.util.Set;
 
 /**
  * A delegate around the internal thread-safe LRUCache implementation.
  */
-public final class LRUCacheDelegate implements Cache {
+public final class LRUCacheStorageDelegate implements CacheStorage {
 
     private LRUCache<String, MCElement> cache;
 
-    public LRUCacheDelegate(int maxSize, long maxBytes, long ceilingSize) {
-        //Create a Cache specifying its configuration.
+    public LRUCacheStorageDelegate(int maxSize, long maxBytes, long ceilingSize) {
+        //Create a CacheStorage specifying its configuration.
         cache = new LRUCache<String, MCElement>(maxSize, maxBytes, ceilingSize);
     }
 
@@ -35,8 +36,8 @@ public final class LRUCacheDelegate implements Cache {
         cache.remove(keystring);
     }
 
-    public Iterator<String> keys() {
-        return cache.keys().iterator();
+    public Set<String> keys() {
+        return cache.keys();
     }
 
     public long size() {
