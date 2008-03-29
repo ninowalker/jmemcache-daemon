@@ -1,0 +1,11 @@
+syntax: glob
+
+*.class
+*.iml
+*.ipr
+*.iws
+nbproject
+target
+catalog.xml
+*~
+

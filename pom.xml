@@ -1,0 +1,62 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.jehiah.memcached</groupId>
+    <artifactId>memcached</artifactId>
+    <packaging>jar</packaging>
+    <version>0.2-SNAPSHOT</version>
+    <name>JMemCacheD</name>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.5</source>
+                    <target>1.5</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+
+    <dependencies>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.1</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <artifactId>slf4j-simple</artifactId>
+            <groupId>org.slf4j</groupId>
+            <version>1.4.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.mina</groupId>
+            <artifactId>mina-core</artifactId>
+            <version>1.1.6</version>
+        </dependency>
+
+        <dependency>
+            <artifactId>commons-cli</artifactId>
+            <groupId>commons-cli</groupId>
+            <version>1.1</version>
+        </dependency>
+
+    </dependencies>
+
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>jdepend-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </reporting>
+
+
+</project>
