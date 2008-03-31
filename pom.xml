@@ -4,7 +4,7 @@
     <groupId>com.thimbleware.jmemcached</groupId>
     <artifactId>jmemcached-parent</artifactId>
     <packaging>pom</packaging>
-    <version>0.2-SNAPSHOT</version>
+    <version>0.2</version>
     <name>JMemCacheD Parent Project</name>
 
     <modules>
