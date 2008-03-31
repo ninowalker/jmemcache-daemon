@@ -4,7 +4,7 @@
     <groupId>com.thimbleware.jmemcached</groupId>
     <artifactId>jmemcached-parent</artifactId>
     <packaging>pom</packaging>
-    <version>1.0-SNAPSHOT</version>
+    <version>0.2-SNAPSHOT</version>
     <name>JMemCacheD Parent Project</name>
 
     <modules>
@@ -24,5 +24,10 @@
             <url>scp://ryan@thimbleware.com//var/www/maven</url>
         </snapshotRepository>
     </distributionManagement>
-    
+
+    <scm>
+        <developerConnection>
+            scm:hg:http://thimbleware.com/hg/jmemcached
+        </developerConnection>
+    </scm>
 </project>
