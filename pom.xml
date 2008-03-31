@@ -1,13 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.jehiah.memcached</groupId>
-    <artifactId>memcached-parent</artifactId>
+    <groupId>com.thimbleware.jmemcached</groupId>
+    <artifactId>jmemcached-parent</artifactId>
     <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
     <name>JMemCacheD Parent Project</name>
+
     <modules>
         <module>jmemcached-core</module>
         <module>jmemcached-cli</module>
     </modules>
+
+    <distributionManagement>
+        <repository>
+            <id>thimbleware.repo</id>
+            <name>ThimbleWare Repository</name>
+            <url>scp://ryan@thimbleware.com//var/www/maven</url>
+        </repository>
+        <snapshotRepository>
+            <id>thimbleware.repo</id>
+            <name>ThimbleWare Repository</name>
+            <url>scp://ryan@thimbleware.com//var/www/maven</url>
+        </snapshotRepository>
+    </distributionManagement>
+    
 </project>

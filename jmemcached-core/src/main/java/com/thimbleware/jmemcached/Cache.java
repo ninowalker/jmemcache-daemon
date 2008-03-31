@@ -1,10 +1,7 @@
-package com.jehiah.memcached;
-
-import org.slf4j.Marker;
+package com.thimbleware.jmemcached;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.String.valueOf;
-import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;

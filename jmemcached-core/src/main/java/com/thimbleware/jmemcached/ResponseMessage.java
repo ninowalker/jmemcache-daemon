@@ -7,7 +7,7 @@
  * Distributed under GPL
  * @author Jehiah Czebotar
  */
-package com.jehiah.memcached;
+package com.thimbleware.jmemcached;
 
 import org.apache.mina.common.ByteBuffer;
 

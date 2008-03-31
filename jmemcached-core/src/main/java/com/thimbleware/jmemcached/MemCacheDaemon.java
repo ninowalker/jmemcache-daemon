@@ -1,4 +1,4 @@
-package com.jehiah.memcached;
+package com.thimbleware.jmemcached;
 
 import org.apache.mina.common.ExecutorThreadModel;
 import org.apache.mina.filter.codec.ProtocolCodecFactory;

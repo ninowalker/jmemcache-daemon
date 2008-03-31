@@ -1,6 +1,6 @@
-package com.jehiah.memcached;
+package com.thimbleware.jmemcached;
 
-import static com.jehiah.memcached.CommandDecoder.SessionState.*;
+import static com.thimbleware.jmemcached.CommandDecoder.SessionState.*;
 import org.apache.mina.common.ByteBuffer;
 import org.apache.mina.common.IoSession;
 import org.apache.mina.filter.codec.ProtocolDecoderOutput;

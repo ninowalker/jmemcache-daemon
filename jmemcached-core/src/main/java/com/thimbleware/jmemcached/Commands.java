@@ -1,4 +1,4 @@
-package com.jehiah.memcached;
+package com.thimbleware.jmemcached;
 
 /**
  */

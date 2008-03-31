@@ -11,7 +11,7 @@
  * @author Jehiah Czebotar
  * @version 0.1
  */
-package com.jehiah.memcached;
+package com.thimbleware.jmemcached;
 
 import org.apache.commons.cli.*;
 
@@ -44,7 +44,7 @@ public class Main {
 
         if (cmdline.hasOption("help") || cmdline.hasOption("h")) {
             System.out.println("Memcached Version " + MemCacheDaemon.memcachedVersion);
-            System.out.println("http://jehiah.com/projects/memcached\n");
+            System.out.println("http://thimbleware.com/projects/memcached\n");
 
             HelpFormatter formatter = new HelpFormatter();
             formatter.printHelp("java -jar memcached.jar", options);

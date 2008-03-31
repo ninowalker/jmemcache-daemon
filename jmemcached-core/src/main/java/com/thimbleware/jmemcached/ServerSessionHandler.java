@@ -7,7 +7,7 @@
  * Distributed under GPL
  * @author Jehiah Czebotar
  */
-package com.jehiah.memcached;
+package com.thimbleware.jmemcached;
 
 import org.apache.mina.common.IdleStatus;
 import org.apache.mina.common.IoHandler;
@@ -19,8 +19,6 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.util.Iterator;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import static java.lang.String.valueOf;
 import static java.lang.Integer.*;
 

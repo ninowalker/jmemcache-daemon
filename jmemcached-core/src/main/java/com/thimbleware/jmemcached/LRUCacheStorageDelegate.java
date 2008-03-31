@@ -7,9 +7,8 @@
  * Distributed under GPL
  * @author Jehiah Czebotar
  */
-package com.jehiah.memcached;
+package com.thimbleware.jmemcached;
 
-import java.util.Iterator;
 import java.util.Set;
 
 /**
