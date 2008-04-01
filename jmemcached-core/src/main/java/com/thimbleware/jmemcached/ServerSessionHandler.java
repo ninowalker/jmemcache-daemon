@@ -250,7 +250,11 @@ public final class ServerSessionHandler implements IoHandler {
      * @return the message response
      */
     protected String delete(String key, int time) {
-        if (cache.delete(key, time)) return "DELETED\r\n";
+        return getDeleteResponseString(cache.delete(key, time));
+    }
+
+    private String getDeleteResponseString(Cache.DeleteResponse deleteResponse) {
+        if (deleteResponse == Cache.DeleteResponse.DELETED) return "DELETED\r\n";
         else return "NOT_FOUND\r\n";
     }
 
@@ -261,11 +265,10 @@ public final class ServerSessionHandler implements IoHandler {
      * @return the message response string
      */
     protected String add(MCElement e) {
-        if (cache.add(e) == Cache.StoreResponse.STORED) return "STORED\r\n";
-        else return "NOT_STORED\r\n";
+        return getStoreResponseString(cache.add(e));
     }
 
-    protected String getStoreResponeString(Cache.StoreResponse storeResponse) {
+    protected String getStoreResponseString(Cache.StoreResponse storeResponse) {
         switch (storeResponse) {
             case EXISTS:
                 return "EXISTS\r\n";
@@ -276,7 +279,7 @@ public final class ServerSessionHandler implements IoHandler {
             case STORED:
                 return "STORED\r\n";
         }
-        return null;
+        throw new RuntimeException("unknown store response from cache: " + storeResponse);
     }
 
     /**
@@ -286,7 +289,7 @@ public final class ServerSessionHandler implements IoHandler {
      * @return the message response string
      */
     protected String replace(MCElement e) {
-        return getStoreResponeString(cache.replace(e));
+        return getStoreResponseString(cache.replace(e));
     }
 
     /**
@@ -296,17 +299,17 @@ public final class ServerSessionHandler implements IoHandler {
      * @return the message response string
      */
     protected String set(MCElement e) {
-        return getStoreResponeString(cache.set(e));
+        return getStoreResponseString(cache.set(e));
     }
 
     /**
      * Check and set an element in the cache
      *
-     * @param cas_key
+     * @param cas_key the unique cas id for the element, to match against
      * @param e       the element to set @return the message response string
      */
     protected String cas(Long cas_key, MCElement e) {
-        return getStoreResponeString(cache.cas(cas_key, e));
+        return getStoreResponseString(cache.cas(cas_key, e));
     }
 
     /**

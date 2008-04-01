@@ -40,6 +40,9 @@ public class Cache {
         STORED, NOT_STORED, EXISTS, NOT_FOUND
     }
 
+    public enum DeleteResponse {
+        DELETED, NOT_FOUND
+    }
 
     /**
      * Read-write lock allows maximal concurrency, since readers can share access;
@@ -66,7 +69,7 @@ public class Cache {
      * @param time only delete the element if time (time in seconds)
      * @return the message response
      */
-    public boolean delete(String key, int time) {
+    public DeleteResponse delete(String key, int time) {
         try {
             startCacheWrite();
 
@@ -80,9 +83,9 @@ public class Cache {
                 } else {
                     this.cacheStorage.remove(key); // just remove it
                 }
-                return true;
+                return DeleteResponse.DELETED;
             } else {
-                return false;
+                return DeleteResponse.NOT_FOUND;
             }
         } finally {
             finishCacheWrite();
