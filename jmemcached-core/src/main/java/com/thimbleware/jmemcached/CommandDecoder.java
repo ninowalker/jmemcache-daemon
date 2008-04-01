@@ -224,6 +224,8 @@ public final class CommandDecoder extends MessageDecoderAdapter {
             cmd.keys.addAll(parts.subList(1, parts.size()));
 
             out.write(cmd);
+        } else {
+            return new SessionStatus(ERROR);
         }
 
 

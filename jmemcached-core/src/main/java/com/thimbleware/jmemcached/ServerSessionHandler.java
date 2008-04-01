@@ -231,11 +231,15 @@ public final class ServerSessionHandler implements IoHandler {
      * @param session the MINA session
      * @param cause   the exception
      */
-    public void exceptionCaught(IoSession session, Throwable cause) {
+    public void exceptionCaught(IoSession session, Throwable cause) throws CharacterCodingException {
         // close the connection on exceptional situation
         logger.error(session.getAttribute("sess_id") + " EXCEPTION", cause);
-        cause.printStackTrace();
-        session.close();
+
+        ResponseMessage r = new ResponseMessage();
+
+        // this needs to make a better distinction between server and client error messages
+        r.out.putString("CLIENT_ERROR\r\n", ENCODER);
+        session.write(r);
     }
 
     /**
