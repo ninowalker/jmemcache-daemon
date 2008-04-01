@@ -28,6 +28,8 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.util.Iterator;
 
+// TODO implement 'delete queue' (time on delete) and flush_all delay
+
 /**
  * The heart of the daemon, responsible for handling the creation and destruction of network
  * sessions, keeping cache statistics, and (most importantly) processing inbound (parsed) commands and then passing on
@@ -278,6 +280,13 @@ public final class ServerSessionHandler implements IoHandler {
         return getStoreResponseString(cache.add(e));
     }
 
+    /**
+     * Find the string response message which is equivalent to a response to a set/add/replace message
+     * in the cache
+     *
+     * @param storeResponse the response code
+     * @return the string to output on the network
+     */
     protected String getStoreResponseString(Cache.StoreResponse storeResponse) {
         switch (storeResponse) {
             case EXISTS:
