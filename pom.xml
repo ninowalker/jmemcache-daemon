@@ -5,8 +5,9 @@
     <artifactId>jmemcached-parent</artifactId>
     <packaging>pom</packaging>
     <version>0.2</version>
-    <name>JMemCacheD Parent Project</name>
-
+    <name>jmemcached Parent Project</name>
+    <url>http://www.thimbleware.com/projects/jmemcached</url>
+        
     <modules>
         <module>jmemcached-core</module>
         <module>jmemcached-cli</module>
@@ -23,6 +24,18 @@
         <name>ThimbleWare</name>
         <url>http://thimbleware.com/</url>
     </organization>
+
+    <developers>
+        <developer>
+            <email>ryan@thimbleware.com</email>
+            <name>Ryan Daum</name>
+            <organization>ThimbleWare Inc</organization>
+            <organizationUrl>http://www.thimbleware.com/</organizationUrl>
+            <roles>
+                <role>maintainer</role>
+            </roles>
+        </developer>
+    </developers>
 
     <distributionManagement>
         <repository>
