@@ -12,6 +12,18 @@
         <module>jmemcached-cli</module>
     </modules>
 
+    <licenses>
+        <license>
+            <name>Apache 2</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+
+    <organization>
+        <name>ThimbleWare</name>
+        <url>http://thimbleware.com/</url>
+    </organization>
+
     <distributionManagement>
         <repository>
             <id>thimbleware.repo</id>

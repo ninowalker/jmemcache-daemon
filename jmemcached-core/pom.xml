@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>jmemcached-core</artifactId>
     <packaging>jar</packaging>
-    <name>JMemCacheD</name>
+    <name>JMemCacheD Core</name>
 
     <parent>
         <groupId>com.thimbleware.jmemcached</groupId>
