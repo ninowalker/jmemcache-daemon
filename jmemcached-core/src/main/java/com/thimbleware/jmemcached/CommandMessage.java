@@ -25,6 +25,8 @@ public final class CommandMessage implements Serializable {
     public String cmd;
     public MCElement element;
     public ArrayList<String> keys;
+    public boolean noreply;
+    public Long cas_key;
 
     public CommandMessage(String cmd) {
         this.cmd = cmd;

@@ -21,12 +21,12 @@ import org.apache.mina.common.IoSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static java.lang.Integer.parseInt;
+import static java.lang.String.valueOf;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.util.Iterator;
-import static java.lang.String.valueOf;
-import static java.lang.Integer.*;
 
 /**
  * The heart of the daemon, responsible for handling the creation and destruction of network
@@ -49,7 +49,7 @@ public final class ServerSessionHandler implements IoHandler {
     public int idle_limit;
     public boolean verbose;
 
-    public static CharsetEncoder ENCODER  = Charset.forName("US-ASCII").newEncoder();
+    public static CharsetEncoder ENCODER = Charset.forName("US-ASCII").newEncoder();
 
     /**
      */
@@ -58,16 +58,16 @@ public final class ServerSessionHandler implements IoHandler {
     /**
      * Construct the server session handler
      *
-     * @param cache the cache to use
+     * @param cache            the cache to use
      * @param memcachedVersion the version string to return to clients
-     * @param verbosity verbosity level for debugging
-     * @param idle how long sessions can be idle for
+     * @param verbosity        verbosity level for debugging
+     * @param idle             how long sessions can be idle for
      */
     public ServerSessionHandler(Cache cache, String memcachedVersion, boolean verbosity, int idle) {
         initStats();
 
         this.cache = cache;
-        
+
         started = Now();
         version = memcachedVersion;
         verbose = verbosity;
@@ -140,11 +140,11 @@ public final class ServerSessionHandler implements IoHandler {
         }
 
         ResponseMessage r = new ResponseMessage();
-        if (cmd == Commands.GET) {
+        if (cmd == Commands.GET || cmd == Commands.GETS) {
             for (int i = 0; i < cmdKeysSize; i++) {
                 MCElement result = get(command.keys.get(i));
                 if (result != null) {
-                    r.out.putString("VALUE " + result.keystring + " " + result.flags + " " + result.data_length + "\r\n", ENCODER);
+                    r.out.putString("VALUE " + result.keystring + " " + result.flags + " " + result.data_length + (cmd == Commands.GETS ? " " + result.cas_unique : "") + "\r\n", ENCODER);
                     r.out.put(result.data, 0, result.data_length);
                     r.out.putString("\r\n", ENCODER);
                 }
@@ -152,11 +152,21 @@ public final class ServerSessionHandler implements IoHandler {
 
             r.out.putString("END\r\n", ENCODER);
         } else if (cmd == Commands.SET) {
-            r.out.putString(set(command.element), ENCODER);
+            String ret = set(command.element);
+            if (!command.noreply)
+                r.out.putString(ret, ENCODER);
+        } else if (cmd == Commands.CAS) {
+            String ret = cas(command.cas_key, command.element);
+            if (!command.noreply)
+                r.out.putString(ret, ENCODER);
         } else if (cmd == Commands.ADD) {
-            r.out.putString(add(command.element), ENCODER);
+            String ret = add(command.element);
+            if (!command.noreply)
+                r.out.putString(ret, ENCODER);
         } else if (cmd == Commands.REPLACE) {
-            r.out.putString(replace(command.element), ENCODER);
+            String ret = replace(command.element);
+            if (!command.noreply)
+                r.out.putString(ret, ENCODER);
         } else if (cmd == Commands.INCR) {
             r.out.putString(get_add(command.keys.get(0), parseInt(command.keys.get(1))), ENCODER);
         } else if (cmd == Commands.DECR) {
@@ -206,8 +216,9 @@ public final class ServerSessionHandler implements IoHandler {
 
     /**
      * Triggered when a session has gone idle.
+     *
      * @param session the MINA session
-     * @param status the idle status
+     * @param status  the idle status
      */
     public void sessionIdle(IoSession session, IdleStatus status) {
         // disconnect an idle client
@@ -216,8 +227,9 @@ public final class ServerSessionHandler implements IoHandler {
 
     /**
      * Triggered when an exception is caught by the protocol handler
+     *
      * @param session the MINA session
-     * @param cause the exception
+     * @param cause   the exception
      */
     public void exceptionCaught(IoSession session, Throwable cause) {
         // close the connection on exceptional situation
@@ -229,7 +241,7 @@ public final class ServerSessionHandler implements IoHandler {
     /**
      * Handle the deletion of an item from the cache.
      *
-     * @param key the key for the item
+     * @param key  the key for the item
      * @param time only delete the element if time (time in seconds)
      * @return the message response
      */
@@ -245,8 +257,22 @@ public final class ServerSessionHandler implements IoHandler {
      * @return the message response string
      */
     protected String add(MCElement e) {
-        if (cache.add(e)) return "STORED\r\n";
+        if (cache.add(e) == Cache.StoreResponse.STORED) return "STORED\r\n";
         else return "NOT_STORED\r\n";
+    }
+
+    protected String getStoreResponeString(Cache.StoreResponse storeResponse) {
+        switch (storeResponse) {
+            case EXISTS:
+                return "EXISTS\r\n";
+            case NOT_FOUND:
+                return "NOT_FOUND\r\n";
+            case NOT_STORED:
+                return "NOT_STORED\r\n";
+            case STORED:
+                return "STORED\r\n";
+        }
+        return null;
     }
 
     /**
@@ -256,8 +282,7 @@ public final class ServerSessionHandler implements IoHandler {
      * @return the message response string
      */
     protected String replace(MCElement e) {
-        if (cache.replace(e)) return "STORED\r\n";
-        else return "NOT_STORED\r\n";
+        return getStoreResponeString(cache.replace(e));
     }
 
     /**
@@ -267,12 +292,22 @@ public final class ServerSessionHandler implements IoHandler {
      * @return the message response string
      */
     protected String set(MCElement e) {
-        if (cache.set(e)) return "STORED\r\n";
-        else return "NOT_STORED\r\n";
+        return getStoreResponeString(cache.set(e));
     }
 
     /**
-     * Increment an (integer) element inthe cache
+     * Check and set an element in the cache
+     *
+     * @param cas_key
+     * @param e       the element to set @return the message response string
+     */
+    protected String cas(Long cas_key, MCElement e) {
+        return getStoreResponeString(cache.cas(cas_key, e));
+    }
+
+    /**
+     * Increment an (integer) element in the cache
+     *
      * @param key the key to increment
      * @param mod the amount to add to the value
      * @return the message response
@@ -288,6 +323,7 @@ public final class ServerSessionHandler implements IoHandler {
 
     /**
      * Check whether an element is in the cache and non-expired
+     *
      * @param key the key for the element to lookup
      * @return whether the element is in the cache and is live
      */
@@ -297,6 +333,7 @@ public final class ServerSessionHandler implements IoHandler {
 
     /**
      * Get an element from the cache
+     *
      * @param key the key for the element to lookup
      * @return the element, or 'null' in case of cache miss.
      */
@@ -325,6 +362,7 @@ public final class ServerSessionHandler implements IoHandler {
 
     /**
      * Return runtime statistics
+     *
      * @param arg additional arguments to the stats command
      * @return the full command response
      */
@@ -371,6 +409,7 @@ public final class ServerSessionHandler implements IoHandler {
 
     /**
      * Flush all cache entries
+     *
      * @return command response
      */
     protected boolean flush_all() {
@@ -379,15 +418,13 @@ public final class ServerSessionHandler implements IoHandler {
 
     /**
      * Flush all cache entries with a timestamp after a given expiration time
+     *
      * @param expire the flush time in seconds
      * @return command response
      */
     protected String flush_all(int expire) {
         return cache.flush_all(expire) ? "OK\r\n" : "ERROR\r\n";
     }
-
-
-
 
 
 }

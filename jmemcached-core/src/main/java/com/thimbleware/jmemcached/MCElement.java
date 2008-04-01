@@ -26,4 +26,5 @@ public final class MCElement implements Serializable {
     public int data_length = 0;
     public byte[] data;
     public String keystring;
+    public long cas_unique;
 }

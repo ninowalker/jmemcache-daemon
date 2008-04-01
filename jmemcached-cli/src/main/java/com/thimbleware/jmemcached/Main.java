@@ -125,7 +125,7 @@ public class Main {
 
         // create daemon and start it
         MemCacheDaemon daemon = new MemCacheDaemon();
-        LRUCacheStorageDelegate cacheStorage = new LRUCacheStorageDelegate(max_size, max_size, 1024000);
+        LRUCacheStorageDelegate cacheStorage = new LRUCacheStorageDelegate(max_size, maxBytes, 1024000);
         daemon.setCache(new Cache(cacheStorage));
         daemon.setAddr(addr);
         daemon.setIdleTime(idle);

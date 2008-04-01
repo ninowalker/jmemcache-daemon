@@ -31,7 +31,14 @@ public class Cache {
     public int getHits;
     public int getMisses;
 
+    public long casCounter;
+
     protected CacheStorage cacheStorage;
+
+
+    public enum StoreResponse {
+        STORED, NOT_STORED, EXISTS, NOT_FOUND
+    }
 
 
     /**
@@ -39,7 +46,6 @@ public class Cache {
      * only writers need sole access.
      */
     private final ReadWriteLock cacheReadWriteLock;
-
 
     /**
      * Construct the server session handler
@@ -89,10 +95,11 @@ public class Cache {
      * @param e the element to add
      * @return the message response string
      */
-    protected boolean add(MCElement e) {
+    protected StoreResponse add(MCElement e) {
         try {
             startCacheRead();
-            return !is_there(e.keystring) && set(e);
+            if (is_there(e.keystring)) return set(e);
+            else return StoreResponse.NOT_STORED;
         } finally {
             finishCacheRead();
         }
@@ -104,14 +111,16 @@ public class Cache {
      * @param e the element to replace
      * @return the message response string
      */
-    public boolean replace(MCElement e) {
+    public StoreResponse replace(MCElement e) {
         try {
             startCacheRead();
-            return is_there(e.keystring) && set(e);
+            if (is_there(e.keystring)) return set(e);
+            else return StoreResponse.NOT_STORED;
         } finally {
             finishCacheRead();
         }
     }
+
 
     /**
      * Set an element in the cache
@@ -119,12 +128,37 @@ public class Cache {
      * @param e the element to set
      * @return the message response string
      */
-    protected boolean set(MCElement e) {
+    protected StoreResponse set(MCElement e) {
         try {
             startCacheWrite();
             setCmds += 1;//update stats
+
+            // increment the CAS counter; put in the new CAS
+            e.cas_unique = casCounter++;
+
             this.cacheStorage.put(e.keystring, e);
-            return true;
+            return StoreResponse.STORED;
+        } finally {
+            finishCacheWrite();
+        }
+    }
+
+    public StoreResponse cas(Long cas_key, MCElement e) {
+        try {
+            startCacheWrite();
+            // have to get the element
+            MCElement element = get(e.keystring);
+            if (element == null)
+                return StoreResponse.NOT_FOUND;
+
+            if (element.cas_unique == cas_key) {
+                // cas_unique matches, now set the element
+                return set(e);
+            } else {
+                // cas didn't match; someone else beat us to it
+                return StoreResponse.EXISTS;
+            }
+
         } finally {
             finishCacheWrite();
         }
@@ -156,6 +190,10 @@ public class Cache {
             } // check for underflow
             e.data = valueOf(old_val).getBytes(); // toString
             e.data_length = e.data.length;
+
+            // assign new cas id
+            e.cas_unique = casCounter++;
+
             this.cacheStorage.put(e.keystring, e); // save new value
             return old_val;
         } finally {
@@ -344,4 +382,5 @@ public class Cache {
     public int getGetMisses() {
         return getMisses;
     }
+
 }

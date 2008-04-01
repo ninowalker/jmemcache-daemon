@@ -19,12 +19,14 @@ package com.thimbleware.jmemcached;
  */
 public interface Commands {
     String GET = "GET".intern();
+    String GETS = "GETS".intern();
     String DELETE = "DELETE".intern();
     String DECR = "DECR".intern();
     String INCR = "INCR".intern();
     String REPLACE = "REPLACE".intern();
     String ADD = "ADD".intern();
     String SET = "SET".intern();
+    String CAS = "CAS".intern();
     String STATS = "STATS".intern();
     String VERSION = "VERSION".intern();
     String QUIT = "QUIT".intern();

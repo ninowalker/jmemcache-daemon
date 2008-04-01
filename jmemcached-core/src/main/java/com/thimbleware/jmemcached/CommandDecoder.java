@@ -177,12 +177,14 @@ public final class CommandDecoder extends MessageDecoderAdapter {
 
         if (cmd.cmd == Commands.ADD ||
                 cmd.cmd == Commands.SET ||
-                cmd.cmd == Commands.REPLACE) {
+                cmd.cmd == Commands.REPLACE ||
+                cmd.cmd == Commands.CAS) {
 
             // if we don't have all the parts, it's malformed
-            if (parts.size() != 5) {
+            if (parts.size() < 5) {
                 return new SessionStatus(ERROR);
             }
+
 
             int size = Integer.parseInt(parts.get(4));
 
@@ -195,9 +197,22 @@ public final class CommandDecoder extends MessageDecoderAdapter {
             }
             cmd.element.data_length = size;
 
+            // look for cas and "noreply" elements
+            if (parts.size() > 5) {
+                int noreply = cmd.cmd == Commands.CAS ? 6 : 5;
+                if (cmd.cmd == Commands.CAS) {
+                    cmd.cas_key = Long.valueOf(parts.get(5));
+                }
+
+                if (parts.size() == noreply + 1 && parts.get(noreply).equalsIgnoreCase("noreply"))
+                    cmd.noreply = true;
+
+            }
+
             return new SessionStatus(WAITING_FOR_DATA, size, cmd);
 
         } else if (cmd.cmd == Commands.GET ||
+                cmd.cmd == Commands.GETS ||
                 cmd.cmd == Commands.INCR ||
                 cmd.cmd == Commands.DECR ||
                 cmd.cmd == Commands.STATS ||
