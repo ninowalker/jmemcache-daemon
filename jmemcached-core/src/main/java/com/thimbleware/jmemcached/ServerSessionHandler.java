@@ -176,9 +176,13 @@ public final class ServerSessionHandler implements IoHandler {
             if (!command.noreply)
                 r.out.putString(ret, ENCODER);
         } else if (cmd == Commands.INCR) {
-            r.out.putString(get_add(command.keys.get(0), parseInt(command.keys.get(1))), ENCODER);
+            String ret = get_add(command.keys.get(0), parseInt(command.keys.get(1)));
+            if (!command.noreply)
+                r.out.putString(ret, ENCODER);
         } else if (cmd == Commands.DECR) {
-            r.out.putString(get_add(command.keys.get(0), -1 * parseInt(command.keys.get(1))), ENCODER);
+            String ret = get_add(command.keys.get(0), -1 * parseInt(command.keys.get(1)));
+            if (!command.noreply)
+                r.out.putString(ret, ENCODER);
         } else if (cmd == Commands.DELETE) {
             String ret = delete(command.keys.get(0), command.time);
             if (!command.noreply)

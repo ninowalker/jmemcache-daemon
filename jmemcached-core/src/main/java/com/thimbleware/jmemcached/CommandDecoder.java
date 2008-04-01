@@ -172,7 +172,7 @@ public final class CommandDecoder extends MessageDecoderAdapter {
     private SessionStatus processLine(List<String> parts, IoSession session, ProtocolDecoderOutput out) {
         if (parts.isEmpty())
             return new SessionStatus(READY);
-        
+
         CommandMessage cmd = new CommandMessage(parts.get(0).toUpperCase().intern());
 
         if (cmd.cmd == Commands.ADD ||
@@ -215,8 +215,6 @@ public final class CommandDecoder extends MessageDecoderAdapter {
 
         } else if (cmd.cmd == Commands.GET ||
                 cmd.cmd == Commands.GETS ||
-                cmd.cmd == Commands.INCR ||
-                cmd.cmd == Commands.DECR ||
                 cmd.cmd == Commands.STATS ||
                 cmd.cmd == Commands.QUIT ||
                 cmd.cmd == Commands.VERSION) {
@@ -224,28 +222,40 @@ public final class CommandDecoder extends MessageDecoderAdapter {
             cmd.keys.addAll(parts.subList(1, parts.size()));
 
             out.write(cmd);
+        } else if (cmd.cmd == Commands.INCR ||
+                cmd.cmd == Commands.DECR) {
+
+            if (parts.size() < 2 || parts.size() > 3)
+                return new SessionStatus(ERROR);
+
+            cmd.keys.add(parts.get(1));
+            cmd.keys.add(parts.get(2));
+            if (parts.size() == 3 && parts.get(2).equalsIgnoreCase("noreply")) {
+                cmd.noreply = true;
+            }
+
+            out.write(cmd);
         } else if (cmd.cmd == Commands.DELETE) {
-            // CMD <options>*
             cmd.keys.add(parts.get(1));
 
             if (parts.size() >= 2) {
-               if (parts.get(parts.size() - 1).equalsIgnoreCase("noreply")) {
-                   cmd.noreply = true;
-                   if (parts.size() == 4)
+                if (parts.get(parts.size() - 1).equalsIgnoreCase("noreply")) {
+                    cmd.noreply = true;
+                    if (parts.size() == 4)
                         cmd.time = Integer.valueOf(parts.get(2));
-               } else if (parts.size() == 3)
-                    cmd.time = Integer.valueOf(parts.get(2));                    
+                } else if (parts.size() == 3)
+                    cmd.time = Integer.valueOf(parts.get(2));
             }
 
             out.write(cmd);
         } else if (cmd.cmd == Commands.FLUSH_ALL) {
-            if (parts.size() >= 2) {
+            if (parts.size() >= 1) {
                 if (parts.get(parts.size() - 1).equalsIgnoreCase("noreply")) {
-                   cmd.noreply = true;
-                   if (parts.size() == 4)
-                        cmd.time = Integer.valueOf(parts.get(2));
-               } else if (parts.size() == 3)
-                    cmd.time = Integer.valueOf(parts.get(2));
+                    cmd.noreply = true;
+                    if (parts.size() == 3)
+                        cmd.time = Integer.valueOf(parts.get(1));
+                } else if (parts.size() == 2)
+                    cmd.time = Integer.valueOf(parts.get(1));
             }
             out.write(cmd);
         } else {
