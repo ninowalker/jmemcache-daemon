@@ -196,11 +196,10 @@ public final class ServerSessionHandler implements IoHandler {
         } else if (cmd == Commands.QUIT) {
             session.close();
         } else if (cmd == Commands.FLUSH_ALL) {
-            int time = 0;
-            if (cmdKeysSize > 0) {
-                time = parseInt(command.keys.get(0));
-            }
-            r.out.putString(flush_all(time), ENCODER);
+
+            String ret = flush_all(command.time);
+            if (!command.noreply)
+                r.out.putString(ret, ENCODER);
         } else {
             r.out.putString("ERROR\r\n", ENCODER);
             logger.error("error; unrecognized command: " + cmd);

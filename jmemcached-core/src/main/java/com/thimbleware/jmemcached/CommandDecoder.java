@@ -218,7 +218,6 @@ public final class CommandDecoder extends MessageDecoderAdapter {
                 cmd.cmd == Commands.INCR ||
                 cmd.cmd == Commands.DECR ||
                 cmd.cmd == Commands.STATS ||
-                cmd.cmd == Commands.FLUSH_ALL ||
                 cmd.cmd == Commands.QUIT ||
                 cmd.cmd == Commands.VERSION) {
             // CMD <options>*
@@ -238,6 +237,16 @@ public final class CommandDecoder extends MessageDecoderAdapter {
                     cmd.time = Integer.valueOf(parts.get(2));                    
             }
 
+            out.write(cmd);
+        } else if (cmd.cmd == Commands.FLUSH_ALL) {
+            if (parts.size() >= 2) {
+                if (parts.get(parts.size() - 1).equalsIgnoreCase("noreply")) {
+                   cmd.noreply = true;
+                   if (parts.size() == 4)
+                        cmd.time = Integer.valueOf(parts.get(2));
+               } else if (parts.size() == 3)
+                    cmd.time = Integer.valueOf(parts.get(2));
+            }
             out.write(cmd);
         } else {
             return new SessionStatus(ERROR);
