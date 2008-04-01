@@ -344,6 +344,7 @@ public final class ServerSessionHandler implements IoHandler {
      *
      * @param cas_key the unique cas id for the element, to match against
      * @param e       the element to set @return the message response string
+     * @return the message response string
      */
     protected String cas(Long cas_key, MCElement e) {
         return getStoreResponseString(cache.cas(cas_key, e));

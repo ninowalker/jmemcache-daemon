@@ -35,7 +35,7 @@ public class MemCacheDaemon {
 
     final Logger logger = LoggerFactory.getLogger(MemCacheDaemon.class);
 
-    public static String memcachedVersion = "0.2-SNAPSHOT";
+    public static String memcachedVersion = "0.3-SNAPSHOT";
 
     private int receiveBufferSize = 1024000;
     private int sendBufferSize = 1024000;
