@@ -97,7 +97,7 @@ public class Cache {
      * Add an element to the cache
      *
      * @param e the element to add
-     * @return the message response string
+     * @return the store response code
      */
     protected StoreResponse add(MCElement e) {
         try {
@@ -113,7 +113,7 @@ public class Cache {
      * Replace an element in the cache
      *
      * @param e the element to replace
-     * @return the message response string
+     * @return the store response code
      */
     public StoreResponse replace(MCElement e) {
         try {
@@ -129,10 +129,9 @@ public class Cache {
      * Append bytes to the end of an element in the cache
      *
      * @param element the element to append
-     * @return message response
+     * @return the store response code
      */
     public StoreResponse append(MCElement element) {
-        // TODO verify that the cache is performing entry expiries based on the new size of the item...
         try {
             startCacheWrite();
             MCElement ret = get(element.keystring);
@@ -156,6 +155,12 @@ public class Cache {
         }
     }
 
+    /**
+     * Prepend bytes to the end of an element in the cache
+     *
+     * @param element the element to append
+     * @return the store response code
+     */
     public StoreResponse prepend(MCElement element) {
         try {
             startCacheWrite();
@@ -183,7 +188,7 @@ public class Cache {
      * Set an element in the cache
      *
      * @param e the element to set
-     * @return the message response string
+     * @return the store response code
      */
     protected StoreResponse set(MCElement e) {
         try {
@@ -200,6 +205,13 @@ public class Cache {
         }
     }
 
+    /**
+     * Set an element in the cache but only if the element has not been touched
+     * since the last 'gets'
+     * @param cas_key the cas key returned by the last gets
+     * @param e the element to set
+     * @return the store response code
+     */
     public StoreResponse cas(Long cas_key, MCElement e) {
         try {
             startCacheWrite();

@@ -361,7 +361,7 @@ public final class ServerSessionHandler implements IoHandler {
         if (ret == null)
             return "NOT_FOUND\r\n";
         else
-            return valueOf(ret);
+            return valueOf(ret)  + "\r\n";
     }
 
 
