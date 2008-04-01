@@ -167,6 +167,14 @@ public final class ServerSessionHandler implements IoHandler {
             String ret = replace(command.element);
             if (!command.noreply)
                 r.out.putString(ret, ENCODER);
+        } else if (cmd == Commands.APPEND) {
+            String ret = append(command.element);
+            if (!command.noreply)
+                r.out.putString(ret, ENCODER);
+        } else if (cmd == Commands.PREPEND) {
+            String ret = prepend(command.element);
+            if (!command.noreply)
+                r.out.putString(ret, ENCODER);
         } else if (cmd == Commands.INCR) {
             r.out.putString(get_add(command.keys.get(0), parseInt(command.keys.get(1))), ENCODER);
         } else if (cmd == Commands.DECR) {
@@ -201,6 +209,7 @@ public final class ServerSessionHandler implements IoHandler {
         }
         session.write(r);
     }
+
 
     /**
      * Called on message delivery.
@@ -290,6 +299,24 @@ public final class ServerSessionHandler implements IoHandler {
      */
     protected String replace(MCElement e) {
         return getStoreResponseString(cache.replace(e));
+    }
+
+    /**
+     * Append bytes to an element in the cache
+     * @param element the element to append to
+     * @return the message response string
+     */
+    protected String append(MCElement element) {
+        return getStoreResponseString(cache.append(element));
+    }
+
+    /**
+     * Prepend bytes to an element in the cache
+     * @param element the element to append to
+     * @return the message response string
+     */
+    protected String prepend(MCElement element) {
+        return getStoreResponseString(cache.prepend(element));
     }
 
     /**

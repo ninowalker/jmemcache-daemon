@@ -20,6 +20,8 @@ import static java.lang.String.valueOf;
 import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.apache.mina.common.ByteBuffer;
+import org.apache.mina.common.ByteBufferAllocator;
 
 /**
  */
@@ -34,7 +36,6 @@ public class Cache {
     public long casCounter;
 
     protected CacheStorage cacheStorage;
-
 
     public enum StoreResponse {
         STORED, NOT_STORED, EXISTS, NOT_FOUND
@@ -124,7 +125,53 @@ public class Cache {
         }
     }
 
+    public StoreResponse append(MCElement element) {
+        try {
+            startCacheWrite();
+            MCElement ret = get(element.keystring);
+            if (ret == null)
+                return StoreResponse.NOT_FOUND;
+            else {
+                ret.data_length += element.data_length;
+                ByteBuffer b = ByteBuffer.allocate(ret.data_length);
+                b.put(ret.data);
+                b.put(element.data);
+                ret.data = new byte[ret.data_length];
+                b.flip();
+                b.get(ret.data);
+                ret.cas_unique++;
+                this.cacheStorage.put(ret.keystring, ret);
 
+                return StoreResponse.STORED;
+            }
+        } finally {
+            finishCacheWrite();
+        }
+    }
+
+    public StoreResponse prepend(MCElement element) {
+        try {
+            startCacheWrite();
+            MCElement ret = get(element.keystring);
+            if (ret == null)
+                return StoreResponse.NOT_FOUND;
+            else {
+                ret.data_length += element.data_length;
+                ByteBuffer b = ByteBuffer.allocate(ret.data_length);
+                b.put(element.data);
+                b.put(ret.data);
+                ret.data = new byte[ret.data_length];
+                b.flip();
+                b.get(ret.data);
+                ret.cas_unique++;
+                this.cacheStorage.put(ret.keystring, ret);
+
+                return StoreResponse.STORED;
+            }
+        } finally {
+            finishCacheWrite();
+        }
+    }
     /**
      * Set an element in the cache
      *

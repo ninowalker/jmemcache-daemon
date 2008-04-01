@@ -178,7 +178,9 @@ public final class CommandDecoder extends MessageDecoderAdapter {
         if (cmd.cmd == Commands.ADD ||
                 cmd.cmd == Commands.SET ||
                 cmd.cmd == Commands.REPLACE ||
-                cmd.cmd == Commands.CAS) {
+                cmd.cmd == Commands.CAS ||
+                cmd.cmd == Commands.APPEND ||
+                cmd.cmd == Commands.PREPEND) {
 
             // if we don't have all the parts, it's malformed
             if (parts.size() < 5) {

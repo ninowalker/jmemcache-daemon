@@ -20,6 +20,8 @@ package com.thimbleware.jmemcached;
 public interface Commands {
     String GET = "GET".intern();
     String GETS = "GETS".intern();
+    String APPEND = "APPEND".intern();
+    String PREPEND = "PREPEND".intern();
     String DELETE = "DELETE".intern();
     String DECR = "DECR".intern();
     String INCR = "INCR".intern();
