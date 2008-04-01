@@ -15,13 +15,13 @@
  */
 package com.thimbleware.jmemcached;
 
+import org.apache.mina.common.ByteBuffer;
+
 import static java.lang.Integer.parseInt;
 import static java.lang.String.valueOf;
 import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import org.apache.mina.common.ByteBuffer;
-import org.apache.mina.common.ByteBufferAllocator;
 
 /**
  */
