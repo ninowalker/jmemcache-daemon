@@ -180,11 +180,9 @@ public final class ServerSessionHandler implements IoHandler {
         } else if (cmd == Commands.DECR) {
             r.out.putString(get_add(command.keys.get(0), -1 * parseInt(command.keys.get(1))), ENCODER);
         } else if (cmd == Commands.DELETE) {
-            int time = 0;
-            if (cmdKeysSize > 1) {
-                time = parseInt(command.keys.get(1));
-            }
-            r.out.putString(delete(command.keys.get(0), time), ENCODER);
+            String ret = delete(command.keys.get(0), command.time);
+            if (!command.noreply)
+                r.out.putString(ret, ENCODER);
         } else if (cmd == Commands.STATS) {
             String option = "";
             if (cmdKeysSize > 0) {

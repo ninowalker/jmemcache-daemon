@@ -27,6 +27,7 @@ public final class CommandMessage implements Serializable {
     public ArrayList<String> keys;
     public boolean noreply;
     public Long cas_key;
+    public int time = 0;
 
     public CommandMessage(String cmd) {
         this.cmd = cmd;

@@ -219,11 +219,24 @@ public final class CommandDecoder extends MessageDecoderAdapter {
                 cmd.cmd == Commands.DECR ||
                 cmd.cmd == Commands.STATS ||
                 cmd.cmd == Commands.FLUSH_ALL ||
-                cmd.cmd == Commands.DELETE ||
                 cmd.cmd == Commands.QUIT ||
                 cmd.cmd == Commands.VERSION) {
             // CMD <options>*
             cmd.keys.addAll(parts.subList(1, parts.size()));
+
+            out.write(cmd);
+        } else if (cmd.cmd == Commands.DELETE) {
+            // CMD <options>*
+            cmd.keys.add(parts.get(1));
+
+            if (parts.size() >= 2) {
+               if (parts.get(parts.size() - 1).equalsIgnoreCase("noreply")) {
+                   cmd.noreply = true;
+                   if (parts.size() == 4)
+                        cmd.time = Integer.valueOf(parts.get(2));
+               } else if (parts.size() == 3)
+                    cmd.time = Integer.valueOf(parts.get(2));                    
+            }
 
             out.write(cmd);
         } else {
