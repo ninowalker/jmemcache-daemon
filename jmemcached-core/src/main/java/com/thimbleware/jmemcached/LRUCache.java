@@ -125,6 +125,10 @@ public final class LRUCache<ID_TYPE, ITEM_TYPE> {
         if (aId == null) throw new IllegalArgumentException("Id must not be null.");
         if (aItem == null) throw new IllegalArgumentException("Item must not be null.");
 
+        // if the item already exists in the cache, subtract its old size
+        if (items.containsKey(aId)) {
+            size -= items.get(aId).size;
+        }
         items.put(aId, new CacheEntry<ITEM_TYPE>(item_size, aItem));
         size += item_size;
     }

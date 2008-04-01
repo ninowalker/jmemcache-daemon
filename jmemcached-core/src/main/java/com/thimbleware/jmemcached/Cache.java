@@ -125,7 +125,14 @@ public class Cache {
         }
     }
 
+    /**
+     * Append bytes to the end of an element in the cache
+     *
+     * @param element the element to append
+     * @return message response
+     */
     public StoreResponse append(MCElement element) {
+        // TODO verify that the cache is performing entry expiries based on the new size of the item...
         try {
             startCacheWrite();
             MCElement ret = get(element.keystring);
