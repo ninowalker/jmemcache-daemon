@@ -113,7 +113,7 @@ public final class LRUCache<ID_TYPE, ITEM_TYPE> {
 
     /**
      * If the item is already present, then replace it; otherwise, add it.
-     * <p/>
+     *
      * If the cache is disabled, do nothing.
      *
      * @param aId   is non-null
@@ -149,7 +149,7 @@ public final class LRUCache<ID_TYPE, ITEM_TYPE> {
     /**
      * Start from beginning, and remove all items from the cache; if cache is
      * disabled, do nothing.
-     * <p/>
+     *
      * Forces a re-population of all items into the cache.
      */
     public void clear() {
@@ -198,7 +198,5 @@ public final class LRUCache<ID_TYPE, ITEM_TYPE> {
     public long getCeilingSize() {
         return ceilingSize;
     }
-
-
 
 }

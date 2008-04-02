@@ -67,7 +67,7 @@ public class Cache {
      * Handle the deletion of an item from the cache.
      *
      * @param key the key for the item
-     * @param time only delete the element if time (time in seconds)
+     * @param time an amount of time to block this entry in the cache for further writes
      * @return the message response
      */
     public DeleteResponse delete(String key, int time) {
@@ -76,11 +76,15 @@ public class Cache {
 
             if (is_there(key)) {
                 if (time != 0) {
+                    // mark it as blocked
                     MCElement el = this.cacheStorage.get(key);
-                    if (el.expire == 0 || el.expire > (Now() + time)) {
-                        el.expire = Now() + time; // update the expire time
-                        this.cacheStorage.put(key, el);
-                    }// else it expire before the time we were asked to expire it
+                    el.blocked = true;
+                    el.blocked_until = Now() + time;
+
+                    // actually clear the data since we don't need to keep it
+                    el.data_length = 0;
+                    el.data = new byte[0];
+                    this.cacheStorage.put(key, el);
                 } else {
                     this.cacheStorage.remove(key); // just remove it
                 }
@@ -135,7 +139,7 @@ public class Cache {
         try {
             startCacheWrite();
             MCElement ret = get(element.keystring);
-            if (ret == null)
+            if (ret == null || is_blocked(ret) || is_expired(ret))
                 return StoreResponse.NOT_FOUND;
             else {
                 ret.data_length += element.data_length;
@@ -165,7 +169,7 @@ public class Cache {
         try {
             startCacheWrite();
             MCElement ret = get(element.keystring);
-            if (ret == null)
+            if (ret == null || is_blocked(ret) || is_expired(ret))
                 return StoreResponse.NOT_FOUND;
             else {
                 ret.data_length += element.data_length;
@@ -199,6 +203,7 @@ public class Cache {
             e.cas_unique = casCounter++;
 
             this.cacheStorage.put(e.keystring, e);
+
             return StoreResponse.STORED;
         } finally {
             finishCacheWrite();
@@ -217,7 +222,7 @@ public class Cache {
             startCacheWrite();
             // have to get the element
             MCElement element = get(e.keystring);
-            if (element == null)
+            if (element == null || is_blocked(element))
                 return StoreResponse.NOT_FOUND;
 
             if (element.cas_unique == cas_key) {
@@ -247,7 +252,7 @@ public class Cache {
                 getMisses += 1;//update stats
                 return null;
             }
-            if (e.expire != 0 && e.expire < Now()) {
+            if (is_expired(e) || is_blocked(e)) {
                 //logger.info("FOUND BUT EXPIRED");
                 getMisses += 1;//update stats
                 return null;
@@ -280,10 +285,18 @@ public class Cache {
         try {
             startCacheRead();
             MCElement e = this.cacheStorage.get(key);
-            return e != null && !(e.expire != 0 && e.expire < Now());
+            return e != null && !is_expired(e) && !is_blocked(e);
         } finally {
             finishCacheRead();
         }
+    }
+
+    protected boolean is_blocked(MCElement e) {
+        return e.blocked && e.blocked_until < Now();
+    }
+
+    protected boolean is_expired(MCElement e) {
+        return e.expire != 0 && e.expire < Now();
     }
 
     /**
@@ -303,10 +316,9 @@ public class Cache {
                 getMisses += 1;//update stats
                 return null;
             }
-            if (e.expire != 0 && e.expire < Now()) {
+            if (is_expired(e) || is_blocked(e)) {
                 getMisses += 1;//update stats
 
-                // TODO shouldn't this actually remove the item from cacheStorage since it's expired?
                 return null;
             }
             getHits += 1;//update stats

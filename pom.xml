@@ -7,11 +7,13 @@
     <version>0.3-SNAPSHOT</version>
     <name>jmemcached Parent Project</name>
     <url>http://www.thimbleware.com/projects/jmemcached</url>
-        
+
     <modules>
         <module>jmemcached-core</module>
         <module>jmemcached-cli</module>
     </modules>
+
+    <inceptionYear>2008</inceptionYear>
 
     <licenses>
         <license>
