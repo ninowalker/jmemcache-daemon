@@ -41,8 +41,9 @@ public interface CacheStorage {
      *
      * @param keystring the key identifying the entry
      * @param el the element to place in the cache
+     * @param data_length
      */
-    void put(String keystring, MCElement el);
+    void put(String keystring, MCElement el, int data_length);
 
 
     /**
@@ -60,17 +61,17 @@ public interface CacheStorage {
     /**
      * Flush all entries from the cache
      */
-    void flushAll();
+    void clear();
 
     /**
      * @return the total count (in bytes) of all the elements in the cache
      */
-    long size();
+    long getSize();
 
     /**
      * @return the maximum capacity (in bytes) of the cache
      */
-    long maxSize();
+    long getMaximumSize();
 
     /**
      * @return how many entries are in the cache

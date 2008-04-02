@@ -106,7 +106,7 @@ public class Cache {
         try {
             startCacheWrite();
 
-            if (is_there(key)) {
+            if (isThere(key)) {
                 if (time != 0) {
                     // mark it as blocked
                     MCElement el = this.cacheStorage.get(key);
@@ -116,7 +116,7 @@ public class Cache {
                     // actually clear the data since we don't need to keep it
                     el.data_length = 0;
                     el.data = new byte[0];
-                    this.cacheStorage.put(key, el);
+                    this.cacheStorage.put(key, el, el.data_length);
 
                     // this must go on a queue for processing later...
                     try {
@@ -170,7 +170,7 @@ public class Cache {
     protected StoreResponse add(MCElement e) {
         try {
             startCacheWrite();
-            if (is_there(e.keystring)) return set(e);
+            if (isThere(e.keystring)) return set(e);
             else return StoreResponse.NOT_STORED;
         } finally {
             finishCacheWrite();
@@ -186,7 +186,7 @@ public class Cache {
     public StoreResponse replace(MCElement e) {
         try {
             startCacheWrite();
-            if (is_there(e.keystring)) return set(e);
+            if (isThere(e.keystring)) return set(e);
             else return StoreResponse.NOT_STORED;
         } finally {
             finishCacheWrite();
@@ -203,7 +203,7 @@ public class Cache {
         try {
             startCacheWrite();
             MCElement ret = get(element.keystring);
-            if (ret == null || is_blocked_from_add(ret) || is_expired(ret))
+            if (ret == null || isBlocked(ret) || isExpired(ret))
                 return StoreResponse.NOT_FOUND;
             else {
                 ret.data_length += element.data_length;
@@ -214,7 +214,7 @@ public class Cache {
                 b.flip();
                 b.get(ret.data);
                 ret.cas_unique++;
-                this.cacheStorage.put(ret.keystring, ret);
+                this.cacheStorage.put(ret.keystring, ret, ret.data_length);
 
                 return StoreResponse.STORED;
             }
@@ -233,7 +233,7 @@ public class Cache {
         try {
             startCacheWrite();
             MCElement ret = get(element.keystring);
-            if (ret == null || is_blocked_from_add(ret) || is_expired(ret))
+            if (ret == null || isBlocked(ret) || isExpired(ret))
                 return StoreResponse.NOT_FOUND;
             else {
                 ret.data_length += element.data_length;
@@ -244,7 +244,7 @@ public class Cache {
                 b.flip();
                 b.get(ret.data);
                 ret.cas_unique++;
-                this.cacheStorage.put(ret.keystring, ret);
+                this.cacheStorage.put(ret.keystring, ret, ret.data_length);
 
                 return StoreResponse.STORED;
             }
@@ -266,7 +266,7 @@ public class Cache {
             // increment the CAS counter; put in the new CAS
             e.cas_unique = casCounter++;
 
-            this.cacheStorage.put(e.keystring, e);
+            this.cacheStorage.put(e.keystring, e, e.data_length);
 
             return StoreResponse.STORED;
         } finally {
@@ -286,7 +286,7 @@ public class Cache {
             startCacheWrite();
             // have to get the element
             MCElement element = get(e.keystring);
-            if (element == null || is_blocked_from_add(element))
+            if (element == null || isBlocked(element))
                 return StoreResponse.NOT_FOUND;
 
             if (element.cas_unique == cas_key) {
@@ -316,7 +316,7 @@ public class Cache {
                 getMisses += 1;//update stats
                 return null;
             }
-            if (is_expired(e) || e.blocked) {
+            if (isExpired(e) || e.blocked) {
                 //logger.info("FOUND BUT EXPIRED");
                 getMisses += 1;//update stats
                 return null;
@@ -332,7 +332,7 @@ public class Cache {
             // assign new cas id
             e.cas_unique = casCounter++;
 
-            this.cacheStorage.put(e.keystring, e); // save new value
+            this.cacheStorage.put(e.keystring, e, e.data_length); // save new value
             return old_val;
         } finally {
             finishCacheWrite();
@@ -341,25 +341,25 @@ public class Cache {
 
 
     /**
-     * Check whether an element is in the cache and non-expired
+     * Check whether an element is in the cache and non-expired and the slot is non-blocked
      * @param key the key for the element to lookup
      * @return whether the element is in the cache and is live
      */
-    protected boolean is_there(String key) {
+    protected boolean isThere(String key) {
         try {
             startCacheRead();
             MCElement e = this.cacheStorage.get(key);
-            return e != null && !is_expired(e) && !is_blocked_from_add(e);
+            return e != null && !isExpired(e) && !isBlocked(e);
         } finally {
             finishCacheRead();
         }
     }
 
-    protected boolean is_blocked_from_add(MCElement e) {
+    protected boolean isBlocked(MCElement e) {
         return e.blocked && e.blocked_until > Now();
     }
 
-    protected boolean is_expired(MCElement e) {
+    protected boolean isExpired(MCElement e) {
         return e.expire != 0 && e.expire < Now();
     }
 
@@ -379,7 +379,7 @@ public class Cache {
                 getMisses += 1;//update stats
                 return null;
             }
-            if (is_expired(e) || e.blocked) {
+            if (isExpired(e) || e.blocked) {
                 getMisses += 1;//update stats
 
                 return null;
@@ -408,7 +408,7 @@ public class Cache {
         // TODO implement this, it isn't right... but how to handle efficiently? (don't want to linear scan entire cacheStorage)
         try {
             startCacheWrite();
-            this.cacheStorage.flushAll();
+            this.cacheStorage.clear();
         } finally {
             finishCacheWrite();
         }
@@ -452,7 +452,7 @@ public class Cache {
     public long getLimitMaxBytes() {
         try {
             startCacheRead();
-            return this.cacheStorage.maxSize();
+            return this.cacheStorage.getMaximumSize();
         } finally {
             finishCacheRead();
         }
@@ -461,7 +461,7 @@ public class Cache {
     public long getCurrentBytes() {
         try {
             startCacheRead();
-            return this.cacheStorage.size();
+            return this.cacheStorage.getSize();
         } finally {
             finishCacheRead();
         }

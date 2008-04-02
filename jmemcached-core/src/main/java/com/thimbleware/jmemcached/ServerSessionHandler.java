@@ -377,7 +377,7 @@ public final class ServerSessionHandler implements IoHandler {
      * @return whether the element is in the cache and is live
      */
     protected boolean is_there(String key) {
-        return cache.is_there(key);
+        return cache.isThere(key);
     }
 
     /**

@@ -33,7 +33,7 @@ public final class LRUCacheStorageDelegate implements CacheStorage {
         return cache.get(keystring);
     }
 
-    public void put(String keystring, MCElement el) {
+    public void put(String keystring, MCElement el, int data_length) {
         cache.put(keystring, el, el.data_length);
     }
 
@@ -45,11 +45,11 @@ public final class LRUCacheStorageDelegate implements CacheStorage {
         return cache.keys();
     }
 
-    public long size() {
+    public long getSize() {
         return cache.getSize();
     }
 
-    public void flushAll() {
+    public void clear() {
         cache.clear();
     }
 
@@ -57,7 +57,7 @@ public final class LRUCacheStorageDelegate implements CacheStorage {
         return cache.count();
     }
 
-    public long maxSize() {
+    public long getMaximumSize() {
         return cache.getMaximumSize();
     }
 }
