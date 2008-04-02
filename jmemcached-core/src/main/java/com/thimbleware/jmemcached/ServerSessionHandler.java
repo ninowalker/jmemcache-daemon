@@ -90,6 +90,7 @@ public final class ServerSessionHandler implements IoHandler {
         }
     }
 
+
     /**
      * Handle the opening of a new session.
      *
@@ -127,7 +128,10 @@ public final class ServerSessionHandler implements IoHandler {
         String cmd = command.cmd;
         int cmdKeysSize = command.keys.size();
 
+        // first process any messages in the delete queue
+        cache.processDeleteQueue();
 
+        // now do the real work
         if (this.verbose) {
             StringBuffer log = new StringBuffer();
             log.append(session.getAttribute("sess_id")).append(" ");

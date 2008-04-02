@@ -90,7 +90,7 @@ public final class CommandDecoder extends MessageDecoderAdapter {
         // ask the session for its state,
         SessionStatus sessionStatus = (SessionStatus) session.getAttribute(SESSION_STATUS);
         if (sessionStatus != null &&  sessionStatus.state == WAITING_FOR_DATA) {
-            if (in.remaining() <= sessionStatus.bytesNeeded)
+            if (in.remaining() < sessionStatus.bytesNeeded + 2)
                 return MessageDecoderResult.NEED_DATA;
         }
         return MessageDecoderResult.OK;
@@ -113,30 +113,36 @@ public final class CommandDecoder extends MessageDecoderAdapter {
         SessionStatus sessionStatus = (SessionStatus) session.getAttribute(SESSION_STATUS);
         SessionStatus returnedSessionStatus;
         if (sessionStatus != null && sessionStatus.state == WAITING_FOR_DATA) {
-            if (in.remaining() < sessionStatus.bytesNeeded)
+            if (in.remaining() < sessionStatus.bytesNeeded + 2) {
                 return MessageDecoderResult.NEED_DATA;
-
+            }
             // get the bytes we want, and that's it
 
             byte[] buffer = new byte[sessionStatus.bytesNeeded];
             in.get(buffer);
-            //String remainder = in.getString(sessionStatus.bytesNeeded, DECODER);
 
-            returnedSessionStatus = continueSet(session, out, sessionStatus, buffer);
+            // eat crlf at end
+            String crlf = in.getString(2, DECODER);
+            if (crlf.equals("\r\n"))
+                returnedSessionStatus = continueSet(session, out, sessionStatus, buffer);
+            else {
+                session.setAttribute(SESSION_STATUS, new SessionStatus(READY));
+                return MessageDecoderResult.NOT_OK;
+            }
         } else {
             // retrieve the first line of the input, if there isn't a full one, request more
             StringBuffer wordBuffer = new StringBuffer(WORD_BUFFER_INIT_SIZE);
             ArrayList<String> words = new ArrayList<String>(8);
-            int r = in.remaining();
+            in.mark();
             boolean completed = false;
-            for (int i = 0; i < r;) {
+            for (int i = 0; in.hasRemaining();) {
                 char c = (char) in.get();
 
                 if (c == ' ') {
                     words.add(wordBuffer.toString());
                     wordBuffer = new StringBuffer(WORD_BUFFER_INIT_SIZE);
                     i++;
-                } else if (c == '\r' && i + 1 < r && in.get() == (byte) '\n') {
+                } else if (c == '\r' && in.hasRemaining() && in.get() == (byte) '\n') {
                     if (wordBuffer.length() != 0)
                         words.add(wordBuffer.toString());
                     completed = true;
@@ -146,17 +152,20 @@ public final class CommandDecoder extends MessageDecoderAdapter {
                     i++;
                 }
             }
-            if (!completed)
+            if (!completed) {
+                in.reset();
                 return MessageDecoderResult.NEED_DATA;
+            }
 
             returnedSessionStatus = processLine(words, session, out);
         }
 
-        session.setAttribute(SESSION_STATUS, returnedSessionStatus);
-        if (returnedSessionStatus.state == ERROR)
-            return MessageDecoderResult.NOT_OK;
-        else
+        if (returnedSessionStatus.state != ERROR) {
+            session.setAttribute(SESSION_STATUS, returnedSessionStatus);
             return MessageDecoderResult.OK;
+        } else
+            return MessageDecoderResult.NOT_OK;
+        
     }
 
 
@@ -170,9 +179,6 @@ public final class CommandDecoder extends MessageDecoderAdapter {
      * @return the session status we want to set the session to
      */
     private SessionStatus processLine(List<String> parts, IoSession session, ProtocolDecoderOutput out) {
-        if (parts.isEmpty())
-            return new SessionStatus(READY);
-
         CommandMessage cmd = new CommandMessage(parts.get(0).toUpperCase().intern());
 
         if (cmd.cmd == Commands.ADD ||

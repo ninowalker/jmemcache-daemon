@@ -15,9 +15,10 @@
  */
 package com.thimbleware.jmemcached;
 
-import org.apache.mina.common.ExecutorThreadModel;
+import org.apache.mina.common.*;
 import org.apache.mina.filter.codec.ProtocolCodecFactory;
 import org.apache.mina.filter.codec.ProtocolCodecFilter;
+import org.apache.mina.filter.executor.ExecutorFilter;
 import org.apache.mina.transport.socket.nio.SocketAcceptor;
 import org.apache.mina.transport.socket.nio.SocketAcceptorConfig;
 import org.apache.mina.transport.socket.nio.SocketSessionConfig;
@@ -26,7 +27,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Executor;
 
 /**
  * The actual daemon - responsible for the binding and configuration of the network configuration.
@@ -62,12 +65,9 @@ public class MemCacheDaemon {
         sessionConfig.setReceiveBufferSize(receiveBufferSize);
         sessionConfig.setTcpNoDelay(true);
         defaultConfig.setThreadModel(ExecutorThreadModel.getInstance("jmemcached"));
-
         acceptor.bind(this.addr, new ServerSessionHandler(cache, memcachedVersion, verbose, idleTime));
-
         ProtocolCodecFactory codec = new MemcachedProtocolCodecFactory();
         acceptor.getFilterChain().addFirst("protocolFilter", new ProtocolCodecFilter(codec));
-
         logger.info("Listening on " + String.valueOf(addr.getHostName()) + ":" + this.port);
     }
 

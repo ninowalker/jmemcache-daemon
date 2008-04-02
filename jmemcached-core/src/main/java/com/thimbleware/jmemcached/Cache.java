@@ -22,6 +22,9 @@ import static java.lang.String.valueOf;
 import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.DelayQueue;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.TimeUnit;
 
 /**
  */
@@ -36,6 +39,10 @@ public class Cache {
     public long casCounter;
 
     protected CacheStorage cacheStorage;
+
+    private DelayQueue<DelayedMCElement> deleteQueue;
+
+    private final ReadWriteLock deleteQueueReadWriteLock;
 
     public enum StoreResponse {
         STORED, NOT_STORED, EXISTS, NOT_FOUND
@@ -52,6 +59,28 @@ public class Cache {
     private final ReadWriteLock cacheReadWriteLock;
 
     /**
+     * Delayed key blocks get processed occasionally.
+     */
+    private class DelayedMCElement implements Delayed {
+        private MCElement element;
+
+        public DelayedMCElement(MCElement element) {
+            this.element = element;
+        }
+
+        public long getDelay(TimeUnit timeUnit) {
+            return timeUnit.convert(element.blocked_until, TimeUnit.SECONDS);
+        }
+
+        public int compareTo(Delayed delayed) {
+            if (!(delayed instanceof DelayedMCElement))
+                return -1;
+            else
+                return element.keystring.compareTo(((DelayedMCElement)delayed).element.keystring);
+        }
+    }
+
+    /**
      * Construct the server session handler
      *
      * @param cacheStorage the cache to use
@@ -60,7 +89,10 @@ public class Cache {
         initStats();
         this.cacheStorage = cacheStorage;
 
+        this.deleteQueue = new DelayQueue<DelayedMCElement>();
+
         cacheReadWriteLock = new ReentrantReadWriteLock();
+        deleteQueueReadWriteLock = new ReentrantReadWriteLock();
     }
 
     /**
@@ -85,6 +117,14 @@ public class Cache {
                     el.data_length = 0;
                     el.data = new byte[0];
                     this.cacheStorage.put(key, el);
+
+                    // this must go on a queue for processing later...
+                    try {
+                        deleteQueueReadWriteLock.writeLock().lock();
+                        deleteQueue.add(new DelayedMCElement(el));
+                    } finally {
+                        deleteQueueReadWriteLock.writeLock().unlock();
+                    }
                 } else {
                     this.cacheStorage.remove(key); // just remove it
                 }
@@ -98,6 +138,29 @@ public class Cache {
     }
 
     /**
+     * Executed periodically to clean from the cache those entries that are just blocking
+     * the insertion of new ones.
+     */
+    public void processDeleteQueue() {
+        try {
+            deleteQueueReadWriteLock.writeLock().lock();
+            DelayedMCElement toDelete = deleteQueue.poll();
+            if (toDelete != null) {
+                try {
+                    startCacheWrite();
+                    if (this.cacheStorage.get(toDelete.element.keystring) != null)
+                        this.cacheStorage.remove(toDelete.element.keystring);
+                } finally {
+                    finishCacheWrite();
+                }
+            }
+
+        } finally {
+            deleteQueueReadWriteLock.writeLock().unlock();
+        }
+    }
+
+    /**
      * Add an element to the cache
      *
      * @param e the element to add
@@ -105,11 +168,11 @@ public class Cache {
      */
     protected StoreResponse add(MCElement e) {
         try {
-            startCacheRead();
+            startCacheWrite();
             if (is_there(e.keystring)) return set(e);
             else return StoreResponse.NOT_STORED;
         } finally {
-            finishCacheRead();
+            finishCacheWrite();
         }
     }
 
@@ -121,11 +184,11 @@ public class Cache {
      */
     public StoreResponse replace(MCElement e) {
         try {
-            startCacheRead();
+            startCacheWrite();
             if (is_there(e.keystring)) return set(e);
             else return StoreResponse.NOT_STORED;
         } finally {
-            finishCacheRead();
+            finishCacheWrite();
         }
     }
 
@@ -139,7 +202,7 @@ public class Cache {
         try {
             startCacheWrite();
             MCElement ret = get(element.keystring);
-            if (ret == null || is_blocked(ret) || is_expired(ret))
+            if (ret == null || is_blocked_from_add(ret) || is_expired(ret))
                 return StoreResponse.NOT_FOUND;
             else {
                 ret.data_length += element.data_length;
@@ -169,7 +232,7 @@ public class Cache {
         try {
             startCacheWrite();
             MCElement ret = get(element.keystring);
-            if (ret == null || is_blocked(ret) || is_expired(ret))
+            if (ret == null || is_blocked_from_add(ret) || is_expired(ret))
                 return StoreResponse.NOT_FOUND;
             else {
                 ret.data_length += element.data_length;
@@ -222,7 +285,7 @@ public class Cache {
             startCacheWrite();
             // have to get the element
             MCElement element = get(e.keystring);
-            if (element == null || is_blocked(element))
+            if (element == null || is_blocked_from_add(element))
                 return StoreResponse.NOT_FOUND;
 
             if (element.cas_unique == cas_key) {
@@ -252,7 +315,7 @@ public class Cache {
                 getMisses += 1;//update stats
                 return null;
             }
-            if (is_expired(e) || is_blocked(e)) {
+            if (is_expired(e) || e.blocked) {
                 //logger.info("FOUND BUT EXPIRED");
                 getMisses += 1;//update stats
                 return null;
@@ -285,14 +348,14 @@ public class Cache {
         try {
             startCacheRead();
             MCElement e = this.cacheStorage.get(key);
-            return e != null && !is_expired(e) && !is_blocked(e);
+            return e != null && !is_expired(e) && !is_blocked_from_add(e);
         } finally {
             finishCacheRead();
         }
     }
 
-    protected boolean is_blocked(MCElement e) {
-        return e.blocked && e.blocked_until < Now();
+    protected boolean is_blocked_from_add(MCElement e) {
+        return e.blocked && e.blocked_until > Now();
     }
 
     protected boolean is_expired(MCElement e) {
@@ -311,12 +374,11 @@ public class Cache {
             startCacheRead();
             MCElement e = this.cacheStorage.get(key);
 
-
             if (e == null) {
                 getMisses += 1;//update stats
                 return null;
             }
-            if (is_expired(e) || is_blocked(e)) {
+            if (is_expired(e) || e.blocked) {
                 getMisses += 1;//update stats
 
                 return null;
