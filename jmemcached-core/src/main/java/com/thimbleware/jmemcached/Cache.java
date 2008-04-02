@@ -69,7 +69,7 @@ public class Cache {
         }
 
         public long getDelay(TimeUnit timeUnit) {
-            return timeUnit.convert(element.blocked_until, TimeUnit.SECONDS);
+            return timeUnit.convert(element.blocked_until - Now(), TimeUnit.MILLISECONDS);
         }
 
         public int compareTo(Delayed delayed) {
@@ -148,8 +148,9 @@ public class Cache {
             if (toDelete != null) {
                 try {
                     startCacheWrite();
-                    if (this.cacheStorage.get(toDelete.element.keystring) != null)
+                    if (this.cacheStorage.get(toDelete.element.keystring) != null) {
                         this.cacheStorage.remove(toDelete.element.keystring);
+                    }
                 } finally {
                     finishCacheWrite();
                 }
