@@ -29,20 +29,21 @@ import java.util.concurrent.TimeUnit;
 /**
  */
 public class Cache {
-    public int currentItems;
-    public int totalItems;
-    public int getCmds;
-    public int setCmds;
-    public int getHits;
-    public int getMisses;
+    private int currentItems;
+    private int totalItems;
+    private int getCmds;
+    private int setCmds;
+    private int getHits;
+    private int getMisses;
 
-    public long casCounter;
+    private  long casCounter;
 
     protected CacheStorage cacheStorage;
 
     private DelayQueue<DelayedMCElement> deleteQueue;
 
     private final ReadWriteLock deleteQueueReadWriteLock;
+
 
     public enum StoreResponse {
         STORED, NOT_STORED, EXISTS, NOT_FOUND
@@ -167,7 +168,7 @@ public class Cache {
      * @param e the element to add
      * @return the store response code
      */
-    protected StoreResponse add(MCElement e) {
+    public StoreResponse add(MCElement e) {
         try {
             startCacheWrite();
             if (isThere(e.keystring)) return set(e);
@@ -258,7 +259,7 @@ public class Cache {
      * @param e the element to set
      * @return the store response code
      */
-    protected StoreResponse set(MCElement e) {
+    public StoreResponse set(MCElement e) {
         try {
             startCacheWrite();
             setCmds += 1;//update stats
@@ -308,7 +309,7 @@ public class Cache {
      * @param mod the amount to add to the value
      * @return the message response
      */
-    protected Integer get_add(String key, int mod) {
+    public Integer get_add(String key, int mod) {
         try {
             startCacheWrite();
             MCElement e = this.cacheStorage.get(key);
@@ -368,7 +369,7 @@ public class Cache {
      * @param key the key for the element to lookup
      * @return the element, or 'null' in case of cache miss.
      */
-    protected MCElement get(String key) {
+    public MCElement get(String key) {
         getCmds += 1;//updates stats
 
         try {
@@ -395,7 +396,7 @@ public class Cache {
      * Flush all cache entries
      * @return command response
      */
-    protected boolean flush_all() {
+    public boolean flush_all() {
         return flush_all(0);
     }
 
@@ -404,7 +405,7 @@ public class Cache {
      * @param expire the flush time in seconds
      * @return command response
      */
-    protected boolean flush_all(int expire) {
+    public boolean flush_all(int expire) {
         // TODO implement this, it isn't right... but how to handle efficiently? (don't want to linear scan entire cacheStorage)
         try {
             startCacheWrite();

@@ -432,8 +432,8 @@ public final class ServerSessionHandler implements IoHandler {
         builder.append("STAT version ").append(version).append("\r\n");
         builder.append("STAT cmd_gets ").append(valueOf(cache.getGetCmds())).append("\r\n");
         builder.append("STAT cmd_sets ").append(valueOf(cache.getSetCmds())).append("\r\n");
-        builder.append("STAT get_hits ").append(valueOf(cache.getHits)).append("\r\n");
-        builder.append("STAT get_misses ").append(valueOf(cache.getMisses)).append("\r\n");
+        builder.append("STAT get_hits ").append(valueOf(cache.getGetHits())).append("\r\n");
+        builder.append("STAT get_misses ").append(valueOf(cache.getGetMisses())).append("\r\n");
         builder.append("STAT curr_connections ").append(valueOf(curr_conns)).append("\r\n");
         builder.append("STAT total_connections ").append(valueOf(total_conns)).append("\r\n");
         builder.append("STAT time ").append(valueOf(Now())).append("\r\n");
