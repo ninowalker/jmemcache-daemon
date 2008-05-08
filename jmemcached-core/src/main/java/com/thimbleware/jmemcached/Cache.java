@@ -171,7 +171,7 @@ public class Cache {
     public StoreResponse add(MCElement e) {
         try {
             startCacheWrite();
-            if (isThere(e.keystring)) return set(e);
+            if (!isThere(e.keystring)) return set(e);
             else return StoreResponse.NOT_STORED;
         } finally {
             finishCacheWrite();
