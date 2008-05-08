@@ -48,6 +48,7 @@ public class MemCacheDaemon {
     private InetSocketAddress addr;
     private int port;
     private Cache cache;
+    private SocketAcceptor acceptor;
 
     public MemCacheDaemon() {
     }
@@ -58,7 +59,7 @@ public class MemCacheDaemon {
      * @throws IOException
      */
     public void start() throws IOException {
-        SocketAcceptor acceptor = new SocketAcceptor(16, Executors.newCachedThreadPool() );
+        acceptor = new SocketAcceptor(16, Executors.newCachedThreadPool() );
         SocketAcceptorConfig defaultConfig = acceptor.getDefaultConfig();
         SocketSessionConfig sessionConfig = defaultConfig.getSessionConfig();
         sessionConfig.setSendBufferSize(sendBufferSize);
@@ -69,6 +70,13 @@ public class MemCacheDaemon {
         ProtocolCodecFactory codec = new MemcachedProtocolCodecFactory();
         acceptor.getFilterChain().addFirst("protocolFilter", new ProtocolCodecFilter(codec));
         logger.info("Listening on " + String.valueOf(addr.getHostName()) + ":" + this.port);
+    }
+
+    public void stop() {
+        if (acceptor != null) {
+            logger.info("Stopping daemon");
+            acceptor.unbindAll();
+        }
     }
 
     public static void setMemcachedVersion(String memcachedVersion) {
