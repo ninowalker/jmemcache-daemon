@@ -37,6 +37,7 @@ public class Main {
         options.addOption("m", "memory", true, "max memory to use in MB");
         options.addOption("c", "ceiling", true, "ceiling memory to use in MB");
         options.addOption("l", "listen", true, "Address to listen on");
+        options.addOption("s", "size", true, "max items");
         options.addOption("V", false, "Show version number");
         options.addOption("v", false, "verbose (show commands)");
 
@@ -108,10 +109,10 @@ public class Main {
 
         long maxBytes;
         if (cmdline.hasOption("m")) {
-            maxBytes = Integer.parseInt(cmdline.getOptionValue("m")) * 1024000;
+            maxBytes = Long.parseLong(cmdline.getOptionValue("m")) * 1024000;
             System.out.println("Setting max memory size to " + String.valueOf(maxBytes) + " bytes");
         } else if (cmdline.hasOption("memory")) {
-            maxBytes = Integer.parseInt(cmdline.getOptionValue("memory")) * 1024000;
+            maxBytes = Long.parseLong(cmdline.getOptionValue("memory")) * 1024000;
             System.out.println("Setting max memory size to " + String.valueOf(maxBytes) + " bytes");
         } else {
             maxBytes = Runtime.getRuntime().maxMemory();
@@ -125,7 +126,7 @@ public class Main {
 
         // create daemon and start it
         MemCacheDaemon daemon = new MemCacheDaemon();
-        LRUCacheStorageDelegate cacheStorage = new LRUCacheStorageDelegate(max_size, maxBytes, 1024000);
+        LRUCacheStorageDelegate cacheStorage = new LRUCacheStorageDelegate(max_size, maxBytes, ceiling);
         daemon.setCache(new Cache(cacheStorage));
         daemon.setAddr(addr);
         daemon.setIdleTime(idle);
