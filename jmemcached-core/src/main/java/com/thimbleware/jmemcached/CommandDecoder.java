@@ -33,8 +33,6 @@ import java.util.List;
  */
 public final class CommandDecoder extends MessageDecoderAdapter {
 
-    private final static int THIRTY_DAYS = 60 * 60 * 24 * 30;
-
     public static CharsetDecoder DECODER  = Charset.forName("US-ASCII").newDecoder();
 
     private static final int WORD_BUFFER_INIT_SIZE = 16;
@@ -196,14 +194,8 @@ public final class CommandDecoder extends MessageDecoderAdapter {
 
             int size = Integer.parseInt(parts.get(4));
 
-            cmd.element = new MCElement();
-            cmd.element.keystring = parts.get(1);
-            cmd.element.flags = parts.get(2);
-            cmd.element.expire = Integer.parseInt(parts.get(3));
-            if (cmd.element.expire != 0 && cmd.element.expire <= THIRTY_DAYS) {
-                cmd.element.expire += Now();
-            }
-            cmd.element.data_length = size;
+            int expire = Integer.parseInt(parts.get(3));
+            cmd.element = new MCElement(parts.get(1), parts.get(2), expire != 0 && expire < MCElement.THIRTY_DAYS ? MCElement.Now() : expire, size);
 
             // look for cas and "noreply" elements
             if (parts.size() > 5) {
@@ -290,10 +282,4 @@ public final class CommandDecoder extends MessageDecoderAdapter {
         return new SessionStatus(READY);
     }
 
-    /**
-     * @return the current time in seconds
-     */
-    public final int Now() {
-        return (int) (System.currentTimeMillis() / 1000);
-    }
 }

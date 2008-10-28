@@ -11,6 +11,7 @@
     <modules>
         <module>jmemcached-core</module>
         <module>jmemcached-cli</module>
+        <module>test</module>
     </modules>
 
     <inceptionYear>2008</inceptionYear>

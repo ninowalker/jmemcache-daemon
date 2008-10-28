@@ -25,18 +25,20 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
 public class Cache {
-    private int currentItems;
-    private int totalItems;
-    private int getCmds;
-    private int setCmds;
-    private int getHits;
-    private int getMisses;
+    private AtomicInteger currentItems = new AtomicInteger();
+    private AtomicInteger totalItems = new AtomicInteger();
+    private AtomicInteger getCmds = new AtomicInteger();
+    private AtomicInteger setCmds = new AtomicInteger();
+    private AtomicInteger getHits = new AtomicInteger();
+    private AtomicInteger getMisses = new AtomicInteger();
 
-    private  long casCounter;
+    private AtomicLong casCounter = new AtomicLong();
 
     protected CacheStorage cacheStorage;
 
@@ -262,10 +264,10 @@ public class Cache {
     public StoreResponse set(MCElement e) {
         try {
             startCacheWrite();
-            setCmds += 1;//update stats
+            setCmds.incrementAndGet();//update stats
 
             // increment the CAS counter; put in the new CAS
-            e.cas_unique = casCounter++;
+            e.cas_unique = casCounter.getAndIncrement();
 
             this.cacheStorage.put(e.keystring, e, e.data_length);
 
@@ -314,12 +316,12 @@ public class Cache {
             startCacheWrite();
             MCElement e = this.cacheStorage.get(key);
             if (e == null) {
-                getMisses += 1;//update stats
+                getMisses.incrementAndGet();//update stats
                 return null;
             }
             if (isExpired(e) || e.blocked) {
                 //logger.info("FOUND BUT EXPIRED");
-                getMisses += 1;//update stats
+                getMisses.incrementAndGet();//update stats
                 return null;
             }
             // TODO handle parse failure!
@@ -331,7 +333,7 @@ public class Cache {
             e.data_length = e.data.length;
 
             // assign new cas id
-            e.cas_unique = casCounter++;
+            e.cas_unique = casCounter.getAndIncrement();
 
             this.cacheStorage.put(e.keystring, e, e.data_length); // save new value
             return old_val;
@@ -370,22 +372,22 @@ public class Cache {
      * @return the element, or 'null' in case of cache miss.
      */
     public MCElement get(String key) {
-        getCmds += 1;//updates stats
+        getCmds.incrementAndGet();//updates stats
 
         try {
             startCacheRead();
             MCElement e = this.cacheStorage.get(key);
 
             if (e == null) {
-                getMisses += 1;//update stats
+                getMisses.incrementAndGet();//update stats
                 return null;
             }
             if (isExpired(e) || e.blocked) {
-                getMisses += 1;//update stats
+                getMisses.incrementAndGet();//update stats
 
                 return null;
             }
-            getHits += 1;//update stats
+            getHits.incrementAndGet();//update stats
             return e;
         } finally {
             finishCacheRead();
@@ -427,9 +429,12 @@ public class Cache {
      * Initialize all statistic counters
      */
     protected void initStats() {
-        currentItems = 0;
-        totalItems = 0;
-        getCmds = setCmds = getHits = getMisses = 0;
+        currentItems.set(0);
+        totalItems.set(0);
+        getCmds.set(0);
+        setCmds.set(0);
+        getHits.set(0);
+        getMisses.set(0);
     }
 
 
@@ -509,23 +514,23 @@ public class Cache {
     }
 
     public int getTotalItems() {
-        return totalItems;
+        return totalItems.get();
     }
 
     public int getGetCmds() {
-        return getCmds;
+        return getCmds.get();
     }
 
     public int getSetCmds() {
-        return setCmds;
+        return setCmds.get();
     }
 
     public int getGetHits() {
-        return getHits;
+        return getHits.get();
     }
 
     public int getGetMisses() {
-        return getMisses;
+        return getMisses.get();
     }
 
 }

@@ -444,11 +444,16 @@ public final class ServerSessionHandler implements IoHandler {
         builder.append("STAT current_bytes ").append(valueOf(this.cache.getCurrentBytes())).append("\r\n");
         builder.append("STAT free_bytes ").append(valueOf(Runtime.getRuntime().freeMemory())).append("\r\n");
 
-        // stuff we know nothing about
-        builder.append("STAT pid 0\r\n");
+        // Not really the same thing precisely, but meaningful nonetheless. potentially this should be renamed
+        builder.append("STAT pid " + Thread.currentThread().getId() + "\r\n");
+
+        // stuff we know nothing about; gets faked only because some clients expect this
+
         builder.append("STAT rusage_user 0:0\r\n");
         builder.append("STAT rusage_system 0:0\r\n");
         builder.append("STAT connection_structures 0\r\n");
+
+        // TODO we could collect these
         builder.append("STAT bytes_read 0\r\n");
         builder.append("STAT bytes_written 0\r\n");
         builder.append("END\r\n");

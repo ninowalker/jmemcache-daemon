@@ -29,4 +29,22 @@ public final class MCElement implements Serializable {
     public long cas_unique;
     public boolean blocked = false;
     public long blocked_until = 0;
+    final static int THIRTY_DAYS = 60 * 60 * 24 * 30;
+
+    public MCElement() {
+    }
+
+    public MCElement(String keystring, String flags, int expire, int data_length) {
+        this.keystring = keystring;
+        this.flags = flags;
+        this.expire = expire;
+        this.data_length = data_length;
+    }
+
+    /**
+     * @return the current time in seconds
+     */
+    public static final int Now() {
+        return (int) (System.currentTimeMillis() / 1000);
+    }
 }
