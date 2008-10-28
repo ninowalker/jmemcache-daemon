@@ -1,23 +1,22 @@
 package com.thimbleware.jmemcached.test;
 
-import org.junit.Test;
-import org.junit.Before;
-import org.junit.After;
-import com.thimbleware.jmemcached.MemCacheDaemon;
-import com.thimbleware.jmemcached.LRUCacheStorageDelegate;
 import com.thimbleware.jmemcached.Cache;
+import com.thimbleware.jmemcached.LRUCacheStorageDelegate;
 import com.thimbleware.jmemcached.MCElement;
-import static com.thimbleware.jmemcached.MCElement.*;
+import static com.thimbleware.jmemcached.MCElement.Now;
+import com.thimbleware.jmemcached.MemCacheDaemon;
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertNotNull;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
-import java.net.InetSocketAddress;
 import java.io.IOException;
-
-import junit.framework.Assert;
-import static junit.framework.Assert.*;
+import java.net.InetSocketAddress;
 
 /**
  */
-public class BasicSetupTest {
+public class BasicCacheTest {
     private static final int MAX_BYTES = 1024 * 1024 * 1024;
     private static final int CEILING_SIZE = 1024 * 1024;
     private MemCacheDaemon daemon;
