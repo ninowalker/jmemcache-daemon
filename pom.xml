@@ -9,8 +9,8 @@
     <url>http://www.thimbleware.com/projects/jmemcached</url>
 
     <modules>
-        <module>jmemcached-core</module>
-        <module>jmemcached-cli</module>
+        <module>core</module>
+        <module>cli</module>
         <module>test</module>
     </modules>
 
