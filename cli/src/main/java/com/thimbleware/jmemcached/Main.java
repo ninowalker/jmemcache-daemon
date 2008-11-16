@@ -18,8 +18,15 @@ package com.thimbleware.jmemcached;
 import org.apache.commons.cli.*;
 
 import java.net.InetSocketAddress;
+import java.text.NumberFormat;
+import java.util.regex.Matcher;
+import java.util.Locale;
 
 import com.thimbleware.jmemcached.storage.hash.LRUCacheStorageDelegate;
+import com.thimbleware.jmemcached.storage.mmap.MemoryMappedCacheStorage;
+import com.thimbleware.jmemcached.storage.mmap.MemoryMappedBlockStore;
+import com.thimbleware.jmemcached.storage.CacheStorage;
+import com.thimbleware.jmemcached.util.Bytes;
 
 
 /**
@@ -34,10 +41,12 @@ public class Main {
         // setup command line options
         Options options = new Options();
         options.addOption("h", "help", false, "print this help screen");
+        options.addOption("f", "mapped-file", true, "use external (from JVM) heap through a memory mapped file");
+        options.addOption("b", "block-size", true, "block size (in bytes) for external memory mapped file allocator.  default is 8 bytes");
         options.addOption("i", "idle", true, "disconnect after idle <x> seconds");
         options.addOption("p", "port", true, "port to listen on");
-        options.addOption("m", "memory", true, "max memory to use in MB");
-        options.addOption("c", "ceiling", true, "ceiling memory to use in MB");
+        options.addOption("m", "memory", true, "max memory to use; in bytes, specify K, kb, M, GB for larger units");
+        options.addOption("c", "ceiling", true, "ceiling memory to use; in bytes, specify K, kb, M, GB for larger units");
         options.addOption("l", "listen", true, "Address to listen on");
         options.addOption("s", "size", true, "max items");
         options.addOption("V", false, "Show version number");
@@ -76,13 +85,12 @@ public class Main {
         }
 
         int max_size = 10000;
-        if (cmdline.hasOption("s")) {
-            max_size = Integer.parseInt(cmdline.getOptionValue("s"));
-            System.out.println("Setting max elements to " + String.valueOf(max_size));
-        } else if (cmdline.hasOption("size")) {
-            max_size = Integer.parseInt(cmdline.getOptionValue("size"));
-            System.out.println("Setting max elements to " + String.valueOf(max_size));
-        }
+        if (cmdline.hasOption("s"))
+            max_size = (int)Bytes.valueOf(cmdline.getOptionValue("s")).bytes();
+        else if (cmdline.hasOption("size"))
+            max_size = (int)Bytes.valueOf(cmdline.getOptionValue("size")).bytes();
+
+        System.out.println("Setting max cache elements to " + String.valueOf(max_size));
 
         int idle = -1;
         if (cmdline.hasOption("i")) {
@@ -91,6 +99,15 @@ public class Main {
             idle = Integer.parseInt(cmdline.getOptionValue("idle"));
         }
 
+        boolean memoryMapped = false;
+        String mmapFile = "";
+        if (cmdline.hasOption("f")) {
+            memoryMapped = true;
+            mmapFile = cmdline.getOptionValue("f");
+        } else if (cmdline.hasOption("mapped-file")) {
+            memoryMapped = true;
+            mmapFile = cmdline.getOptionValue("f");
+        }
 
         boolean verbose = false;
         if (cmdline.hasOption("v")) {
@@ -99,36 +116,61 @@ public class Main {
 
         long ceiling;
         if (cmdline.hasOption("c")) {
-            ceiling = Integer.parseInt(cmdline.getOptionValue("c")) * 1024000;
-            System.out.println("Setting ceiling memory size to " + String.valueOf(ceiling) + " bytes");
+            ceiling = Bytes.valueOf(cmdline.getOptionValue("c")).bytes();
+            System.out.println("Setting ceiling memory size to " + Bytes.bytes(ceiling).megabytes() + "M");
         } else if (cmdline.hasOption("ceiling")) {
-            ceiling = Integer.parseInt(cmdline.getOptionValue("ceiling")) * 1024000;
-            System.out.println("Setting ceiling memory size to " + String.valueOf(ceiling) + " bytes");
-        } else {
+            ceiling = Bytes.valueOf(cmdline.getOptionValue("ceiling")).bytes();
+            System.out.println("Setting ceiling memory size to " + Bytes.bytes(ceiling).megabytes() + "M");
+        } else if (!memoryMapped ){
             ceiling = 1024000;
-            System.out.println("Setting ceiling memory size to JVM limit of " + String.valueOf(ceiling) + " bytes");
+            System.out.println("Setting ceiling memory size to default limit of " + Bytes.bytes(ceiling).megabytes() + "M");
+        } else {
+            System.out.println("ERROR : ceiling memory size mandatory when external memory mapped file is specified");
+
+            return;
+        }
+
+        int blockSize = 8;
+        if (!memoryMapped && (cmdline.hasOption("b") || cmdline.hasOption("block-size"))) {
+            System.out.println("WARN : block size option is only valid for memory mapped external heap storage; ignoring");
+        } else if (cmdline.hasOption("b")) {
+            blockSize = Integer.parseInt(cmdline.getOptionValue("b"));
+        } else if (cmdline.hasOption("block-size")) {
+            blockSize = Integer.parseInt(cmdline.getOptionValue("block-size"));
         }
 
         long maxBytes;
         if (cmdline.hasOption("m")) {
-            maxBytes = Long.parseLong(cmdline.getOptionValue("m")) * 1024000;
-            System.out.println("Setting max memory size to " + String.valueOf(maxBytes) + " bytes");
+            maxBytes = Bytes.valueOf(cmdline.getOptionValue("m")).bytes();
+            System.out.println("Setting max memory size to " + Bytes.bytes(maxBytes).gigabytes() + "GB");
         } else if (cmdline.hasOption("memory")) {
-            maxBytes = Long.parseLong(cmdline.getOptionValue("memory")) * 1024000;
-            System.out.println("Setting max memory size to " + String.valueOf(maxBytes) + " bytes");
-        } else {
+            maxBytes = Bytes.valueOf(cmdline.getOptionValue("memory")).bytes();
+            System.out.println("Setting max memory size to " + Bytes.bytes(maxBytes).gigabytes() + "GB");
+        } else if (!memoryMapped) {
             maxBytes = Runtime.getRuntime().maxMemory();
-            System.out.println("Setting max memory size to JVM limit of " + String.valueOf(maxBytes) + " bytes");
+            System.out.println("Setting max memory size to JVM limit of " + Bytes.bytes(maxBytes).gigabytes() + "GB");
+        } else {
+            System.out.println("ERROR : max memory size mandatory when external memory mapped file is specified");
+            return;
         }
 
-        if (maxBytes > Runtime.getRuntime().maxMemory()) {
+        if (!memoryMapped && maxBytes > Runtime.getRuntime().maxMemory()) {
             System.out.println("ERROR : JVM heap size is not big enough. use '-Xmx" + String.valueOf(maxBytes / 1024000) + "m' java argument before the '-jar' option.");
+            return;
+        } else if (memoryMapped && maxBytes > Integer.MAX_VALUE) {
+            System.out.println("ERROR : when external memory mapped, memory size may not exceed the size of Integer.MAX_VALUE (" + Bytes.bytes(Integer.MAX_VALUE).gigabytes() + "GB");
             return;
         }
 
         // create daemon and start it
         MemCacheDaemon daemon = new MemCacheDaemon();
-        LRUCacheStorageDelegate cacheStorage = new LRUCacheStorageDelegate(max_size, maxBytes, ceiling);
+        CacheStorage cacheStorage;
+        if (memoryMapped) {
+            MemoryMappedBlockStore mappedBlockStore = new MemoryMappedBlockStore(maxBytes, mmapFile, blockSize);
+            cacheStorage = new MemoryMappedCacheStorage(mappedBlockStore, max_size, ceiling);
+        }
+        else
+            cacheStorage = new LRUCacheStorageDelegate(max_size, maxBytes, ceiling);
         daemon.setCache(new Cache(cacheStorage));
         daemon.setAddr(addr);
         daemon.setIdleTime(idle);
@@ -136,5 +178,6 @@ public class Main {
         daemon.setVerbose(verbose);
         daemon.start();
     }
+
 
 }
