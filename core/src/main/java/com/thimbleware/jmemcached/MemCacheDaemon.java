@@ -77,6 +77,7 @@ public class MemCacheDaemon {
             logger.info("Stopping daemon");
             acceptor.unbindAll();
         }
+        cache.close();
     }
 
     public static void setMemcachedVersion(String memcachedVersion) {

@@ -18,6 +18,8 @@ public class MemoryMappedBlockStore {
     private RandomAccessFile fileStorage;
     private MappedByteBuffer storage;
 
+    private String fileName;
+
     private long freeBytes;
 
     private final long storeSizeBytes;
@@ -25,6 +27,7 @@ public class MemoryMappedBlockStore {
 
     private SortedMap<Long, Long> freeList;
     private Set<Region> currentRegions;
+
 
     /**
      * Exception thrown on inability to allocate a new block
@@ -130,6 +133,7 @@ public class MemoryMappedBlockStore {
         freeBytes = storeSizeBytes;
 
         // open the file for read-write
+        this.fileName = fileName;
         fileStorage = new RandomAccessFile(fileName, "rw");
 
         // memory map it out the requested size
@@ -137,7 +141,6 @@ public class MemoryMappedBlockStore {
 
         // clear the buffer
         storage.clear();
-
 
         // the free list starts with one giant free region; we create a tree map as index, then set initial values
         // with one empty region.
@@ -160,6 +163,9 @@ public class MemoryMappedBlockStore {
 
         // close the actual file
         fileStorage.close();
+
+        // delete the file; it is no longer of any use
+        new File(fileName).delete();
     }
 
     /**

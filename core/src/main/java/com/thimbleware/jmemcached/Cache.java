@@ -49,6 +49,7 @@ public class Cache {
     private final ReadWriteLock deleteQueueReadWriteLock;
 
 
+
     public enum StoreResponse {
         STORED, NOT_STORED, EXISTS, NOT_FOUND
     }
@@ -439,6 +440,9 @@ public class Cache {
         getMisses.set(0);
     }
 
+    public void close() {
+        cacheStorage.close();
+    }
 
     public Set<String> keys() {
         try { startCacheRead();

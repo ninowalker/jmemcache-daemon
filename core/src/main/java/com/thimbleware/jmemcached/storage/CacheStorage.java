@@ -66,6 +66,11 @@ public interface CacheStorage {
     void clear();
 
     /**
+     * Close this cache; freeing its storage and related resources
+     */
+    void close();
+
+    /**
      * @return the total count (in bytes) of all the elements in the cache
      */
     long getCurrentSizeBytes();
@@ -80,5 +85,8 @@ public interface CacheStorage {
      */
     long getCurrentItemCount();
 
+    /**
+     * @return the maximum number of items this cache can hold
+     */
     int getMaximumItems();
 }

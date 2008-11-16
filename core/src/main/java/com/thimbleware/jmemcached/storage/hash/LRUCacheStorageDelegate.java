@@ -56,6 +56,10 @@ public final class LRUCacheStorageDelegate implements CacheStorage {
         cache.clear();
     }
 
+    public void close() {
+        cache.clear();
+    }
+
     public long getCurrentItemCount() {
         return cache.count();
     }

@@ -6,6 +6,7 @@ import com.thimbleware.jmemcached.storage.CacheStorage;
 import java.util.Set;
 import java.util.Map;
 import java.util.LinkedHashMap;
+import java.io.IOException;
 
 /**
  * Cache storage delegate for the memory mapped storage mechanism.
@@ -97,6 +98,15 @@ public class MemoryMappedCacheStorage implements CacheStorage {
     public void clear() {
         index.clear();
         store.clear();
+    }
+
+    public void close() {
+        clear();
+        try {
+            store.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public long getCurrentSizeBytes() {
