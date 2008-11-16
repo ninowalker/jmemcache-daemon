@@ -50,6 +50,8 @@ public class MemCacheDaemon {
     private Cache cache;
     private SocketAcceptor acceptor;
 
+    private boolean running = false;
+
     public MemCacheDaemon() {
     }
 
@@ -70,9 +72,11 @@ public class MemCacheDaemon {
         ProtocolCodecFactory codec = new MemcachedProtocolCodecFactory();
         acceptor.getFilterChain().addFirst("protocolFilter", new ProtocolCodecFilter(codec));
         logger.info("Listening on " + String.valueOf(addr.getHostName()) + ":" + this.port);
+        running = true;
     }
 
     public void stop() {
+        running = false;
         if (acceptor != null) {
             logger.info("Stopping daemon");
             acceptor.unbindAll();
@@ -114,5 +118,9 @@ public class MemCacheDaemon {
 
     public void setCache(Cache cache) {
         this.cache = cache;
+    }
+
+    public boolean isRunning() {
+        return running;
     }
 }

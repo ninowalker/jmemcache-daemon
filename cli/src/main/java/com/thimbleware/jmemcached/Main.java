@@ -163,7 +163,7 @@ public class Main {
         }
 
         // create daemon and start it
-        MemCacheDaemon daemon = new MemCacheDaemon();
+        final MemCacheDaemon daemon = new MemCacheDaemon();
         CacheStorage cacheStorage;
         if (memoryMapped) {
             MemoryMappedBlockStore mappedBlockStore = new MemoryMappedBlockStore(maxBytes, mmapFile, blockSize);
@@ -177,6 +177,12 @@ public class Main {
         daemon.setPort(port);
         daemon.setVerbose(verbose);
         daemon.start();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            public void run() {
+                if (daemon != null && daemon.isRunning()) daemon.stop();
+            }
+        }));
     }
 
 
