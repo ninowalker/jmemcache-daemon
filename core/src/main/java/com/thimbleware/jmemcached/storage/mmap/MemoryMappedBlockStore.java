@@ -178,11 +178,16 @@ public class MemoryMappedBlockStore {
 
         if (!entryIterator.hasNext()) {
             /** No more room.
-             *  We now have two options - we can grow the store, or compact
-             *  the holes in the existing one.  We usually want to grow (fast),
-             *  and compact (slow) only if necessary (i.e. some periodic interval
+             *  We now have three options - we can throw error, grow the store, or compact
+             *  the holes in the existing one.
+             *
+             *  We usually want to grow (fast), and compact (slow) only if necessary
+             *  (i.e. some periodic interval
              *  has been reached or a maximum store size constant hit.)
+             *
              *  Incremental compaction is a Nice To Have.
+             *
+             *  TODO implement compaction routine; throw; in theory the cache on top of us should be removing elements before we fill
              */
             //    compact();
 

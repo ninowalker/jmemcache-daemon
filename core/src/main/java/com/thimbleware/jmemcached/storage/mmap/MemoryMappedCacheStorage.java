@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.LinkedHashMap;
 
 /**
+ * Cache storage delegate for the memory mapped storage mechanism.
  */
 public class MemoryMappedCacheStorage implements CacheStorage {
     private int maximumItems;
