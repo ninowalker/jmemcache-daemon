@@ -14,7 +14,9 @@
  *  limitations under the License.
  */
 
-package com.thimbleware.jmemcached;
+package com.thimbleware.jmemcached.storage;
+
+import com.thimbleware.jmemcached.MCElement;
 
 import java.util.Set;
 
@@ -66,16 +68,17 @@ public interface CacheStorage {
     /**
      * @return the total count (in bytes) of all the elements in the cache
      */
-    long getSize();
+    long getCurrentSizeBytes();
 
     /**
      * @return the maximum capacity (in bytes) of the cache
      */
-    long getMaximumSize();
+    long getMaximumSizeBytes();
 
     /**
      * @return how many entries are in the cache
      */
-    long count();
+    long getCurrentItemCount();
 
+    int getMaximumItems();
 }

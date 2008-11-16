@@ -13,7 +13,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package com.thimbleware.jmemcached;
+package com.thimbleware.jmemcached.protocol;
 
 import org.apache.mina.common.IdleStatus;
 import org.apache.mina.common.IoHandler;
@@ -27,6 +27,9 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.util.Iterator;
+
+import com.thimbleware.jmemcached.Cache;
+import com.thimbleware.jmemcached.MCElement;
 
 // TODO implement 'delete queue' (time on delete) and flush_all delay
 
@@ -150,8 +153,8 @@ public final class ServerSessionHandler implements IoHandler {
             for (int i = 0; i < cmdKeysSize; i++) {
                 MCElement result = get(command.keys.get(i));
                 if (result != null) {
-                    r.out.putString("VALUE " + result.keystring + " " + result.flags + " " + result.data_length + (cmd == Commands.GETS ? " " + result.cas_unique : "") + "\r\n", ENCODER);
-                    r.out.put(result.data, 0, result.data_length);
+                    r.out.putString("VALUE " + result.keystring + " " + result.flags + " " + result.dataLength + (cmd == Commands.GETS ? " " + result.cas_unique : "") + "\r\n", ENCODER);
+                    r.out.put(result.data, 0, result.dataLength);
                     r.out.putString("\r\n", ENCODER);
                 }
             }

@@ -13,7 +13,9 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package com.thimbleware.jmemcached;
+package com.thimbleware.jmemcached.protocol;
+
+import com.thimbleware.jmemcached.MCElement;
 
 import java.io.Serializable;
 import java.util.ArrayList;

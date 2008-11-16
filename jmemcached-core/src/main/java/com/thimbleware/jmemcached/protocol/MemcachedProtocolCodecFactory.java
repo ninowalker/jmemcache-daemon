@@ -13,20 +13,15 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package com.thimbleware.jmemcached;
+package com.thimbleware.jmemcached.protocol;
 
-import org.apache.mina.common.ByteBuffer;
+import org.apache.mina.filter.codec.demux.DemuxingProtocolCodecFactory;
 
-import java.io.Serializable;
-
-/**
- * Represents an outbound response on the network stream.
- */
-public class ResponseMessage implements Serializable {
-    public ByteBuffer out;
-
-    public ResponseMessage() {
-        out = ByteBuffer.allocate(1024);
-        out.setAutoExpand(true);
+public class MemcachedProtocolCodecFactory extends DemuxingProtocolCodecFactory
+{
+    public MemcachedProtocolCodecFactory()
+    {
+        super.register( CommandDecoder.class );
+        super.register( ResponseEncoder.class );
     }
 }

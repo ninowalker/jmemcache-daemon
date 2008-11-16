@@ -1,33 +1,64 @@
 package com.thimbleware.jmemcached.test;
 
-import com.thimbleware.jmemcached.Cache;
-import com.thimbleware.jmemcached.LRUCacheStorageDelegate;
-import com.thimbleware.jmemcached.MCElement;
 import static com.thimbleware.jmemcached.MCElement.Now;
-import com.thimbleware.jmemcached.MemCacheDaemon;
+import com.thimbleware.jmemcached.*;
+import com.thimbleware.jmemcached.storage.hash.LRUCacheStorageDelegate;
+import com.thimbleware.jmemcached.storage.mmap.MemoryMappedBlockStore;
+import com.thimbleware.jmemcached.storage.mmap.MemoryMappedCacheStorage;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
+import java.util.Collection;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class BasicCacheTest {
     private static final int MAX_BYTES = 1024 * 1024 * 1024;
     private static final int CEILING_SIZE = 1024 * 1024;
     private MemCacheDaemon daemon;
     private static final int MAX_SIZE = 1000;
 
+    public static enum CacheType {
+        MAPPED, LOCAL
+    }
+
+    private CacheType cacheType;
+    private int blockSize;
+
+    public BasicCacheTest(CacheType cacheType, int blockSize) {
+        this.cacheType = cacheType;
+        this.blockSize = blockSize;
+    }
+
+    @Parameterized.Parameters
+    public static Collection regExValues() {
+        return Arrays.asList(new Object[][] {
+                {CacheType.LOCAL, 1 },
+                {CacheType.MAPPED, 8 }});
+    }
+
+
     @Before
     public void setup() throws IOException {
         // create daemon and start it
         daemon = new MemCacheDaemon();
-        LRUCacheStorageDelegate cacheStorage = new LRUCacheStorageDelegate(MAX_SIZE, MAX_BYTES, CEILING_SIZE);
-        daemon.setCache(new Cache(cacheStorage));
+        if (cacheType == CacheType.LOCAL) {
+            LRUCacheStorageDelegate cacheStorage = new LRUCacheStorageDelegate(MAX_SIZE, MAX_BYTES, CEILING_SIZE);
+            daemon.setCache(new Cache(cacheStorage));
+        } else {
+            MemoryMappedCacheStorage cacheStorage = new MemoryMappedCacheStorage(
+                    new MemoryMappedBlockStore(MAX_BYTES, "block_store.dat", blockSize), MAX_SIZE, CEILING_SIZE);
+            daemon.setCache(new Cache(cacheStorage));
+        }
         daemon.setAddr(new InetSocketAddress("localhost", 12345));
         daemon.setVerbose(false);
         daemon.start();
@@ -65,11 +96,11 @@ public class BasicCacheTest {
 
         // must be non null and match the original
         assertNotNull("got result", result);
-        assertEquals("data length matches", result.data_length, element.data_length);
-        assertEquals("data matches", result.data, element.data);
-        assertEquals("key matches", result.keystring, element.keystring);
+        assertEquals("data length matches", result.dataLength, element.dataLength);
+        assertEquals("data matches", new String(element.data), new String(result.data));
+        assertEquals("key matches", element.keystring, result.keystring);
 
-        assertEquals("size of cache matches element entered", element.data_length, daemon.getCache().getCurrentBytes());
+        assertEquals("size of cache matches element entered", element.dataLength, daemon.getCache().getCurrentBytes());
         assertEquals("cache has 1 element", 1, daemon.getCache().getCurrentItems());
     }
 
@@ -92,10 +123,10 @@ public class BasicCacheTest {
 
         // must be non null and match the original
         assertNotNull("got result", result);
-        assertEquals("data length matches", result.data_length, element.data_length);
-        assertEquals("data matches", result.data, element.data);
+        assertEquals("data length matches", result.dataLength, element.dataLength);
+        assertEquals("data matches", new String(element.data), new String(result.data));
 
-        assertEquals("size of cache matches element entered", element.data_length, daemon.getCache().getCurrentBytes());
+        assertEquals("size of cache matches element entered", element.dataLength, daemon.getCache().getCurrentBytes());
         assertEquals("cache has 1 element", 1, daemon.getCache().getCurrentItems());
 
         // now replace
@@ -114,10 +145,9 @@ public class BasicCacheTest {
 
         // must be non null and match the original
         assertNotNull("got result", result);
-        assertEquals("data length matches", result.data_length, element.data_length);
-        assertEquals("data matches", result.data, element.data);
+        assertEquals("data length matches", result.dataLength, element.dataLength);
+        assertEquals("data matches", new String(element.data), new String(result.data));
         assertEquals("key matches", result.keystring, element.keystring);
-        assertEquals("size of cache matches element entered", element.data_length, daemon.getCache().getCurrentBytes());
         assertEquals("cache has 1 element", 1, daemon.getCache().getCurrentItems());
 
     }
@@ -163,11 +193,11 @@ public class BasicCacheTest {
 
         // must be non null and match the original
         assertNotNull("got result", result);
-        assertEquals("data length matches", result.data_length, element.data_length);
-        assertEquals("data matches", result.data, element.data);
+        assertEquals("data length matches", result.dataLength, element.dataLength);
+        assertEquals("data matches", new String(element.data), new String(result.data));
         assertEquals("key matches", result.keystring, element.keystring);
 
-        assertEquals("size of cache matches element entered", element.data_length, daemon.getCache().getCurrentBytes());
+        assertEquals("size of cache matches element entered", element.dataLength, daemon.getCache().getCurrentBytes());
         assertEquals("cache has 1 element", 1, daemon.getCache().getCurrentItems());
     }
 
@@ -185,7 +215,7 @@ public class BasicCacheTest {
         // put in cache again and fail
         assertEquals(daemon.getCache().add(element), Cache.StoreResponse.NOT_STORED);
 
-        assertEquals("size of cache matches single element entered", element.data_length, daemon.getCache().getCurrentBytes());
+        assertEquals("size of cache matches single element entered", element.dataLength, daemon.getCache().getCurrentBytes());
         assertEquals("cache has only 1 element", 1, daemon.getCache().getCurrentItems());
     }
 

@@ -13,7 +13,10 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package com.thimbleware.jmemcached;
+package com.thimbleware.jmemcached.storage.hash;
+
+import com.thimbleware.jmemcached.MCElement;
+import com.thimbleware.jmemcached.storage.CacheStorage;
 
 import java.util.Set;
 
@@ -34,7 +37,7 @@ public final class LRUCacheStorageDelegate implements CacheStorage {
     }
 
     public void put(String keystring, MCElement el, int data_length) {
-        cache.put(keystring, el, el.data_length);
+        cache.put(keystring, el, el.dataLength);
     }
 
     public void remove(String keystring) {
@@ -45,7 +48,7 @@ public final class LRUCacheStorageDelegate implements CacheStorage {
         return cache.keys();
     }
 
-    public long getSize() {
+    public long getCurrentSizeBytes() {
         return cache.getSize();
     }
 
@@ -53,11 +56,15 @@ public final class LRUCacheStorageDelegate implements CacheStorage {
         cache.clear();
     }
 
-    public long count() {
+    public long getCurrentItemCount() {
         return cache.count();
     }
 
-    public long getMaximumSize() {
-        return cache.getMaximumSize();
+    public int getMaximumItems() {
+        return cache.getMaximumItems();
+    }
+
+    public long getMaximumSizeBytes() {
+        return cache.getMaximumSizeBytes();
     }
 }

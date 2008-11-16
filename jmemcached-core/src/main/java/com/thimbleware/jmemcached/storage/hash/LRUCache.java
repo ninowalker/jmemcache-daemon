@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-package com.thimbleware.jmemcached;
+package com.thimbleware.jmemcached.storage.hash;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -32,7 +32,7 @@ public final class LRUCache<ID_TYPE, ITEM_TYPE> {
 
     private long size = 0; // current size in bytes
 
-    private final long maximumSize; // in bytes
+    private final long maximumSizeBytes; // in bytes
     private long ceilingSize;
     private int maximumItems;
     private static final int INITIAL_TABLE_SIZE = 2048;
@@ -51,12 +51,12 @@ public final class LRUCache<ID_TYPE, ITEM_TYPE> {
      * Caches are created as empty, and populated through use.
      *
      * @param maximumItems maximum number of items allowed in the cache
-     * @param maximumSize maximum size in bytes of the cache
+     * @param maximumSizeBytes maximum size in bytes of the cache
      * @param ceilingSize number of bytes to attempt to leave as ceiling room
      */
-    public LRUCache(final int maximumItems, final long maximumSize, final long ceilingSize) {
+    public LRUCache(final int maximumItems, final long maximumSizeBytes, final long ceilingSize) {
         this.maximumItems = maximumItems;
-        this.maximumSize = maximumSize;
+        this.maximumSizeBytes = maximumSizeBytes;
         this.ceilingSize = ceilingSize;
 
         /**
@@ -64,7 +64,7 @@ public final class LRUCache<ID_TYPE, ITEM_TYPE> {
          */
         items = new LinkedHashMap<ID_TYPE, CacheEntry<ITEM_TYPE>>(INITIAL_TABLE_SIZE) {
             protected boolean removeEldestEntry(Map.Entry<ID_TYPE, CacheEntry<ITEM_TYPE>> eldest) {
-                if (size + ceilingSize > maximumSize || size() > maximumItems) {
+                if (size + ceilingSize > maximumSizeBytes || size() > maximumItems) {
                     size -= eldest.getValue().size;
                     return true;
                 } else return false;
@@ -188,8 +188,8 @@ public final class LRUCache<ID_TYPE, ITEM_TYPE> {
     /**
      * @return the maximum capacity (in bytes) of the cache
      */
-    public long getMaximumSize() {
-        return maximumSize;
+    public long getMaximumSizeBytes() {
+        return maximumSizeBytes;
     }
 
     /**

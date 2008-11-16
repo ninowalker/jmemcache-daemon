@@ -13,9 +13,10 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package com.thimbleware.jmemcached;
+package com.thimbleware.jmemcached.protocol;
 
-import static com.thimbleware.jmemcached.CommandDecoder.SessionState.*;
+import static com.thimbleware.jmemcached.protocol.CommandDecoder.SessionState.*;
+import com.thimbleware.jmemcached.MCElement;
 import org.apache.mina.common.ByteBuffer;
 import org.apache.mina.common.IoSession;
 import org.apache.mina.filter.codec.ProtocolDecoderOutput;
