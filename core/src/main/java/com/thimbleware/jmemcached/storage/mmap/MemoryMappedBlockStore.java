@@ -137,7 +137,7 @@ public class MemoryMappedBlockStore {
         fileStorage = new RandomAccessFile(fileName, "rw");
 
         // memory map it out the requested size
-        storage = fileStorage.getChannel().map(READ_WRITE, 0, maxBytes);
+        storage = fileStorage.getChannel().map(PRIVATE, 0, maxBytes);
 
         // clear the buffer
         storage.clear();
