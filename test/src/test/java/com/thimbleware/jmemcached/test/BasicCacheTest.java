@@ -2,6 +2,7 @@ package com.thimbleware.jmemcached.test;
 
 import static com.thimbleware.jmemcached.MCElement.Now;
 import com.thimbleware.jmemcached.*;
+import com.thimbleware.jmemcached.util.Bytes;
 import com.thimbleware.jmemcached.storage.hash.LRUCacheStorageDelegate;
 import com.thimbleware.jmemcached.storage.mmap.MemoryMappedBlockStore;
 import com.thimbleware.jmemcached.storage.mmap.MemoryMappedCacheStorage;
@@ -22,8 +23,8 @@ import java.util.Collection;
  */
 @RunWith(Parameterized.class)
 public class BasicCacheTest {
-    private static final int MAX_BYTES = 1024 * 1024 * 1024;
-    private static final int CEILING_SIZE = 1024 * 1024;
+    private static final int MAX_BYTES = (int)Bytes.valueOf("32m").bytes();
+    private static final int CEILING_SIZE = (int)Bytes.valueOf("4m").bytes();
     private MemCacheDaemon daemon;
     private static final int MAX_SIZE = 1000;
 
