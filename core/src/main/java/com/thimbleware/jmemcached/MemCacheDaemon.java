@@ -40,8 +40,8 @@ public class MemCacheDaemon {
 
     public static String memcachedVersion = "0.3";
 
-    private int receiveBufferSize = 1024000;
-    private int sendBufferSize = 1024000;
+    private int receiveBufferSize = 32768;
+    private int sendBufferSize = 32768;
 
     private boolean verbose;
     private int idleTime;
@@ -55,22 +55,27 @@ public class MemCacheDaemon {
     public MemCacheDaemon() {
     }
 
+    public MemCacheDaemon(Cache cache) {
+        this.cache = cache;
+    }
+
     /**
      * Bind the network connection and start the network processing threads.
      *
      * @throws IOException
      */
     public void start() throws IOException {
-        acceptor = new SocketAcceptor(16, Executors.newCachedThreadPool() );
+        acceptor = new SocketAcceptor(32, Executors.newCachedThreadPool() );
         SocketAcceptorConfig defaultConfig = acceptor.getDefaultConfig();
         SocketSessionConfig sessionConfig = defaultConfig.getSessionConfig();
         sessionConfig.setSendBufferSize(sendBufferSize);
         sessionConfig.setReceiveBufferSize(receiveBufferSize);
         sessionConfig.setTcpNoDelay(true);
+
         defaultConfig.setThreadModel(ExecutorThreadModel.getInstance("jmemcached"));
         acceptor.bind(this.addr, new ServerSessionHandler(cache, memcachedVersion, verbose, idleTime));
-        ProtocolCodecFactory codec = new MemcachedProtocolCodecFactory();
-        acceptor.getFilterChain().addFirst("protocolFilter", new ProtocolCodecFilter(codec));
+        ProtocolCodecFactory codecFactory = new MemcachedProtocolCodecFactory();
+        acceptor.getFilterChain().addFirst("protocolFilter", new ProtocolCodecFilter(codecFactory));
         logger.info("Listening on " + String.valueOf(addr.getHostName()) + ":" + this.port);
         running = true;
     }

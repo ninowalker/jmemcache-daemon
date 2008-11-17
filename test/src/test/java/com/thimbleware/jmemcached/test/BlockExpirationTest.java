@@ -16,8 +16,8 @@ import static junit.framework.Assert.*;
 /**
  */
 public class BlockExpirationTest {
-    private static final long MAX_BYTES = 1024 * 1024 * 1024;
-    private static final long CEILING_SIZE = 1024 * 1024;
+    private static final int MAX_BYTES = 1024 * 1024 * 1024;
+    private static final int CEILING_SIZE = 1024 * 1024;
     private static final int MAX_SIZE = 1000;
 
     private MemCacheDaemon daemon;

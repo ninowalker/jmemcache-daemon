@@ -166,8 +166,8 @@ public class Main {
         final MemCacheDaemon daemon = new MemCacheDaemon();
         CacheStorage cacheStorage;
         if (memoryMapped) {
-            MemoryMappedBlockStore mappedBlockStore = new MemoryMappedBlockStore(maxBytes, mmapFile, blockSize);
-            cacheStorage = new MemoryMappedCacheStorage(mappedBlockStore, max_size, ceiling);
+            MemoryMappedBlockStore mappedBlockStore = new MemoryMappedBlockStore((int)maxBytes, mmapFile, blockSize);
+            cacheStorage = new MemoryMappedCacheStorage(mappedBlockStore, max_size, (int)ceiling);
         }
         else
             cacheStorage = new LRUCacheStorageDelegate(max_size, maxBytes, ceiling);

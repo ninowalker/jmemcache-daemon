@@ -22,7 +22,7 @@ import java.io.Serializable;
 /**
  * Represents an outbound response on the network stream.
  */
-public class ResponseMessage implements Serializable {
+public final class ResponseMessage implements Serializable {
     public ByteBuffer out;
 
     public ResponseMessage() {

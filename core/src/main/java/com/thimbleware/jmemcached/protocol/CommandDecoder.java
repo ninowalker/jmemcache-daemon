@@ -36,9 +36,12 @@ public final class CommandDecoder extends MessageDecoderAdapter {
 
     public static CharsetDecoder DECODER  = Charset.forName("US-ASCII").newDecoder();
 
-    private static final int WORD_BUFFER_INIT_SIZE = 16;
+    private static final int WORD_BUFFER_INIT_SIZE = 8;
 
     private static final String SESSION_STATUS = "sessionStatus";
+    private ArrayList<StringBuilder> words;
+    private static final String CRLF = "\r\n";
+    private static final String NOREPLY = "noreply";
 
     /**
      * Possible states that the current session is in.
@@ -54,7 +57,7 @@ public final class CommandDecoder extends MessageDecoderAdapter {
      */
     final class SessionStatus implements Serializable {
         // the state the session is in
-        public SessionState state;
+        public final SessionState state;
 
         // if we are waiting for more data, how much?
         public int bytesNeeded;
@@ -71,6 +74,10 @@ public final class CommandDecoder extends MessageDecoderAdapter {
             this.bytesNeeded = bytesNeeded;
             this.cmd = cmd;
         }
+    }
+
+    public CommandDecoder() {
+        words = new ArrayList<StringBuilder>(8);
     }
 
     /**
@@ -122,7 +129,7 @@ public final class CommandDecoder extends MessageDecoderAdapter {
 
             // eat crlf at end
             String crlf = in.getString(2, DECODER);
-            if (crlf.equals("\r\n"))
+            if (crlf.equals(CRLF))
                 returnedSessionStatus = continueSet(session, out, sessionStatus, buffer);
             else {
                 session.setAttribute(SESSION_STATUS, new SessionStatus(READY));
@@ -130,33 +137,23 @@ public final class CommandDecoder extends MessageDecoderAdapter {
             }
         } else {
             // retrieve the first line of the input, if there isn't a full one, request more
-            StringBuffer wordBuffer = new StringBuffer(WORD_BUFFER_INIT_SIZE);
-            ArrayList<String> words = new ArrayList<String>(8);
-            in.mark();
-            boolean completed = false;
-            for (int i = 0; in.hasRemaining();) {
-                char c = (char) in.get();
+            words.clear();
 
-                if (c == ' ') {
-                    words.add(wordBuffer.toString());
-                    wordBuffer = new StringBuffer(WORD_BUFFER_INIT_SIZE);
-                    i++;
-                } else if (c == '\r' && in.hasRemaining() && in.get() == (byte) '\n') {
-                    if (wordBuffer.length() != 0)
-                        words.add(wordBuffer.toString());
-                    completed = true;
-                    break;
-                } else {
-                    wordBuffer.append(c);
-                    i++;
-                }
-            }
+            in.mark();
+
+            boolean completed = collectCommand(in);
+
             if (!completed) {
                 in.reset();
                 return MessageDecoderResult.NEED_DATA;
             }
 
-            returnedSessionStatus = processLine(words, session, out);
+            final int numParts = words.size();
+            List<String> parts = new ArrayList<String>(numParts);
+            for (StringBuilder word : words) {
+                parts.add(word.toString());
+            }
+            returnedSessionStatus = processLine(parts, out, numParts);
         }
 
         if (returnedSessionStatus.state != ERROR) {
@@ -164,7 +161,32 @@ public final class CommandDecoder extends MessageDecoderAdapter {
             return MessageDecoderResult.OK;
         } else
             return MessageDecoderResult.NOT_OK;
+
+    }
+
+    private boolean collectCommand(ByteBuffer in) {
+        StringBuilder wordBuffer = new StringBuilder(WORD_BUFFER_INIT_SIZE);
+        boolean completed = false;
+        boolean appended = false;
         
+        while (in.hasRemaining()) {
+            char c = (char) in.get();
+
+            if (c == ' ') {
+                words.add(wordBuffer);
+                appended = false;
+                wordBuffer = new StringBuilder(WORD_BUFFER_INIT_SIZE);
+            } else if (c == '\r' && in.hasRemaining() && in.get() == (byte) '\n') {
+                if (appended)
+                    words.add(wordBuffer);
+                completed = true;
+                break;
+            } else {
+                wordBuffer.append(c);
+                appended = true;
+            }
+        }
+        return completed;
     }
 
 
@@ -173,25 +195,25 @@ public final class CommandDecoder extends MessageDecoderAdapter {
      * session handler, or (in the case of SET-type commands) partially parses the command and sets the session into
      * a state to wait for additional data.
      * @param parts the (originally space separated) parts of the command
-     * @param session the MINA IoSession
      * @param out the MINA protocol decoder output to pass our command on to
+     * @param numParts number of arguments
      * @return the session status we want to set the session to
      */
-    private SessionStatus processLine(List<String> parts, IoSession session, ProtocolDecoderOutput out) {
-        CommandMessage cmd = new CommandMessage(parts.get(0).toUpperCase().intern());
+    private SessionStatus processLine(List<String> parts, ProtocolDecoderOutput out, int numParts) {
+        final String cmdType = parts.get(0).toUpperCase().intern();
+        CommandMessage cmd = new CommandMessage(cmdType);
 
-        if (cmd.cmd == Commands.ADD ||
-                cmd.cmd == Commands.SET ||
-                cmd.cmd == Commands.REPLACE ||
-                cmd.cmd == Commands.CAS ||
-                cmd.cmd == Commands.APPEND ||
-                cmd.cmd == Commands.PREPEND) {
+        if (cmdType == Commands.ADD ||
+                cmdType == Commands.SET ||
+                cmdType == Commands.REPLACE ||
+                cmdType == Commands.CAS ||
+                cmdType == Commands.APPEND ||
+                cmdType == Commands.PREPEND) {
 
             // if we don't have all the parts, it's malformed
-            if (parts.size() < 5) {
+            if (numParts < 5) {
                 return new SessionStatus(ERROR);
             }
-
 
             int size = Integer.parseInt(parts.get(4));
 
@@ -199,61 +221,61 @@ public final class CommandDecoder extends MessageDecoderAdapter {
             cmd.element = new MCElement(parts.get(1), parts.get(2), expire != 0 && expire < MCElement.THIRTY_DAYS ? MCElement.Now() : expire, size);
 
             // look for cas and "noreply" elements
-            if (parts.size() > 5) {
-                int noreply = cmd.cmd == Commands.CAS ? 6 : 5;
-                if (cmd.cmd == Commands.CAS) {
+            if (numParts > 5) {
+                int noreply = cmdType == Commands.CAS ? 6 : 5;
+                if (cmdType == Commands.CAS) {
                     cmd.cas_key = Long.valueOf(parts.get(5));
                 }
 
-                if (parts.size() == noreply + 1 && parts.get(noreply).equalsIgnoreCase("noreply"))
+                if (numParts == noreply + 1 && parts.get(noreply).equalsIgnoreCase(NOREPLY))
                     cmd.noreply = true;
 
             }
 
             return new SessionStatus(WAITING_FOR_DATA, size, cmd);
 
-        } else if (cmd.cmd == Commands.GET ||
-                cmd.cmd == Commands.GETS ||
-                cmd.cmd == Commands.STATS ||
-                cmd.cmd == Commands.QUIT ||
-                cmd.cmd == Commands.VERSION) {
+        } else if (cmdType == Commands.GET ||
+                cmdType == Commands.GETS ||
+                cmdType == Commands.STATS ||
+                cmdType == Commands.QUIT ||
+                cmdType == Commands.VERSION) {
             // CMD <options>*
-            cmd.keys.addAll(parts.subList(1, parts.size()));
+            cmd.keys.addAll(parts.subList(1, numParts));
 
             out.write(cmd);
-        } else if (cmd.cmd == Commands.INCR ||
-                cmd.cmd == Commands.DECR) {
+        } else if (cmdType == Commands.INCR ||
+                cmdType == Commands.DECR) {
 
-            if (parts.size() < 2 || parts.size() > 3)
+            if (numParts < 2 || numParts > 3)
                 return new SessionStatus(ERROR);
 
             cmd.keys.add(parts.get(1));
             cmd.keys.add(parts.get(2));
-            if (parts.size() == 3 && parts.get(2).equalsIgnoreCase("noreply")) {
+            if (numParts == 3 && parts.get(2).equalsIgnoreCase(NOREPLY)) {
                 cmd.noreply = true;
             }
 
             out.write(cmd);
-        } else if (cmd.cmd == Commands.DELETE) {
+        } else if (cmdType == Commands.DELETE) {
             cmd.keys.add(parts.get(1));
 
-            if (parts.size() >= 2) {
-                if (parts.get(parts.size() - 1).equalsIgnoreCase("noreply")) {
+            if (numParts >= 2) {
+                if (parts.get(numParts - 1).equalsIgnoreCase(NOREPLY)) {
                     cmd.noreply = true;
-                    if (parts.size() == 4)
+                    if (numParts == 4)
                         cmd.time = Integer.valueOf(parts.get(2));
-                } else if (parts.size() == 3)
+                } else if (numParts == 3)
                     cmd.time = Integer.valueOf(parts.get(2));
             }
 
             out.write(cmd);
-        } else if (cmd.cmd == Commands.FLUSH_ALL) {
-            if (parts.size() >= 1) {
-                if (parts.get(parts.size() - 1).equalsIgnoreCase("noreply")) {
+        } else if (cmdType == Commands.FLUSH_ALL) {
+            if (numParts >= 1) {
+                if (parts.get(numParts - 1).equalsIgnoreCase(NOREPLY)) {
                     cmd.noreply = true;
-                    if (parts.size() == 3)
+                    if (numParts == 3)
                         cmd.time = Integer.valueOf(parts.get(1));
-                } else if (parts.size() == 2)
+                } else if (numParts == 2)
                     cmd.time = Integer.valueOf(parts.get(1));
             }
             out.write(cmd);

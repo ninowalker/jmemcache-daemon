@@ -136,7 +136,7 @@ public final class ServerSessionHandler implements IoHandler {
 
         // now do the real work
         if (this.verbose) {
-            StringBuffer log = new StringBuffer();
+            StringBuilder log = new StringBuilder();
             log.append(session.getAttribute("sess_id")).append(" ");
             log.append(cmd);
             if (command.element != null) {

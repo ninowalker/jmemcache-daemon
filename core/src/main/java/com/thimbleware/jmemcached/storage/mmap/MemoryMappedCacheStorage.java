@@ -78,8 +78,6 @@ public class MemoryMappedCacheStorage implements CacheStorage {
         MemoryMappedBlockStore.Region region = store.alloc(dataLength, item.data);
 
         index.put(id, new StoredValue(item.flags, item.expire, region));
-
-        store.sync();
     }
 
     public void remove(String keystring) {

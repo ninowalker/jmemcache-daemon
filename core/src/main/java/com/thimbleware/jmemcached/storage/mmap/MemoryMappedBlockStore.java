@@ -13,7 +13,7 @@ import java.util.*;
  *
  * Should offer O(Log(N)) search and free of blocks.
  */
-public class MemoryMappedBlockStore {
+public final class MemoryMappedBlockStore {
 
     private RandomAccessFile fileStorage;
     private MappedByteBuffer storage;
@@ -111,7 +111,7 @@ public class MemoryMappedBlockStore {
      * @return the actual mount to use
      */
     private static long roundUp( long size, long blockSize ) {
-        return size - 1 + blockSize - (size - 1) % blockSize;
+        return size - 1L + blockSize - (size - 1L) % blockSize;
     }
 
     /**
@@ -217,7 +217,7 @@ public class MemoryMappedBlockStore {
 
             /** Add it back to the free list if needed
              */
-            if ( newFreeSize > 0 ) {
+            if ( newFreeSize > 0L ) {
                 freeList.put( newFreeSize, position + desiredBlockSize) ;
             }
 
@@ -237,9 +237,6 @@ public class MemoryMappedBlockStore {
         }
     }
 
-    public void sync() {
-        storage.force();
-    }
 
     public void free(Region region) {
         freeList.put(region.physicalSize, region.offset);
