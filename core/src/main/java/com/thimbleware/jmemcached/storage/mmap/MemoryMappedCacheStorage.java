@@ -58,9 +58,7 @@ public class MemoryMappedCacheStorage implements CacheStorage {
             return null;
         }
         MCElement el = new MCElement(keystring, result.flags, result.expire, result.region.size);
-        el.data = new byte[result.region.size];
-
-        result.region.buffer.get(el.data);
+        el.data = store.get(result.region);
 
         return el;
     }

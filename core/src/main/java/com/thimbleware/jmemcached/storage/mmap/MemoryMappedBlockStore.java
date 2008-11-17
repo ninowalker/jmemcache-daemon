@@ -58,21 +58,15 @@ public final class MemoryMappedBlockStore {
         private final long offset;
 
         /**
-         * NIO buffer for reading and writing bytes from/to the store.
-         */
-        public final ByteBuffer buffer;
-
-        /**
          * Flag which is true if the region is valid and in use.
          * Set to false on free()
          */
         public boolean valid = false;
 
-        public Region(int size, long physicalSize, long offset, ByteBuffer buffer) {
+        public Region(int size, long physicalSize, long offset) {
             this.size = size;
             this.physicalSize = physicalSize;
             this.offset = offset;
-            this.buffer = buffer;
             this.valid = true;
         }
 
@@ -110,7 +104,7 @@ public final class MemoryMappedBlockStore {
      * @param blockSize the block size to use
      * @return the actual mount to use
      */
-    private static long roundUp( long size, long blockSize ) {
+    public static long roundUp( long size, long blockSize ) {
         return size - 1L + blockSize - (size - 1L) % blockSize;
     }
 
@@ -135,7 +129,8 @@ public final class MemoryMappedBlockStore {
         // open the file for read-write
         this.fileName = fileName;
         fileStorage = new RandomAccessFile(fileName, "rw");
-
+        fileStorage.seek(maxBytes);
+        
         // memory map it out the requested size
         storage = fileStorage.getChannel().map(PRIVATE, 0, maxBytes);
 
@@ -224,12 +219,11 @@ public final class MemoryMappedBlockStore {
             freeBytes -= desiredBlockSize;
 
             // get the buffer to it
+            storage.rewind();
+            storage.position((int)position);
+            storage.put(data, 0, desiredSize);
 
-            Buffer buf = storage.position((int) position);
-            ((ByteBuffer)buf).put(data);
-            buf.rewind();
-
-            Region region = new Region(desiredSize, desiredBlockSize, position, ((ByteBuffer) buf));
+            Region region = new Region(desiredSize, desiredBlockSize, position);
 
             currentRegions.add(region);
 
@@ -237,6 +231,12 @@ public final class MemoryMappedBlockStore {
         }
     }
 
+    public byte[] get(Region region) {
+        byte[] result = new byte[region.size];
+        storage.position((int)region.offset);
+        storage.get(result, 0, region.size);
+        return result;
+    }
 
     public void free(Region region) {
         freeList.put(region.physicalSize, region.offset);

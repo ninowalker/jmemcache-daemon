@@ -38,7 +38,6 @@ public final class ResponseEncoder implements MessageEncoder {
 
     public void encode(IoSession session, Object message, ProtocolEncoderOutput out) throws Exception {
         ResponseMessage m = (ResponseMessage) message;
-        m.out.setAutoExpand(false);
         m.out.flip();
         out.write(m.out);
     }

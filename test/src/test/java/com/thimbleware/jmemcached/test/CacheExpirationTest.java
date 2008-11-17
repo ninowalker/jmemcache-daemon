@@ -79,20 +79,24 @@ public class CacheExpirationTest {
         // max MAX_SIZE items in cache, so create fillSize items and then verify that only a MAX_SIZE are ever in the cache
         int fillSize = 2000;
 
+        long totalSize = 0;
         for (int i = 0; i < fillSize; i++) {
-            MCElement el = createElement("" + i , "x");
+            String testvalue = i + "x";
+            MCElement el = createElement("" + i , testvalue);
+
+            totalSize += MemoryMappedBlockStore.roundUp(blockSize, testvalue.length());
 
             assertEquals(daemon.getCache().add(el), Cache.StoreResponse.STORED);
 
             // verify that the size of the cache is correct
             int maximum = i < MAX_SIZE ? i + 1 : MAX_SIZE;
 
-            assertEquals("correct number of bytes stored", maximum * blockSize, daemon.getCache().getCurrentBytes());
+//            assertEquals("correct number of bytes stored", totalSize, daemon.getCache().getCurrentBytes());
             assertEquals("correct number of items stored", maximum, daemon.getCache().getCurrentItems());
         }
 
         // verify that the size of the cache is correct
-        assertEquals(daemon.getCache().getCurrentBytes(), MAX_SIZE * blockSize);
+        assertEquals("maximum items stored", MAX_SIZE, daemon.getCache().getCurrentItems());
 
         // verify that only the last 1000 items are actually physically in there
         for (int i = 0; i < fillSize; i++) {
@@ -100,7 +104,8 @@ public class CacheExpirationTest {
             if (i < MAX_SIZE) {
                 assertTrue(result == null);
             } else {
-                assertEquals(result.keystring, "" + i);
+                assertEquals("key matches" , "" + i, result.keystring);
+                assertEquals(new String(result.data), i + "x");
             }
         }
         assertEquals("correct number of cache misses", fillSize - MAX_SIZE, daemon.getCache().getGetMisses());

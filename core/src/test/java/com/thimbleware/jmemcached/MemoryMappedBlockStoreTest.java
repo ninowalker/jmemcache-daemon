@@ -27,13 +27,13 @@ public class MemoryMappedBlockStoreTest {
     @Test
     public void writeBlocks() {
         for (int i = 0; i < 1800; i++){
-            byte[] data = new byte[256];
-            data[0] = 'h';
-            data[1] = 'i';
-            data[2] = '\n';
+            byte[] sentData = new byte[3];
+            sentData[0] = 'h';
+            sentData[1] = 'i';
+            sentData[2] = '\n';
 
             long before = bs.getFreeBytes();
-            MemoryMappedBlockStore.Region region = bs.alloc(250, data);
+            MemoryMappedBlockStore.Region region = bs.alloc(3, sentData);
 
             long after = bs.getFreeBytes();
             assertEquals("after allocating region, free space available", after, before - region.physicalSize);
@@ -41,11 +41,10 @@ public class MemoryMappedBlockStoreTest {
             assertNotNull("region returned", region);
             assertTrue("size is less or equal to region size", region.size <= region.physicalSize);
             assertTrue("region is valid", region.valid);
-            assertEquals("rounded up to nearest region boundary", region.physicalSize, 256, 0);
+            assertEquals("rounded up to nearest region boundary", region.physicalSize, 8, 0);
 
-            byte[] altData = new byte[256];
-            region.buffer.get(altData);
-            assertEquals("region data matches",  new String(data), new String(altData));
+            byte[] receivedData = bs.get(region);
+            assertEquals("region data matches",  new String(sentData), new String(receivedData));
             
             if (i % 5 == 0) {
                 before = bs.getFreeBytes();
