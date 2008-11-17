@@ -25,8 +25,9 @@ import java.util.Collection;
 public class BasicCacheTest {
     private static final int MAX_BYTES = (int)Bytes.valueOf("32m").bytes();
     private static final int CEILING_SIZE = (int)Bytes.valueOf("4m").bytes();
-    private MemCacheDaemon daemon;
     private static final int MAX_SIZE = 1000;
+
+    private MemCacheDaemon daemon;
 
     public static enum CacheType {
         MAPPED, LOCAL
