@@ -72,7 +72,7 @@
             scm:hg:http://thimbleware.com/hg/jmemcached
         </connection>
         <developerConnection>
-            scm:hg:ssh://ryan@thimbleware.com//var/hg/jmemcached
+            scm:hg:file:///var/hg/jmemcached
         </developerConnection>
     </scm>
 </project>
