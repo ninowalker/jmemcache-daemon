@@ -84,7 +84,7 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        MCElement element = new MCElement(testKey, "", Now(), testvalue.length());
+        MCElement element = new MCElement(testKey, 0, Now(), testvalue.length());
         element.data = testvalue.getBytes();
 
         // put in cache
@@ -111,7 +111,7 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        MCElement element = new MCElement(testKey, "", Now(), testvalue.length());
+        MCElement element = new MCElement(testKey, 0, Now(), testvalue.length());
         element.data = testvalue.getBytes();
 
         // put in cache
@@ -133,7 +133,7 @@ public class BasicCacheTest {
 
         // now replace
         testvalue = "54321";
-        element = new MCElement(testKey, "", Now(), testvalue.length());
+        element = new MCElement(testKey, 0, Now(), testvalue.length());
         element.data = testvalue.getBytes();
 
         // put in cache
@@ -159,7 +159,7 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        MCElement element = new MCElement(testKey, "", Now(), testvalue.length());
+        MCElement element = new MCElement(testKey, 0, Now(), testvalue.length());
         element.data = testvalue.getBytes();
 
         // put in cache
@@ -181,7 +181,7 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        MCElement element = new MCElement(testKey, "", Now(), testvalue.length());
+        MCElement element = new MCElement(testKey, 0, Now(), testvalue.length());
         element.data = testvalue.getBytes();
 
         // put in cache
@@ -208,7 +208,7 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        MCElement element = new MCElement(testKey, "", Now(), testvalue.length());
+        MCElement element = new MCElement(testKey, 0, Now(), testvalue.length());
         element.data = testvalue.getBytes();
 
         // put in cache
@@ -226,7 +226,7 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        MCElement element = new MCElement(testKey, "", Now(), testvalue.length());
+        MCElement element = new MCElement(testKey, 0, Now(), testvalue.length());
         element.data = testvalue.getBytes();
 
         // put in cache, then flush
@@ -243,7 +243,7 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "1";
 
-        MCElement element = new MCElement(testKey, "", Now(), testvalue.length());
+        MCElement element = new MCElement(testKey, 0, Now(), testvalue.length());
         element.data = testvalue.getBytes();
 
         // put in cache

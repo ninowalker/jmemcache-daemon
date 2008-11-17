@@ -108,7 +108,7 @@ public class CacheExpirationTest {
     }
 
     private MCElement createElement(String testKey, String testvalue) {
-        MCElement element = new MCElement(testKey, "", Now(), testvalue.length());
+        MCElement element = new MCElement(testKey, 0, Now(), testvalue.length());
         element.data = testvalue.getBytes();
 
         return element;

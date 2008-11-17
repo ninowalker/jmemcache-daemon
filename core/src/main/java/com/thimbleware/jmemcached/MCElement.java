@@ -22,7 +22,7 @@ import java.io.Serializable;
  */
 public final class MCElement implements Serializable {
     public int expire = 0;
-    public String flags;
+    public int flags;
     public int dataLength = 0;
     public byte[] data;
     public String keystring;
@@ -34,7 +34,7 @@ public final class MCElement implements Serializable {
     public MCElement() {
     }
 
-    public MCElement(String keystring, String flags, int expire, int dataLength) {
+    public MCElement(String keystring, int flags, int expire, int dataLength) {
         this.keystring = keystring;
         this.flags = flags;
         this.expire = expire;

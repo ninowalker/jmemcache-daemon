@@ -16,11 +16,11 @@ public class MemoryMappedCacheStorage implements CacheStorage {
     private long ceilingBytes;
 
     class StoredValue {
-        String flags;
+        int flags;
         int expire;
         MemoryMappedBlockStore.Region region;
 
-        StoredValue(String flags, int expire, MemoryMappedBlockStore.Region region) {
+        StoredValue(int flags, int expire, MemoryMappedBlockStore.Region region) {
             this.flags = flags;
             this.expire = expire;
             this.region = region;
