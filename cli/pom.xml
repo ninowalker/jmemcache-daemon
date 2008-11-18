@@ -4,7 +4,7 @@
     <packaging>jar</packaging>
     <name>jmemcached Command Line Interface</name>
     <description>Command line front end interface to the cache daemon.</description>
-    
+
     <parent>
         <groupId>com.thimbleware.jmemcached</groupId>
         <artifactId>jmemcached-parent</artifactId>
@@ -28,9 +28,9 @@
                 -->
                 <artifactId>maven-assembly-plugin</artifactId>
                 <configuration>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
+                    <descriptors>
+                        <descriptor>src/main/assembly/assembly.xml</descriptor>
+                    </descriptors>
                     <archive>
                         <manifest>
                             <mainClass>com.thimbleware.jmemcached.Main</mainClass>
