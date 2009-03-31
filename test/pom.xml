@@ -38,5 +38,26 @@
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>net.spy.memcached</groupId>
+            <artifactId>memcached-client</artifactId>
+            <version>2.3</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <repositories>
+        <repository>
+            <id>third-party</id>
+            <name>Thirty Party Repository</name>
+            <url>http://thimbleware.com/maven-3rd-party</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots> 
+        </repository>
+    </repositories>
 </project>

@@ -221,7 +221,7 @@ public final class CommandDecoder extends MessageDecoderAdapter {
 
             int flags = Integer.parseInt(parts.get(2));
 
-            cmd.element = new MCElement(parts.get(1), flags, expire != 0 && expire < MCElement.THIRTY_DAYS ? MCElement.Now() : expire, size);
+            cmd.element = new MCElement(parts.get(1), flags, expire != 0 && expire < MCElement.THIRTY_DAYS ? MCElement.Now() + expire : expire, size);
 
             // look for cas and "noreply" elements
             if (numParts > 5) {
