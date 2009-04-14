@@ -13,6 +13,12 @@
     </parent>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -46,6 +52,62 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <configuration>
+                            <tasks>
+
+                                <taskdef name="deb" classname="org.vafer.jdeb.ant.DebAntTask"/>
+
+                                <copy todir="${deb}/control">
+                                    <fileset dir="src/main/resources/deb/control"/>
+                                    <filterset begintoken="[[" endtoken="]]">
+                                        <filter token="version" value="${project.version}"/>
+                                    </filterset>
+                                </copy>
+
+                                <mkdir dir="${project.build.directory}/deb-jar-contents/usr/share/jmemcached"/>
+
+                                <copy file="${project.build.directory}/${project.artifactId}-${project.version}-main.jar" todir="${project.build.directory}/deb-jar-contents/usr/share/jmemcached"/>
+
+                                <deb destfile="${project.build.directory}/${project.artifactId}.deb" control="${deb}/control">
+                                    <tarfileset dir="${project.build.directory}/classes/deb/bin/"
+                                                prefix="/usr/share/jmemcached/"
+                                                filemode="755"/>
+
+                                    <tarfileset dir="${project.build.directory}/classes/deb/init.d/"
+                                                prefix="/etc/init.d"
+                                                filemode="755"/>
+
+                                    <tarfileset dir="${project.build.directory}/classes/deb/log"
+                                                prefix="/var/log/jmemcached"
+                                                filemode="750"
+                                                username="daemon" group="daemon"/>
+
+                                    <data src="${project.build.directory}/deb-jar-contents"/>
+                                </deb>
+
+                            </tasks>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.vafer</groupId>
+                        <artifactId>jdeb</artifactId>
+                        <version>0.7</version>
+                    </dependency>
+                </dependencies>
             </plugin>
         </plugins>
     </build>

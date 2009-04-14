@@ -37,6 +37,7 @@ import com.thimbleware.jmemcached.util.Bytes;
 public class Main {
 
     public static void main(String[] args) throws Exception {
+        // look for external log4j.properties
 
         // setup command line options
         Options options = new Options();

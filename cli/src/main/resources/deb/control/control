@@ -1,0 +1,9 @@
+Package: jmemcached
+Version: [[version]]
+Section: misc
+Priority: optional
+Architecture: all
+Depends: sun-java5-jre | sun-java6-jre
+Maintainer: Ryan Daum <ryan@thimbleware.com>
+Description: JMemcacheD Memcached server implemented in Java 
+Distribution: development
