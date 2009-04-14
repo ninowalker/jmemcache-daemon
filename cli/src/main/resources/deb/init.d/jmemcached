@@ -28,7 +28,7 @@ NO_START=0
 
 # Run Jmemcached as this user ID (default: jmemcached)
 # Set this to an empty string to prevent Jmemcached from starting automatically
-JMEMCACHED_USER=daemon
+JMEMCACHED_USER=jmemcached
                                                                                 
 # The first existing directory is used for JAVA_HOME (if JAVA_HOME is not
 # defined in /etc/default/jmemcached)
@@ -139,7 +139,7 @@ case "$1" in
 	    echo -n "Starting $DESC: "
 	    	if [ \! -e "$LOGDIR/out.log" ]; then
 			touch "$LOGDIR/out.log"
-			chown daemon "$LOGDIR/out.log"
+			chown $JMEMCACHED_USER "$LOGDIR/out.log"
 		fi
 		su -p -s /bin/sh "$JMEMCACHED_USER" \
 			-c "$ROTATELOGS \"$LOGDIR/out.log\" 86400" \

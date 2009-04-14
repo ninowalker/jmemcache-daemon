@@ -1,0 +1,37 @@
+#!/bin/sh
+#
+# Post installation script
+#
+
+set -e
+
+# summary of how this script can be called:
+#        * <postinst> `configure' <most-recently-configured-version>
+#        * <old-postinst> `abort-upgrade' <new version>
+#        * <conflictor's-postinst> `abort-remove' `in-favour' <package>
+#          <new-version>
+#        * <postinst> `abort-remove'
+#        * <deconfigured's-postinst> `abort-deconfigure' `in-favour'
+#          <failed-install-package> <version> `removing'
+#          <conflicting-package> <version>
+# for details, see http://www.debian.org/doc/debian-policy/ or
+# the debian-policy package
+
+# create the jmemcached user running the daemon
+adduser --quiet --system --no-create-home --disabled-password jmemcached
+
+# Create the installation directory
+mkdir -p /var/log/jmemcached
+chown jmemcached /var/log/jmemcached
+
+# start Jetrix and register it to start at the end of the boot sequence
+if [ -x "/etc/init.d/jmemcached" ]; then
+	update-rc.d jmemcached defaults 95 >/dev/null
+	if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
+		invoke-rc.d jmemcached start || exit $?
+	else
+		/etc/init.d/jmemcached start || exit $?
+	fi
+fi
+
+exit 0

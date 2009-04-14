@@ -1,0 +1,17 @@
+#!/bin/sh
+#
+# Pre removal scriptix
+#
+
+set -e
+
+# stop the server
+if [ -x "/etc/init.d/jmemcached" ]; then
+	if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
+		invoke-rc.d jmemcached stop || exit $?
+	else
+		/etc/init.d/jmemcached stop || exit $?
+	fi
+fi
+
+exit 0
