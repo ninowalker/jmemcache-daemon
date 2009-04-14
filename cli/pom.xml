@@ -65,7 +65,7 @@
 
                                 <taskdef name="deb" classname="org.vafer.jdeb.ant.DebAntTask"/>
 
-                                <copy todir="${deb}/control">
+                                <copy todir="${project.build.directory}/control">
                                     <fileset dir="src/main/resources/deb/control"/>
                                     <filterset begintoken="[[" endtoken="]]">
                                         <filter token="version" value="${project.version}"/>
@@ -76,7 +76,7 @@
 
                                 <copy file="${project.build.directory}/${project.artifactId}-${project.version}-main.jar" todir="${project.build.directory}/deb-jar-contents/usr/share/jmemcached"/>
 
-                                <deb destfile="${project.build.directory}/${project.artifactId}.deb" control="${deb}/control">
+                                <deb destfile="${project.build.directory}/${project.artifactId}.deb" control="${project.build.directory}/control">
                                     <tarfileset dir="${project.build.directory}/classes/deb/bin/"
                                                 prefix="/usr/share/jmemcached/"
                                                 filemode="755"/>
