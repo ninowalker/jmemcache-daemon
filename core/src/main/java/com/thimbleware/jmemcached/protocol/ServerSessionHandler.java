@@ -15,9 +15,10 @@
  */
 package com.thimbleware.jmemcached.protocol;
 
-import org.apache.mina.common.IdleStatus;
-import org.apache.mina.common.IoHandler;
-import org.apache.mina.common.IoSession;
+
+import org.apache.mina.core.service.IoHandler;
+import org.apache.mina.core.session.IoSession;
+import org.apache.mina.core.session.IdleStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -101,7 +102,7 @@ public final class ServerSessionHandler implements IoHandler {
      */
     public void sessionOpened(IoSession session) {
         if (this.idle_limit > 0) {
-            session.setIdleTime(IdleStatus.BOTH_IDLE, this.idle_limit);
+            session.getConfig().setIdleTime(IdleStatus.BOTH_IDLE, this.idle_limit);
         }
 
         session.setAttribute("waiting_for", 0);

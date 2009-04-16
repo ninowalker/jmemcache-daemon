@@ -15,7 +15,7 @@
  */
 package com.thimbleware.jmemcached.protocol;
 
-import org.apache.mina.common.ByteBuffer;
+import org.apache.mina.core.buffer.IoBuffer;
 
 import java.io.Serializable;
 
@@ -23,10 +23,10 @@ import java.io.Serializable;
  * Represents an outbound response on the network stream.
  */
 public final class ResponseMessage implements Serializable {
-    public ByteBuffer out;
+    public IoBuffer out;
 
     public ResponseMessage() {
-        out = ByteBuffer.allocate(1024);
+        out = IoBuffer.allocate(1024);
         out.setAutoExpand(true);
     }
 }

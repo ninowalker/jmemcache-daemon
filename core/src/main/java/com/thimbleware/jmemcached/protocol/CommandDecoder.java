@@ -17,11 +17,12 @@ package com.thimbleware.jmemcached.protocol;
 
 import static com.thimbleware.jmemcached.protocol.CommandDecoder.SessionState.*;
 import com.thimbleware.jmemcached.MCElement;
-import org.apache.mina.common.ByteBuffer;
-import org.apache.mina.common.IoSession;
+
 import org.apache.mina.filter.codec.ProtocolDecoderOutput;
 import org.apache.mina.filter.codec.demux.MessageDecoderAdapter;
 import org.apache.mina.filter.codec.demux.MessageDecoderResult;
+import org.apache.mina.core.session.IoSession;
+import org.apache.mina.core.buffer.IoBuffer;
 
 import java.io.Serializable;
 import java.nio.charset.Charset;
@@ -92,7 +93,7 @@ public final class CommandDecoder extends MessageDecoderAdapter {
      *         specified buffer is decodable ({@link #OK}) or not decodable
      *         {@link #NOT_OK}.
      */
-    public final MessageDecoderResult decodable(IoSession session, ByteBuffer in) {
+    public final MessageDecoderResult decodable(IoSession session, IoBuffer in) {
         // ask the session for its state,
         SessionStatus sessionStatus = (SessionStatus) session.getAttribute(SESSION_STATUS);
         if (sessionStatus != null &&  sessionStatus.state == WAITING_FOR_DATA) {
@@ -105,7 +106,7 @@ public final class CommandDecoder extends MessageDecoderAdapter {
     /**
      * Actually decodes inbound data from the memcached protocol session.
      *
-     * MINA invokes {@link #decode(IoSession, ByteBuffer, ProtocolDecoderOutput)}
+     * MINA invokes {@link #decode(IoSession, IoBuffer, ProtocolDecoderOutput)}
      * method with read data, and then the decoder implementation puts decoded
      * messages into {@link ProtocolDecoderOutput}.
      *
@@ -115,7 +116,7 @@ public final class CommandDecoder extends MessageDecoderAdapter {
      *
      * @throws Exception if the read data violated protocol specification
      */
-    public final MessageDecoderResult decode(IoSession session, ByteBuffer in, ProtocolDecoderOutput out) throws Exception {
+    public final MessageDecoderResult decode(IoSession session, IoBuffer in, ProtocolDecoderOutput out) throws Exception {
         SessionStatus sessionStatus = (SessionStatus) session.getAttribute(SESSION_STATUS);
         SessionStatus returnedSessionStatus;
         if (sessionStatus != null && sessionStatus.state == WAITING_FOR_DATA) {
@@ -164,7 +165,7 @@ public final class CommandDecoder extends MessageDecoderAdapter {
 
     }
 
-    private boolean collectCommand(ByteBuffer in) {
+    private boolean collectCommand(IoBuffer in) {
         StringBuilder wordBuffer = new StringBuilder(WORD_BUFFER_INIT_SIZE);
         boolean completed = false;
         boolean appended = false;

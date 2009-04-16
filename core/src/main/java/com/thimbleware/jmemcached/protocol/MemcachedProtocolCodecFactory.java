@@ -21,7 +21,7 @@ public class MemcachedProtocolCodecFactory extends DemuxingProtocolCodecFactory
 {
     public MemcachedProtocolCodecFactory()
     {
-        super.register( CommandDecoder.class );
-        super.register( ResponseEncoder.class );
+        super.addMessageDecoder( CommandDecoder.class );
+        super.addMessageEncoder( ResponseMessage.class, ResponseEncoder.class );
     }
 }

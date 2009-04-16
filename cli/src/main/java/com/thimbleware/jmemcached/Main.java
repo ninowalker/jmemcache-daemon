@@ -175,7 +175,6 @@ public class Main {
         daemon.setCache(new Cache(cacheStorage));
         daemon.setAddr(addr);
         daemon.setIdleTime(idle);
-        daemon.setPort(port);
         daemon.setVerbose(verbose);
         daemon.start();
 

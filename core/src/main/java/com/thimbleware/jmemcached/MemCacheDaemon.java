@@ -15,12 +15,11 @@
  */
 package com.thimbleware.jmemcached;
 
-import org.apache.mina.common.*;
 import org.apache.mina.filter.codec.ProtocolCodecFactory;
 import org.apache.mina.filter.codec.ProtocolCodecFilter;
-import org.apache.mina.transport.socket.nio.SocketAcceptor;
-import org.apache.mina.transport.socket.nio.SocketAcceptorConfig;
-import org.apache.mina.transport.socket.nio.SocketSessionConfig;
+import org.apache.mina.transport.socket.nio.NioSocketAcceptor;
+import org.apache.mina.transport.socket.SocketAcceptor;
+import org.apache.mina.transport.socket.SocketSessionConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,7 +45,6 @@ public class MemCacheDaemon {
     private boolean verbose;
     private int idleTime;
     private InetSocketAddress addr;
-    private int port;
     private Cache cache;
     private SocketAcceptor acceptor;
 
@@ -65,18 +63,19 @@ public class MemCacheDaemon {
      * @throws IOException
      */
     public void start() throws IOException {
-        acceptor = new SocketAcceptor(32, Executors.newCachedThreadPool() );
-        SocketAcceptorConfig defaultConfig = acceptor.getDefaultConfig();
-        SocketSessionConfig sessionConfig = defaultConfig.getSessionConfig();
+        acceptor = new NioSocketAcceptor();
+        SocketSessionConfig sessionConfig = acceptor.getSessionConfig();
         sessionConfig.setSendBufferSize(sendBufferSize);
         sessionConfig.setReceiveBufferSize(receiveBufferSize);
         sessionConfig.setTcpNoDelay(true);
+        acceptor.setReuseAddress(true);
+        acceptor.setHandler(new ServerSessionHandler(cache, memcachedVersion, verbose, idleTime));
+        acceptor.setDefaultLocalAddress(this.addr);
 
-        defaultConfig.setThreadModel(ExecutorThreadModel.getInstance("jmemcached"));
-        acceptor.bind(this.addr, new ServerSessionHandler(cache, memcachedVersion, verbose, idleTime));
+        acceptor.bind();
         ProtocolCodecFactory codecFactory = new MemcachedProtocolCodecFactory();
         acceptor.getFilterChain().addFirst("protocolFilter", new ProtocolCodecFilter(codecFactory));
-        logger.info("Listening on " + String.valueOf(addr.getHostName()) + ":" + this.port);
+        logger.info("Listening on " + String.valueOf(addr.getHostName()) + ":" + addr.getPort());
         running = true;
     }
 
@@ -84,7 +83,7 @@ public class MemCacheDaemon {
         running = false;
         if (acceptor != null) {
             logger.info("Stopping daemon");
-            acceptor.unbindAll();
+            acceptor.unbind();
         }
         cache.close();
     }
@@ -113,9 +112,6 @@ public class MemCacheDaemon {
         this.addr = addr;
     }
 
-    public void setPort(int port) {
-        this.port = port;
-    }
 
     public Cache getCache() {
         return cache;

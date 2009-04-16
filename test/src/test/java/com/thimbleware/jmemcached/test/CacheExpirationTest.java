@@ -5,6 +5,7 @@ import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.apache.mina.util.AvailablePortFinder;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -30,6 +31,7 @@ public class CacheExpirationTest {
     private static final int MAX_SIZE = 1000;
 
     private MemCacheDaemon daemon;
+    private int PORT;
 
     public static enum CacheType {
         MAPPED, LOCAL
@@ -63,7 +65,8 @@ public class CacheExpirationTest {
                     new MemoryMappedBlockStore(MAX_BYTES, "block_store.dat", blockSize), MAX_SIZE, CEILING_SIZE);
             daemon.setCache(new Cache(cacheStorage));
         }
-        daemon.setAddr(new InetSocketAddress("localhost", 12345));
+        PORT = AvailablePortFinder.getNextAvailable();
+        daemon.setAddr(new InetSocketAddress("localhost", PORT));
         daemon.setVerbose(false);
         daemon.start();
     }
