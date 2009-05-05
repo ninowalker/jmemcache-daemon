@@ -81,6 +81,7 @@ public final class CommandDecoder extends MessageDecoderAdapter {
         words = new ArrayList<StringBuilder>(8);
     }
 
+    
     /**
      * Checks the specified buffer is decodable by this decoder.
      *

@@ -72,9 +72,11 @@ public class MemCacheDaemon {
         acceptor.setHandler(new ServerSessionHandler(cache, memcachedVersion, verbose, idleTime));
         acceptor.setDefaultLocalAddress(this.addr);
 
-        acceptor.bind();
         ProtocolCodecFactory codecFactory = new MemcachedProtocolCodecFactory();
         acceptor.getFilterChain().addFirst("protocolFilter", new ProtocolCodecFilter(codecFactory));
+        
+        acceptor.bind();
+
         logger.info("Listening on " + String.valueOf(addr.getHostName()) + ":" + addr.getPort());
         running = true;
     }
