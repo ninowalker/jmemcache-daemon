@@ -6,6 +6,9 @@ import static org.junit.Assert.assertNotNull;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 
 import net.spy.memcached.MemcachedClient;
 
@@ -53,9 +56,22 @@ public class SpyMemcached23Test {
     }
 
     @Test
-    public void testConnectDaemon() throws IOException, InterruptedException {
+    public void testGetSet() throws IOException, InterruptedException {
         _client.set( "foo", 5000, "bar" );
         Assert.assertEquals( "bar", _client.get( "foo" ) );
+    }
+
+    @Test
+    public void testBulkGet() throws IOException, InterruptedException {
+        _client.set( "foo1", 3600, "bar1" );
+        _client.set( "foo2", 3600, "bar2" );
+        _client.set( "foo3", 3600, "bar3" );
+        _client.set( "foo4", 3600, "bar4" );
+        Map<String,Object> results = _client.getBulk("foo1", "foo2", "foo3", "foo4");
+        Assert.assertEquals( "bar1", results.get("foo1"));
+        Assert.assertEquals( "bar2", results.get("foo2"));
+        Assert.assertEquals( "bar3", results.get("foo3"));
+        Assert.assertEquals( "bar4", results.get("foo4"));
     }
 
     private MemCacheDaemon createDaemon( final InetSocketAddress address ) throws IOException {
