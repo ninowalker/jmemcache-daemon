@@ -63,7 +63,7 @@ public final class LRUCache<ID_TYPE, ITEM_TYPE> {
          * Creates a linked hash map which expels old elements on declared criterion
          */
         items = new LinkedHashMap<ID_TYPE, CacheEntry<ITEM_TYPE>>(INITIAL_TABLE_SIZE) {
-            protected boolean removeEldestEntry(Map.Entry<ID_TYPE, CacheEntry<ITEM_TYPE>> eldest) {
+            protected final boolean removeEldestEntry(Map.Entry<ID_TYPE, CacheEntry<ITEM_TYPE>> eldest) {
                 if (size + ceilingSize > maximumSizeBytes || size() > maximumItems) {
                     size -= eldest.getValue().size;
                     return true;

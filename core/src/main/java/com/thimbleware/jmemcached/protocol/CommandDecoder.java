@@ -15,7 +15,7 @@
  */
 package com.thimbleware.jmemcached.protocol;
 
-import static com.thimbleware.jmemcached.protocol.CommandDecoder.SessionState.*;
+import static com.thimbleware.jmemcached.protocol.SessionStatus.State.*;
 import com.thimbleware.jmemcached.MCElement;
 
 import org.apache.mina.filter.codec.ProtocolDecoderOutput;
@@ -24,7 +24,6 @@ import org.apache.mina.filter.codec.demux.MessageDecoderResult;
 import org.apache.mina.core.session.IoSession;
 import org.apache.mina.core.buffer.IoBuffer;
 
-import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.util.ArrayList;
@@ -43,39 +42,6 @@ public final class CommandDecoder extends MessageDecoderAdapter {
     private ArrayList<StringBuilder> words;
     private static final String CRLF = "\r\n";
     private static final String NOREPLY = "noreply";
-
-    /**
-     * Possible states that the current session is in.
-     */
-    enum SessionState {
-        ERROR,
-        WAITING_FOR_DATA,
-        READY
-    }
-
-    /**
-     * Object for holding the current session status.
-     */
-    final class SessionStatus implements Serializable {
-        // the state the session is in
-        public final SessionState state;
-
-        // if we are waiting for more data, how much?
-        public int bytesNeeded;
-
-        // the current working command
-        public CommandMessage cmd;
-
-        SessionStatus(SessionState state) {
-            this.state = state;
-        }
-
-        SessionStatus(SessionState state, int bytesNeeded, CommandMessage cmd) {
-            this.state = state;
-            this.bytesNeeded = bytesNeeded;
-            this.cmd = cmd;
-        }
-    }
 
     public CommandDecoder() {
         words = new ArrayList<StringBuilder>(8);
@@ -120,12 +86,13 @@ public final class CommandDecoder extends MessageDecoderAdapter {
     public final MessageDecoderResult decode(IoSession session, IoBuffer in, ProtocolDecoderOutput out) throws Exception {
         SessionStatus sessionStatus = (SessionStatus) session.getAttribute(SESSION_STATUS);
         SessionStatus returnedSessionStatus;
+
+        // if we're waiting for data, let's try and get it
         if (sessionStatus != null && sessionStatus.state == WAITING_FOR_DATA) {
             if (in.remaining() < sessionStatus.bytesNeeded + 2) {
                 return MessageDecoderResult.NEED_DATA;
             }
             // get the bytes we want, and that's it
-
             byte[] buffer = new byte[sessionStatus.bytesNeeded];
             in.get(buffer);
 
@@ -134,7 +101,7 @@ public final class CommandDecoder extends MessageDecoderAdapter {
             if (crlf.equals(CRLF))
                 returnedSessionStatus = continueSet(session, out, sessionStatus, buffer);
             else {
-                session.setAttribute(SESSION_STATUS, new SessionStatus(READY));
+                session.setAttribute(SESSION_STATUS, SessionStatus.ready());
                 return MessageDecoderResult.NOT_OK;
             }
         } else {
@@ -143,13 +110,14 @@ public final class CommandDecoder extends MessageDecoderAdapter {
 
             in.mark();
 
+            // find out if we have enough for a command. if we don't, reset the buffer and continue
             boolean completed = collectCommand(in);
-
             if (!completed) {
                 in.reset();
                 return MessageDecoderResult.NEED_DATA;
             }
 
+            // build the segmented parts into an array list and pass it on for processing
             final int numParts = words.size();
             List<String> parts = new ArrayList<String>(numParts);
             for (StringBuilder word : words) {
@@ -166,6 +134,7 @@ public final class CommandDecoder extends MessageDecoderAdapter {
 
     }
 
+    // collect the parts of the stream for the command
     private boolean collectCommand(IoBuffer in) {
         StringBuilder wordBuffer = new StringBuilder(WORD_BUFFER_INIT_SIZE);
         boolean completed = false;
@@ -193,7 +162,7 @@ public final class CommandDecoder extends MessageDecoderAdapter {
 
 
     /**
-     * Process an individual completel protocol line and either passes the command for processing by the
+     * Process an individual complete protocol line and either passes the command for processing by the
      * session handler, or (in the case of SET-type commands) partially parses the command and sets the session into
      * a state to wait for additional data.
      * @param parts the (originally space separated) parts of the command
@@ -214,7 +183,7 @@ public final class CommandDecoder extends MessageDecoderAdapter {
 
             // if we don't have all the parts, it's malformed
             if (numParts < 5) {
-                return new SessionStatus(ERROR);
+                return SessionStatus.error();
             }
 
             int size = Integer.parseInt(parts.get(4));
@@ -237,7 +206,7 @@ public final class CommandDecoder extends MessageDecoderAdapter {
 
             }
 
-            return new SessionStatus(WAITING_FOR_DATA, size, cmd);
+            return SessionStatus.needMoreForCommand(size, cmd);
 
         } else if (cmdType == Commands.GET ||
                 cmdType == Commands.GETS ||
@@ -252,7 +221,7 @@ public final class CommandDecoder extends MessageDecoderAdapter {
                 cmdType == Commands.DECR) {
 
             if (numParts < 2 || numParts > 3)
-                return new SessionStatus(ERROR);
+                return SessionStatus.error();
 
             cmd.keys.add(parts.get(1));
             cmd.keys.add(parts.get(2));
@@ -285,11 +254,11 @@ public final class CommandDecoder extends MessageDecoderAdapter {
             }
             out.write(cmd);
         } else {
-            return new SessionStatus(ERROR);
+            return SessionStatus.error();
         }
 
 
-        return new SessionStatus(READY);
+        return SessionStatus.ready();
 
     }
 
@@ -307,7 +276,7 @@ public final class CommandDecoder extends MessageDecoderAdapter {
 
         out.write(state.cmd);
 
-        return new SessionStatus(READY);
+        return SessionStatus.ready();
     }
 
 }

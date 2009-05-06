@@ -94,7 +94,7 @@ public class BasicCacheTest {
         assertEquals(daemon.getCache().add(element), Cache.StoreResponse.STORED);
 
         // get result
-        MCElement result = daemon.getCache().get(testKey);
+        MCElement result = daemon.getCache().get(testKey)[0];
 
         // assert no miss
         assertEquals("confirmed no misses", 0, daemon.getCache().getGetMisses());
@@ -121,7 +121,7 @@ public class BasicCacheTest {
         assertEquals(daemon.getCache().add(element), Cache.StoreResponse.STORED);
 
         // get result
-        MCElement result = daemon.getCache().get(testKey);
+        MCElement result = daemon.getCache().get(testKey)[0];
 
         // assert no miss
         assertEquals("confirmed no misses", 0, daemon.getCache().getGetMisses());
@@ -143,7 +143,7 @@ public class BasicCacheTest {
         assertEquals(daemon.getCache().replace(element), Cache.StoreResponse.STORED);
 
         // get result
-        result = daemon.getCache().get(testKey);
+        result = daemon.getCache().get(testKey)[0];
 
         // assert no miss
         assertEquals("confirmed no misses", 0, daemon.getCache().getGetMisses());
@@ -169,7 +169,7 @@ public class BasicCacheTest {
         assertEquals(daemon.getCache().replace(element), Cache.StoreResponse.NOT_STORED);
 
         // get result
-        MCElement result = daemon.getCache().get(testKey);
+        MCElement result = daemon.getCache().get(testKey)[0];
 
         // assert miss
         assertEquals("confirmed no misses", 1, daemon.getCache().getGetMisses());
@@ -191,7 +191,7 @@ public class BasicCacheTest {
         assertEquals(daemon.getCache().set(element), Cache.StoreResponse.STORED);
 
         // get result
-        MCElement result = daemon.getCache().get(testKey);
+        MCElement result = daemon.getCache().get(testKey)[0];
 
         // assert no miss
         assertEquals("confirmed no misses", 0, daemon.getCache().getGetMisses());

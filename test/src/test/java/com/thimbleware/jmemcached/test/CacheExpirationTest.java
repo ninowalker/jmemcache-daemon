@@ -103,7 +103,7 @@ public class CacheExpirationTest {
 
         // verify that only the last 1000 items are actually physically in there
         for (int i = 0; i < fillSize; i++) {
-            MCElement result = daemon.getCache().get("" + i);
+            MCElement result = daemon.getCache().get("" + i)[0];
             if (i < MAX_SIZE) {
                 assertTrue(result == null);
             } else {

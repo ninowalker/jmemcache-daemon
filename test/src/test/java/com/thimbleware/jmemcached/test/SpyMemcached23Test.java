@@ -5,10 +5,7 @@ import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Set;
-import java.util.HashSet;
+import java.util.*;
 
 import net.spy.memcached.MemcachedClient;
 
@@ -63,23 +60,28 @@ public class SpyMemcached23Test {
 
     @Test
     public void testBulkGet() throws IOException, InterruptedException {
-        _client.set( "foo1", 3600, "bar1" );
-        _client.set( "foo2", 3600, "bar2" );
-        _client.set( "foo3", 3600, "bar3" );
-        _client.set( "foo4", 3600, "bar4" );
-        Map<String,Object> results = _client.getBulk("foo1", "foo2", "foo3", "foo4");
-        Assert.assertEquals( "bar1", results.get("foo1"));
-        Assert.assertEquals( "bar2", results.get("foo2"));
-        Assert.assertEquals( "bar3", results.get("foo3"));
-        Assert.assertEquals( "bar4", results.get("foo4"));
+        ArrayList<String> allStrings = new ArrayList<String>();
+        for (int i = 0; i < 5000; i++) {
+            _client.set("foo" + i, 360000, "bar" + i);
+            allStrings.add("foo" + i);
+        }
+
+        Map<String,Object> results = _client.getBulk(allStrings.subList(0, 2000));
+        Map<String,Object> results2 = _client.getBulk(allStrings.subList(2000, 5000));
+        for (int i = 0; i < 2000; i++) {
+            Assert.assertEquals("bar" + i, results.get("foo" + i));
+        }
+        for (int i = 2000; i < 5000; i++) {
+            Assert.assertEquals("bar" + i, results2.get("foo" + i));
+        }
     }
 
     private MemCacheDaemon createDaemon( final InetSocketAddress address ) throws IOException {
         final MemCacheDaemon daemon = new MemCacheDaemon();
-        final LRUCacheStorageDelegate cacheStorage = new LRUCacheStorageDelegate(1000, 1024*1024, 1024000);
+        final LRUCacheStorageDelegate cacheStorage = new LRUCacheStorageDelegate(40000, 1024*1024*1024, 1024000);
         daemon.setCache(new Cache(cacheStorage));
         daemon.setAddr( address );
-        daemon.setVerbose(true);
+        daemon.setVerbose(false);
         return daemon;
     }
 

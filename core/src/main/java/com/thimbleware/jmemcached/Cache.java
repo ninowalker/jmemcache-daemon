@@ -20,6 +20,8 @@ import org.apache.mina.core.buffer.IoBuffer;
 import static java.lang.Integer.parseInt;
 import static java.lang.String.valueOf;
 import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.DelayQueue;
@@ -208,7 +210,7 @@ public class Cache {
     public StoreResponse append(MCElement element) {
         try {
             startCacheWrite();
-            MCElement ret = get(element.keystring);
+            MCElement ret = get(element.keystring)[0];
             if (ret == null || isBlocked(ret) || isExpired(ret))
                 return StoreResponse.NOT_FOUND;
             else {
@@ -238,7 +240,7 @@ public class Cache {
     public StoreResponse prepend(MCElement element) {
         try {
             startCacheWrite();
-            MCElement ret = get(element.keystring);
+            MCElement ret = get(element.keystring)[0];
             if (ret == null || isBlocked(ret) || isExpired(ret))
                 return StoreResponse.NOT_FOUND;
             else {
@@ -291,7 +293,7 @@ public class Cache {
         try {
             startCacheWrite();
             // have to get the element
-            MCElement element = get(e.keystring);
+            MCElement element = get(e.keystring)[0];
             if (element == null || isBlocked(element))
                 return StoreResponse.NOT_FOUND;
 
@@ -371,27 +373,34 @@ public class Cache {
 
     /**
      * Get an element from the cache
-     * @param key the key for the element to lookup
+     * @param keys the key for the element to lookup
      * @return the element, or 'null' in case of cache miss.
      */
-    public MCElement get(String key) {
+    public MCElement[] get(String ... keys) {
         getCmds.incrementAndGet();//updates stats
 
         try {
             startCacheRead();
-            MCElement e = this.cacheStorage.get(key);
+            MCElement[] elements = new MCElement[keys.length];
+            int x = 0;
+            for (String key : keys) {
+                MCElement e = this.cacheStorage.get(key);
 
-            if (e == null) {
-                getMisses.incrementAndGet();//update stats
-                return null;
-            }
-            if (isExpired(e) || e.blocked) {
-                getMisses.incrementAndGet();//update stats
+                if (e == null) {
+                    getMisses.incrementAndGet();//update stats
+                    elements[x] = null;
+                } else if (isExpired(e) || e.blocked) {
+                    getMisses.incrementAndGet();//update stats
 
-                return null;
+                    elements[x] = null;
+                } else {
+                    getHits.incrementAndGet();//update stats
+                    elements[x] = e;
+                }
+                x++;
             }
-            getHits.incrementAndGet();//update stats
-            return e;
+
+            return elements;
         } finally {
             finishCacheRead();
         }

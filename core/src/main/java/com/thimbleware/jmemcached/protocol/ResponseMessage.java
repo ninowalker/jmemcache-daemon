@@ -28,5 +28,7 @@ public final class ResponseMessage implements Serializable {
     public ResponseMessage() {
         out = IoBuffer.allocate(1024);
         out.setAutoExpand(true);
+        out.setAutoShrink(true);
     }
+
 }

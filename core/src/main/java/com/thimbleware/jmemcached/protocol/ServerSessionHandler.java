@@ -28,11 +28,13 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.thimbleware.jmemcached.Cache;
 import com.thimbleware.jmemcached.MCElement;
 
-// TODO implement 'delete queue' (time on delete) and flush_all delay
+// TODO implement flush_all delay
 
 /**
  * The heart of the daemon, responsible for handling the creation and destruction of network
@@ -43,19 +45,21 @@ public final class ServerSessionHandler implements IoHandler {
 
     final Logger logger = LoggerFactory.getLogger(ServerSessionHandler.class);
 
-    public String version;
-    public int curr_conns;
-    public int total_conns;
-    public int started;          /* when the process was started */
+    public final String version;
+    public final AtomicInteger curr_conns = new AtomicInteger();
+    public final AtomicInteger total_conns = new AtomicInteger();
+    public final AtomicInteger started = new AtomicInteger();          /* when the process was started */
 
-    public static long bytes_read;
-    public static long bytes_written;
-    public static long curr_bytes;
+    public final AtomicLong bytes_read = new AtomicLong();
+    public final AtomicLong bytes_written = new AtomicLong();
+    public final AtomicLong curr_bytes = new AtomicLong();
 
-    public int idle_limit;
-    public boolean verbose;
+    public final int idle_limit;
+    public final boolean verbose;
 
-    public static CharsetEncoder ENCODER = Charset.forName("US-ASCII").newEncoder();
+    public final static CharsetEncoder ENCODER = Charset.forName("US-ASCII").newEncoder();
+
+    public static final byte[] VALUE = "VALUE ".getBytes();
 
     /**
      */
@@ -74,7 +78,7 @@ public final class ServerSessionHandler implements IoHandler {
 
         this.cache = cache;
 
-        started = Now();
+        started.set(Now());
         version = memcachedVersion;
         verbose = verbosity;
         idle_limit = idle;
@@ -86,9 +90,9 @@ public final class ServerSessionHandler implements IoHandler {
      * @param session the MINA session object
      */
     public void sessionCreated(IoSession session) {
-        int conn = total_conns++;
+        int conn = total_conns.incrementAndGet();
         session.setAttribute("sess_id", valueOf(conn));
-        curr_conns++;
+        curr_conns.incrementAndGet();
         if (this.verbose) {
             logger.info(session.getAttribute("sess_id") + " CONNECTED");
         }
@@ -114,7 +118,7 @@ public final class ServerSessionHandler implements IoHandler {
      * @param session the MINA session object
      */
     public void sessionClosed(IoSession session) {
-        curr_conns--;
+        curr_conns.incrementAndGet();
         if (this.verbose) {
             logger.info(session.getAttribute("sess_id") + " DIS-CONNECTED");
         }
@@ -150,75 +154,80 @@ public final class ServerSessionHandler implements IoHandler {
         }
 
         ResponseMessage r = new ResponseMessage();
-        if (cmd == Commands.GET || cmd == Commands.GETS) {
-            for (int i = 0; i < cmdKeysSize; i++) {
-                MCElement result = get(command.keys.get(i));
-                if (result != null) {
-                    r.out.putString("VALUE " + result.keystring + " " + result.flags + " " + result.dataLength + (cmd == Commands.GETS ? " " + result.cas_unique : "") + "\r\n", ENCODER);
-                    r.out.put(result.data, 0, result.dataLength);
-                    r.out.putString("\r\n", ENCODER);
+        try {
+            if (cmd == Commands.GET || cmd == Commands.GETS) {
+                MCElement[] results = get(command.keys.toArray(new String[command.keys.size()]));
+                for (MCElement result : results) {
+                    if (result != null) {
+                        r.out.put(VALUE, 0, VALUE.length);
+                        r.out.putString(result.keystring + " " + result.flags + " " + result.dataLength + (cmd == Commands.GETS ? " " + result.cas_unique : "") + "\r\n", ENCODER);
+                        r.out.put(result.data, 0, result.dataLength);
+                        r.out.putString("\r\n", ENCODER);
+                    }
                 }
-            }
 
-            r.out.putString("END\r\n", ENCODER);
-        } else if (cmd == Commands.SET) {
-            String ret = set(command.element);
-            if (!command.noreply)
-                r.out.putString(ret, ENCODER);
-        } else if (cmd == Commands.CAS) {
-            String ret = cas(command.cas_key, command.element);
-            if (!command.noreply)
-                r.out.putString(ret, ENCODER);
-        } else if (cmd == Commands.ADD) {
-            String ret = add(command.element);
-            if (!command.noreply)
-                r.out.putString(ret, ENCODER);
-        } else if (cmd == Commands.REPLACE) {
-            String ret = replace(command.element);
-            if (!command.noreply)
-                r.out.putString(ret, ENCODER);
-        } else if (cmd == Commands.APPEND) {
-            String ret = append(command.element);
-            if (!command.noreply)
-                r.out.putString(ret, ENCODER);
-        } else if (cmd == Commands.PREPEND) {
-            String ret = prepend(command.element);
-            if (!command.noreply)
-                r.out.putString(ret, ENCODER);
-        } else if (cmd == Commands.INCR) {
-            String ret = get_add(command.keys.get(0), parseInt(command.keys.get(1)));
-            if (!command.noreply)
-                r.out.putString(ret, ENCODER);
-        } else if (cmd == Commands.DECR) {
-            String ret = get_add(command.keys.get(0), -1 * parseInt(command.keys.get(1)));
-            if (!command.noreply)
-                r.out.putString(ret, ENCODER);
-        } else if (cmd == Commands.DELETE) {
-            String ret = delete(command.keys.get(0), command.time);
-            if (!command.noreply)
-                r.out.putString(ret, ENCODER);
-        } else if (cmd == Commands.STATS) {
-            String option = "";
-            if (cmdKeysSize > 0) {
-                option = command.keys.get(0);
-            }
-            r.out.putString(stat(option), ENCODER);
-        } else if (cmd == Commands.VERSION) {
-            r.out.putString("VERSION ", ENCODER);
-            r.out.putString(version, ENCODER);
-            r.out.putString("\r\n", ENCODER);
-        } else if (cmd == Commands.QUIT) {
-            session.close();
-        } else if (cmd == Commands.FLUSH_ALL) {
+                r.out.putString("END\r\n", ENCODER);
+            } else if (cmd == Commands.SET) {
+                String ret = set(command.element);
+                if (!command.noreply)
+                    r.out.putString(ret, ENCODER);
+            } else if (cmd == Commands.CAS) {
+                String ret = cas(command.cas_key, command.element);
+                if (!command.noreply)
+                    r.out.putString(ret, ENCODER);
+            } else if (cmd == Commands.ADD) {
+                String ret = add(command.element);
+                if (!command.noreply)
+                    r.out.putString(ret, ENCODER);
+            } else if (cmd == Commands.REPLACE) {
+                String ret = replace(command.element);
+                if (!command.noreply)
+                    r.out.putString(ret, ENCODER);
+            } else if (cmd == Commands.APPEND) {
+                String ret = append(command.element);
+                if (!command.noreply)
+                    r.out.putString(ret, ENCODER);
+            } else if (cmd == Commands.PREPEND) {
+                String ret = prepend(command.element);
+                if (!command.noreply)
+                    r.out.putString(ret, ENCODER);
+            } else if (cmd == Commands.INCR) {
+                String ret = get_add(command.keys.get(0), parseInt(command.keys.get(1)));
+                if (!command.noreply)
+                    r.out.putString(ret, ENCODER);
+            } else if (cmd == Commands.DECR) {
+                String ret = get_add(command.keys.get(0), -1 * parseInt(command.keys.get(1)));
+                if (!command.noreply)
+                    r.out.putString(ret, ENCODER);
+            } else if (cmd == Commands.DELETE) {
+                String ret = delete(command.keys.get(0), command.time);
+                if (!command.noreply)
+                    r.out.putString(ret, ENCODER);
+            } else if (cmd == Commands.STATS) {
+                String option = "";
+                if (cmdKeysSize > 0) {
+                    option = command.keys.get(0);
+                }
+                r.out.putString(stat(option), ENCODER);
+            } else if (cmd == Commands.VERSION) {
+                r.out.putString("VERSION ", ENCODER);
+                r.out.putString(version, ENCODER);
+                r.out.putString("\r\n", ENCODER);
+            } else if (cmd == Commands.QUIT) {
+                session.close(false);
+            } else if (cmd == Commands.FLUSH_ALL) {
 
-            String ret = flush_all(command.time);
-            if (!command.noreply)
-                r.out.putString(ret, ENCODER);
-        } else {
-            r.out.putString("ERROR\r\n", ENCODER);
-            logger.error("error; unrecognized command: " + cmd);
+                String ret = flush_all(command.time);
+                if (!command.noreply)
+                    r.out.putString(ret, ENCODER);
+            } else {
+                r.out.putString("ERROR\r\n", ENCODER);
+                logger.error("error; unrecognized command: " + cmd);
+            }
         }
-        session.write(r);
+        finally {
+            session.write(r);
+        }
     }
 
 
@@ -242,7 +251,7 @@ public final class ServerSessionHandler implements IoHandler {
      */
     public void sessionIdle(IoSession session, IdleStatus status) {
         // disconnect an idle client
-        session.close();
+        session.close(false);
     }
 
     /**
@@ -391,7 +400,17 @@ public final class ServerSessionHandler implements IoHandler {
      * @return the element, or 'null' in case of cache miss.
      */
     protected MCElement get(String key) {
-        return cache.get(key);
+        return cache.get(key)[0];
+    }
+
+    /**
+     * Get an element from the cache
+     *
+     * @param keys the key for the element to lookup
+     * @return the element, or 'null' in case of cache miss.
+     */
+    protected MCElement[] get(String ... keys) {
+        return cache.get(keys);
     }
 
 
@@ -406,11 +425,11 @@ public final class ServerSessionHandler implements IoHandler {
      * Initialize all statistic counters
      */
     protected void initStats() {
-        curr_bytes = 0;
-        curr_conns = 0;
-        total_conns = 0;
-        bytes_read = 0;
-        bytes_written = 0;
+        curr_bytes.set(0);
+        curr_conns.set(0);
+        total_conns.set(0);
+        bytes_read.set(0);
+        bytes_written.set(0);
     }
 
     /**
@@ -424,9 +443,8 @@ public final class ServerSessionHandler implements IoHandler {
         StringBuilder builder = new StringBuilder();
 
         if (arg.equals("keys")) {
-            Iterator itr = this.cache.keys().iterator();
-            while (itr.hasNext()) {
-                builder.append("STAT key ").append(itr.next()).append("\r\n");
+            for (String key : this.cache.keys()) {
+                builder.append("STAT key ").append(key).append("\r\n");
             }
             builder.append("END\r\n");
             return builder.toString();
@@ -441,7 +459,7 @@ public final class ServerSessionHandler implements IoHandler {
         builder.append("STAT curr_connections ").append(valueOf(curr_conns)).append("\r\n");
         builder.append("STAT total_connections ").append(valueOf(total_conns)).append("\r\n");
         builder.append("STAT time ").append(valueOf(Now())).append("\r\n");
-        builder.append("STAT uptime ").append(valueOf(Now() - this.started)).append("\r\n");
+        builder.append("STAT uptime ").append(valueOf(Now() - this.started.intValue())).append("\r\n");
 
         builder.append("STAT cur_items ").append(valueOf(this.cache.getCurrentItems())).append("\r\n");
         builder.append("STAT limit_maxbytes ").append(valueOf(this.cache.getLimitMaxBytes())).append("\r\n");
