@@ -24,16 +24,40 @@ import java.util.ArrayList;
  * The payload object holding the parsed message.
  */
 public final class CommandMessage implements Serializable {
+    public static enum ErrorType {
+        OK, ERROR, CLIENT_ERROR
+    }
+
     public String cmd;
     public MCElement element;
     public ArrayList<String> keys;
     public boolean noreply;
     public Long cas_key;
     public int time = 0;
+    public ErrorType error = ErrorType.OK;
+    public String errorString;
 
-    public CommandMessage(String cmd) {
+    private CommandMessage(String cmd) {
         this.cmd = cmd;
         element = null;
         keys = new ArrayList<String>();
+    }
+
+    public static CommandMessage error(String errorString) {
+        CommandMessage errcmd = new CommandMessage(null);
+        errcmd.error = ErrorType.ERROR;
+        errcmd.errorString = errorString;
+        return errcmd;
+    }
+
+    public static CommandMessage clientError(String errorString) {
+        CommandMessage errcmd = new CommandMessage(null);
+        errcmd.error = ErrorType.CLIENT_ERROR;
+        errcmd.errorString = errorString;
+        return errcmd;
+    }
+    
+    public static CommandMessage command(String cmd) {
+        return new CommandMessage(cmd);
     }
 }

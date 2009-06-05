@@ -155,7 +155,13 @@ public final class ServerSessionHandler implements IoHandler {
 
         ResponseMessage r = new ResponseMessage();
         try {
-            if (cmd == Commands.GET || cmd == Commands.GETS) {
+            if (command.error == CommandMessage.ErrorType.CLIENT_ERROR) {
+
+                r.out.putString("CLIENT_ERROR " + command.errorString + "\r\n", ENCODER);
+            } else if (command.error == CommandMessage.ErrorType.ERROR) {
+
+                r.out.putString("ERROR " + command.errorString + "\r\n", ENCODER);
+            }  else if (cmd == Commands.GET || cmd == Commands.GETS) {
                 MCElement[] results = get(command.keys.toArray(new String[command.keys.size()]));
                 for (MCElement result : results) {
                     if (result != null) {

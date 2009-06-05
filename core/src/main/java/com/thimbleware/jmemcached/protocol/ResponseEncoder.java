@@ -16,13 +16,14 @@
 package com.thimbleware.jmemcached.protocol;
 
 import org.apache.mina.filter.codec.ProtocolEncoderOutput;
+import org.apache.mina.filter.codec.ProtocolEncoderAdapter;
 import org.apache.mina.filter.codec.demux.MessageEncoder;
 import org.apache.mina.core.session.IoSession;
 
 /**
  * MINA MessageEncoder responsible for writing a ResponseMessage into the network stream.
  */
-public final class ResponseEncoder implements MessageEncoder {
+public final class ResponseEncoder extends ProtocolEncoderAdapter {
 
     public void encode(IoSession session, Object message, ProtocolEncoderOutput out) throws Exception {
         ResponseMessage m = (ResponseMessage) message;

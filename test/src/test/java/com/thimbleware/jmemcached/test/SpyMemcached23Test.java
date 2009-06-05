@@ -61,18 +61,30 @@ public class SpyMemcached23Test {
     @Test
     public void testBulkGet() throws IOException, InterruptedException {
         ArrayList<String> allStrings = new ArrayList<String>();
-        for (int i = 0; i < 5000; i++) {
+        for (int i = 0; i < 10000; i++) {
             _client.set("foo" + i, 360000, "bar" + i);
             allStrings.add("foo" + i);
         }
 
         Map<String,Object> results = _client.getBulk(allStrings.subList(0, 2000));
-        Map<String,Object> results2 = _client.getBulk(allStrings.subList(2000, 5000));
+        Map<String,Object> results2 = _client.getBulk(allStrings.subList(2000, 4000));
+        Map<String,Object> results3 = _client.getBulk(allStrings.subList(4000, 6000));
+        Map<String,Object> results4 = _client.getBulk(allStrings.subList(6000, 8000));
+        Map<String,Object> results5 = _client.getBulk(allStrings.subList(8000, 10000));
         for (int i = 0; i < 2000; i++) {
             Assert.assertEquals("bar" + i, results.get("foo" + i));
         }
-        for (int i = 2000; i < 5000; i++) {
+        for (int i = 2000; i < 4000; i++) {
             Assert.assertEquals("bar" + i, results2.get("foo" + i));
+        }
+        for (int i = 4000; i < 6000; i++) {
+            Assert.assertEquals("bar" + i, results3.get("foo" + i));
+        }
+        for (int i = 6000; i < 8000; i++) {
+            Assert.assertEquals("bar" + i, results4.get("foo" + i));
+        }
+        for (int i = 8000; i < 10000; i++) {
+            Assert.assertEquals("bar" + i, results5.get("foo" + i));
         }
     }
 

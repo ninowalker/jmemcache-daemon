@@ -19,8 +19,7 @@ import static com.thimbleware.jmemcached.protocol.SessionStatus.State.*;
 import com.thimbleware.jmemcached.MCElement;
 
 import org.apache.mina.filter.codec.ProtocolDecoderOutput;
-import org.apache.mina.filter.codec.demux.MessageDecoderAdapter;
-import org.apache.mina.filter.codec.demux.MessageDecoderResult;
+import org.apache.mina.filter.codec.CumulativeProtocolDecoder;
 import org.apache.mina.core.session.IoSession;
 import org.apache.mina.core.buffer.IoBuffer;
 
@@ -28,69 +27,28 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Arrays;
 
 /**
  * MINA MessageDecoderAdapter responsible for parsing inbound lines from the memcached protocol session.
  */
-public final class CommandDecoder extends MessageDecoderAdapter {
+public final class CommandDecoder extends CumulativeProtocolDecoder {
 
     public static CharsetDecoder DECODER  = Charset.forName("US-ASCII").newDecoder();
 
-    private static final int WORD_BUFFER_INIT_SIZE = 8;
-
     private static final String SESSION_STATUS = "sessionStatus";
-    private ArrayList<StringBuilder> words;
-    private static final String CRLF = "\r\n";
     private static final String NOREPLY = "noreply";
 
-    public CommandDecoder() {
-        words = new ArrayList<StringBuilder>(8);
-    }
+    protected boolean doDecode(IoSession session, IoBuffer in, ProtocolDecoderOutput out)
+            throws Exception {
 
-    
-    /**
-     * Checks the specified buffer is decodable by this decoder.
-     *
-     * In our case checks the session state to see if we are waiting for data.  If we are, make sure
-     * that we actually have all the data we need.
-     *
-     * @return {@link #OK} if this decoder can decode the specified buffer.
-     *         {@link #NOT_OK} if this decoder cannot decode the specified buffer.
-     *         {@link #NEED_DATA} if more data is required to determine if the
-     *         specified buffer is decodable ({@link #OK}) or not decodable
-     *         {@link #NOT_OK}.
-     */
-    public final MessageDecoderResult decodable(IoSession session, IoBuffer in) {
-        // ask the session for its state,
-        SessionStatus sessionStatus = (SessionStatus) session.getAttribute(SESSION_STATUS);
-        if (sessionStatus != null &&  sessionStatus.state == WAITING_FOR_DATA) {
-            if (in.remaining() < sessionStatus.bytesNeeded + 2)
-                return MessageDecoderResult.NEED_DATA;
-        }
-        return MessageDecoderResult.OK;
-    }
-
-    /**
-     * Actually decodes inbound data from the memcached protocol session.
-     *
-     * MINA invokes {@link #decode(IoSession, IoBuffer, ProtocolDecoderOutput)}
-     * method with read data, and then the decoder implementation puts decoded
-     * messages into {@link ProtocolDecoderOutput}.
-     *
-     * @return {@link #OK} if finished decoding messages successfully.
-     *         {@link #NEED_DATA} if you need more data to finish decoding current message.
-     *         {@link #NOT_OK} if you cannot decode current message due to protocol specification violation.
-     *
-     * @throws Exception if the read data violated protocol specification
-     */
-    public final MessageDecoderResult decode(IoSession session, IoBuffer in, ProtocolDecoderOutput out) throws Exception {
-        SessionStatus sessionStatus = (SessionStatus) session.getAttribute(SESSION_STATUS);
         SessionStatus returnedSessionStatus;
 
-        // if we're waiting for data, let's try and get it
+        SessionStatus sessionStatus = (SessionStatus) session.getAttribute(SESSION_STATUS);
+
         if (sessionStatus != null && sessionStatus.state == WAITING_FOR_DATA) {
             if (in.remaining() < sessionStatus.bytesNeeded + 2) {
-                return MessageDecoderResult.NEED_DATA;
+                return false;
             }
             // get the bytes we want, and that's it
             byte[] buffer = new byte[sessionStatus.bytesNeeded];
@@ -98,66 +56,86 @@ public final class CommandDecoder extends MessageDecoderAdapter {
 
             // eat crlf at end
             String crlf = in.getString(2, DECODER);
-            if (crlf.equals(CRLF))
+            if (crlf.equals("\r\n")) {
                 returnedSessionStatus = continueSet(session, out, sessionStatus, buffer);
-            else {
                 session.setAttribute(SESSION_STATUS, SessionStatus.ready());
-                return MessageDecoderResult.NOT_OK;
-            }
-        } else {
-            // retrieve the first line of the input, if there isn't a full one, request more
-            words.clear();
 
-            in.mark();
-
-            // find out if we have enough for a command. if we don't, reset the buffer and continue
-            boolean completed = collectCommand(in);
-            if (!completed) {
-                in.reset();
-                return MessageDecoderResult.NEED_DATA;
+                return true;
+            } else {
+                session.setAttribute(SESSION_STATUS, SessionStatus.ready());
+                return true;
             }
-
-            // build the segmented parts into an array list and pass it on for processing
-            final int numParts = words.size();
-            List<String> parts = new ArrayList<String>(numParts);
-            for (StringBuilder word : words) {
-                parts.add(word.toString());
-            }
-            returnedSessionStatus = processLine(parts, out, numParts);
         }
 
-        if (returnedSessionStatus.state != ERROR) {
-            session.setAttribute(SESSION_STATUS, returnedSessionStatus);
-            return MessageDecoderResult.OK;
-        } else
-            return MessageDecoderResult.NOT_OK;
 
+        // Remember the initial position.
+        int start = in.position();
+
+        List<String> words = new ArrayList<String>(8);
+
+        // Now find the first CRLF in the buffer.
+        byte previous = 0;
+        while (in.hasRemaining()) {
+            byte current = in.get();
+
+            if (previous == '\r' && current == '\n') {
+                // Remember the current position and limit.
+                int position = in.position();
+                int limit = in.limit();
+                try {
+                    in.position(start);
+                    in.limit(position);
+                    // The bytes between in.position() and in.limit()
+                    // now contain a full CRLF terminated line.
+                    words = collectCommand(in.slice());
+
+                    if (words != null) {
+                        // build the segmented parts into an array list and pass it on for processing
+                        final int numParts = words.size();
+
+                        returnedSessionStatus = processLine(words, out, numParts);
+
+                        if (returnedSessionStatus.state != ERROR) {
+                            session.setAttribute(SESSION_STATUS, returnedSessionStatus);
+                            return true;
+                        } else {
+                            out.write(CommandMessage.clientError("bad data chunk"));
+                            
+                            return true;
+                        }
+                    }
+                } finally {
+                    // Set the position to point right after the
+                    // detected line and set the limit to the old
+                    // one.
+                    in.position(position);
+                    in.limit(limit);
+                }
+                // Decoded one line; CumulativeProtocolDecoder will
+                // call me again until I return false. So just
+                // return true until there are no more lines in the
+                // buffer.
+                return true;
+            }
+
+            previous = current;
+        }
+
+        // Could not find CRLF in the buffer. Reset the initial
+        // position to the one we recorded above.
+        in.position(start);
+
+        return false;
     }
 
-    // collect the parts of the stream for the command
-    private boolean collectCommand(IoBuffer in) {
-        StringBuilder wordBuffer = new StringBuilder(WORD_BUFFER_INIT_SIZE);
-        boolean completed = false;
-        boolean appended = false;
-        
-        while (in.hasRemaining()) {
-            char c = (char) in.get();
 
-            if (c == ' ') {
-                words.add(wordBuffer);
-                appended = false;
-                wordBuffer = new StringBuilder(WORD_BUFFER_INIT_SIZE);
-            } else if (c == '\r' && in.hasRemaining() && in.get() == (byte) '\n') {
-                if (appended)
-                    words.add(wordBuffer);
-                completed = true;
-                break;
-            } else {
-                wordBuffer.append(c);
-                appended = true;
-            }
-        }
-        return completed;
+    // collect the parts of the stream for the command
+    private List<String> collectCommand(IoBuffer in) {
+        // get the bytes we want, and that's it
+        byte[] buffer = new byte[in.remaining() - 2];
+        in.get(buffer);
+
+        return Arrays.asList(new String(buffer).split(" "));
     }
 
 
@@ -172,7 +150,7 @@ public final class CommandDecoder extends MessageDecoderAdapter {
      */
     private SessionStatus processLine(List<String> parts, ProtocolDecoderOutput out, int numParts) {
         final String cmdType = parts.get(0).toUpperCase().intern();
-        CommandMessage cmd = new CommandMessage(cmdType);
+        CommandMessage cmd = CommandMessage.command(cmdType);
 
         if (cmdType == Commands.ADD ||
                 cmdType == Commands.SET ||
@@ -183,7 +161,9 @@ public final class CommandDecoder extends MessageDecoderAdapter {
 
             // if we don't have all the parts, it's malformed
             if (numParts < 5) {
-                return SessionStatus.error();
+                out.write(CommandMessage.error(""));
+
+                return SessionStatus.ready();
             }
 
             int size = Integer.parseInt(parts.get(4));

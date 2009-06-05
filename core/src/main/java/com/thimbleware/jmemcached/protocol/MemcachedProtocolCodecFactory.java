@@ -15,13 +15,21 @@
  */
 package com.thimbleware.jmemcached.protocol;
 
-import org.apache.mina.filter.codec.demux.DemuxingProtocolCodecFactory;
+import org.apache.mina.core.session.IoSession;
+import org.apache.mina.filter.codec.ProtocolCodecFactory;
+import org.apache.mina.filter.codec.ProtocolDecoder;
+import org.apache.mina.filter.codec.ProtocolEncoder;
 
-public class MemcachedProtocolCodecFactory extends DemuxingProtocolCodecFactory
+public class MemcachedProtocolCodecFactory implements ProtocolCodecFactory
 {
-    public MemcachedProtocolCodecFactory()
-    {
-        super.addMessageDecoder( CommandDecoder.class );
-        super.addMessageEncoder( ResponseMessage.class, ResponseEncoder.class );
+    private ProtocolEncoder encoder = new ResponseEncoder();
+    private ProtocolDecoder decoder = new CommandDecoder();
+
+    public ProtocolEncoder getEncoder(IoSession session) throws Exception {
+        return encoder;
+    }
+
+    public ProtocolDecoder getDecoder(IoSession session) throws Exception {
+        return decoder;
     }
 }
