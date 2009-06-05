@@ -194,7 +194,7 @@ public final class CommandDecoder extends CumulativeProtocolDecoder {
                 cmdType == Commands.QUIT ||
                 cmdType == Commands.VERSION) {
             // CMD <options>*
-            cmd.keys.addAll(parts.subList(1, numParts));
+            cmd.keys = parts.subList(1, numParts);
 
             out.write(cmd);
         } else if (cmdType == Commands.INCR ||

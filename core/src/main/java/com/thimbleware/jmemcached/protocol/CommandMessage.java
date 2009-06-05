@@ -19,6 +19,7 @@ import com.thimbleware.jmemcached.MCElement;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * The payload object holding the parsed message.
@@ -30,7 +31,7 @@ public final class CommandMessage implements Serializable {
 
     public String cmd;
     public MCElement element;
-    public ArrayList<String> keys;
+    public List<String> keys;
     public boolean noreply;
     public Long cas_key;
     public int time = 0;
