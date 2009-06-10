@@ -37,7 +37,7 @@ public class MemCacheDaemon {
 
     public static String memcachedVersion = "0.3";
 
-    private int receiveBufferSize = 32768;
+    private int receiveBufferSize = 32768 * 1024;
     private int sendBufferSize = 32768;
 
     private boolean verbose;
