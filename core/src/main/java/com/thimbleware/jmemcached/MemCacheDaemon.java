@@ -15,20 +15,18 @@
  */
 package com.thimbleware.jmemcached;
 
-import org.apache.mina.filter.codec.ProtocolCodecFactory;
-import org.apache.mina.filter.codec.ProtocolCodecFilter;
-import org.apache.mina.transport.socket.nio.NioSocketAcceptor;
-import org.apache.mina.transport.socket.SocketAcceptor;
-import org.apache.mina.transport.socket.SocketSessionConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jboss.netty.bootstrap.ServerBootstrap;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
-import com.thimbleware.jmemcached.protocol.MemcachedProtocolCodecFactory;
-import com.thimbleware.jmemcached.protocol.ServerSessionHandler;
+import com.thimbleware.jmemcached.protocol.MemcachedPipelineFactory;
 
 /**
  * The actual daemon - responsible for the binding and configuration of the network configuration.
@@ -46,9 +44,9 @@ public class MemCacheDaemon {
     private int idleTime;
     private InetSocketAddress addr;
     private Cache cache;
-    private SocketAcceptor acceptor;
 
     private boolean running = false;
+    private Channel serverChannel;
 
     public MemCacheDaemon() {
     }
@@ -63,33 +61,28 @@ public class MemCacheDaemon {
      * @throws IOException
      */
     public void start() throws IOException {
-        acceptor = new NioSocketAcceptor();
-        SocketSessionConfig sessionConfig = acceptor.getSessionConfig();
-        sessionConfig.setSendBufferSize(sendBufferSize);
-        sessionConfig.setReceiveBufferSize(receiveBufferSize);
-        sessionConfig.setTcpNoDelay(true);
-        acceptor.setReuseAddress(true);
-        acceptor.setHandler(new ServerSessionHandler(cache, memcachedVersion, verbose, idleTime));
-        acceptor.setDefaultLocalAddress(this.addr);
+        ChannelFactory factory =
+            new NioServerSocketChannelFactory(
+                    Executors.newCachedThreadPool(),
+                    Executors.newCachedThreadPool());
 
-        ProtocolCodecFactory codecFactory = new MemcachedProtocolCodecFactory();
-        acceptor.getFilterChain().addFirst("protocolFilter", new ProtocolCodecFilter(codecFactory));
-        
-        acceptor.bind();
+        ServerBootstrap bootstrap = new ServerBootstrap(factory);
+
+        bootstrap.setPipelineFactory(new MemcachedPipelineFactory(cache, memcachedVersion, verbose, idleTime, receiveBufferSize));
+
+        bootstrap.setOption("child.tcpNoDelay", true);
+        bootstrap.setOption("child.keepAlive", true);
+
+        serverChannel = bootstrap.bind(addr);
 
         logger.info("Listening on " + String.valueOf(addr.getHostName()) + ":" + addr.getPort());
         running = true;
     }
 
     public void stop() {
-        running = false;
-        if (acceptor != null) {
-            logger.info("Stopping daemon");
-            acceptor.unbind();
-        }
-        cache.close();
+        serverChannel.close().awaitUninterruptibly();
     }
-
+    
     public static void setMemcachedVersion(String memcachedVersion) {
         MemCacheDaemon.memcachedVersion = memcachedVersion;
     }

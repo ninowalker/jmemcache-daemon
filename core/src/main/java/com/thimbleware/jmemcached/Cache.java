@@ -15,8 +15,6 @@
  */
 package com.thimbleware.jmemcached;
 
-import org.apache.mina.core.buffer.IoBuffer;
-
 import static java.lang.Integer.parseInt;
 import static java.lang.String.valueOf;
 import java.util.Set;
@@ -29,6 +27,7 @@ import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.nio.ByteBuffer;
 
 import com.thimbleware.jmemcached.storage.CacheStorage;
 
@@ -215,7 +214,7 @@ public class Cache {
                 return StoreResponse.NOT_FOUND;
             else {
                 ret.dataLength += element.dataLength;
-                IoBuffer b = IoBuffer.allocate(ret.dataLength);
+                ByteBuffer b = ByteBuffer.allocate(ret.dataLength);
                 b.put(ret.data);
                 b.put(element.data);
                 ret.data = new byte[ret.dataLength];
@@ -245,7 +244,7 @@ public class Cache {
                 return StoreResponse.NOT_FOUND;
             else {
                 ret.dataLength += element.dataLength;
-                IoBuffer b = IoBuffer.allocate(ret.dataLength);
+                ByteBuffer b = ByteBuffer.allocate(ret.dataLength);
                 b.put(element.data);
                 b.put(ret.data);
                 ret.data = new byte[ret.dataLength];

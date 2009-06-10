@@ -13,7 +13,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.apache.mina.util.AvailablePortFinder;
 
 import com.thimbleware.jmemcached.Cache;
 import com.thimbleware.jmemcached.MemCacheDaemon;
@@ -60,18 +59,19 @@ public class SpyMemcached23Test {
 
     @Test
     public void testBulkGet() throws IOException, InterruptedException {
+        int totalSize = 2000;
         ArrayList<String> allStrings = new ArrayList<String>();
-        for (int i = 0; i < 5000; i++) {
+        for (int i = 0; i < totalSize; i++) {
             _client.set("foo" + i, 360000, "bar" + i);
             allStrings.add("foo" + i);
         }
 
-        Map<String,Object> results = _client.getBulk(allStrings.subList(0, 2000));
-        Map<String,Object> results2 = _client.getBulk(allStrings.subList(2000, 5000));
-        for (int i = 0; i < 2000; i++) {
+        Map<String,Object> results = _client.getBulk(allStrings.subList(0, totalSize / 2));
+        Map<String,Object> results2 = _client.getBulk(allStrings.subList(totalSize / 2, totalSize));
+        for (int i = 0; i < totalSize / 2; i++) {
             Assert.assertEquals("bar" + i, results.get("foo" + i));
         }
-        for (int i = 2000; i < 5000; i++) {
+        for (int i = totalSize / 2; i < totalSize; i++) {
             Assert.assertEquals("bar" + i, results2.get("foo" + i));
         }
     }

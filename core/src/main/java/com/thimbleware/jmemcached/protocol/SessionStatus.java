@@ -11,13 +11,14 @@ final class SessionStatus implements Serializable {
      * Possible states that the current session is in.
      */
     enum State {
-        ERROR,
         WAITING_FOR_DATA,
-        READY
+        READY,
+        PROCESSING,
+        PROCESSING_MULTILINE,
     }
 
     // the state the session is in
-    public final State state;
+    public State state;
 
     // if we are waiting for more data, how much?
     public int bytesNeeded;
@@ -25,27 +26,37 @@ final class SessionStatus implements Serializable {
     // the current working command
     public CommandMessage cmd;
 
-    SessionStatus(State state) {
-        this.state = state;
+
+    public SessionStatus() {
+        ready();
     }
 
-    SessionStatus(State state, int bytesNeeded, CommandMessage cmd) {
-        this.state = state;
-        this.bytesNeeded = bytesNeeded;
+    public SessionStatus ready() {
+        this.cmd = null;
+        this.bytesNeeded = -1;
+        this.state = State.READY;
+
+        return this;
+    }
+
+    public SessionStatus processing() {
+        this.state = State.PROCESSING;
+
+        return this;
+    }
+
+    public SessionStatus processingMultiline() {
+        this.state = State.PROCESSING_MULTILINE;
+
+        return this;
+    }
+
+    public SessionStatus needMore(int size, CommandMessage cmd) {
         this.cmd = cmd;
-    }
+        this.bytesNeeded = size;
+        this.state = State.WAITING_FOR_DATA;
 
-    public static SessionStatus error() {
-        return new SessionStatus(State.ERROR);
+        return this;
     }
-
-    public static SessionStatus ready() {
-        return new SessionStatus(State.READY);
-    }
-
-    public static SessionStatus needMoreForCommand(int bytesNeeded, CommandMessage cmd) {
-        return new SessionStatus(State.WAITING_FOR_DATA, bytesNeeded, cmd);
-    }
-
 
 }
