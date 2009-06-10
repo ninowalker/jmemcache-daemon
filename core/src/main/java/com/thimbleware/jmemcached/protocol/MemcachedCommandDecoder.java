@@ -54,7 +54,7 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
     private void processLine(String[] parts, Channel channel, ChannelHandlerContext channelHandlerContext) {
         final int numParts = parts.length;
         final String cmdType = parts[0].toUpperCase().intern();
-        CommandMessage cmd = new CommandMessage(cmdType);
+        CommandMessage cmd = CommandMessage.command(cmdType);
 
         if (cmdType == Commands.ADD ||
                 cmdType == Commands.SET ||

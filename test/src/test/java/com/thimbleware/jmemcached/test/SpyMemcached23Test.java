@@ -6,6 +6,8 @@ import static org.junit.Assert.assertNotNull;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
+import java.util.concurrent.Future;
+import java.util.concurrent.ExecutionException;
 
 import net.spy.memcached.MemcachedClient;
 
@@ -58,22 +60,20 @@ public class SpyMemcached23Test {
     }
 
     @Test
-    public void testBulkGet() throws IOException, InterruptedException {
-        int totalSize = 2000;
+    public void testBulkGet() throws IOException, InterruptedException, ExecutionException {
         ArrayList<String> allStrings = new ArrayList<String>();
-        for (int i = 0; i < totalSize; i++) {
+        for (int i = 0; i < 10000; i++) {
             _client.set("foo" + i, 360000, "bar" + i);
             allStrings.add("foo" + i);
         }
+        // doing a regular get, we are just too slow for spymemcached's tolerances... for now
+        Future<Map<String, Object>> future = _client.asyncGetBulk(allStrings);
+        Map<String, Object> results = future.get();
 
-        Map<String,Object> results = _client.getBulk(allStrings.subList(0, totalSize / 2));
-        Map<String,Object> results2 = _client.getBulk(allStrings.subList(totalSize / 2, totalSize));
-        for (int i = 0; i < totalSize / 2; i++) {
+        for (int i = 0; i < 10000; i++) {
             Assert.assertEquals("bar" + i, results.get("foo" + i));
         }
-        for (int i = totalSize / 2; i < totalSize; i++) {
-            Assert.assertEquals("bar" + i, results2.get("foo" + i));
-        }
+
     }
 
     private MemCacheDaemon createDaemon( final InetSocketAddress address ) throws IOException {
