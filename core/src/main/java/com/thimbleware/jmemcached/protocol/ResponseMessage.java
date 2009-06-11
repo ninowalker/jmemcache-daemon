@@ -3,9 +3,12 @@ package com.thimbleware.jmemcached.protocol;
 import com.thimbleware.jmemcached.Cache;
 import com.thimbleware.jmemcached.MCElement;
 
+import java.io.Serializable;
+
 /**
+ * Represents the response to a command.
  */
-public final class ResponseMessage {
+public final class ResponseMessage implements Serializable {
 
     public ResponseMessage(CommandMessage cmd) {
         this.cmd = cmd;

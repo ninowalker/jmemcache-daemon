@@ -310,7 +310,7 @@ public class Cache {
     }
 
     /**
-     * Increment an (integer) element inthe cache
+     * Increment/decremen t an (integer) element in the cache
      * @param key the key to increment
      * @param mod the amount to add to the value
      * @return the message response

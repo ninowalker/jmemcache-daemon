@@ -54,37 +54,21 @@ public class MemcachedResponseEncoder extends SimpleChannelUpstreamHandler {
                     channel.write(result.keystring + " " + result.flags + " " + result.dataLength + (cmd == Command.GETS ? " " + result.cas_unique : "") + "\r\n");
                     channel.write(new String(result.data));
                     channel.write("\r\n");
+
+                    // send response immediately
                     channelHandlerContext.sendUpstream(messageEvent);
                 }
             }
             channel.write("END\r\n");
-        } else if (cmd == Command.SET) {
-            String ret = getStoreResponseString(command.response);
+        } else if (cmd == Command.SET || cmd == Command.CAS || cmd == Command.ADD || cmd == Command.REPLACE || cmd == Command.APPEND  || cmd == Command.PREPEND) {
+            String ret = storeResponseString(command.response);
             if (!command.cmd.noreply)
                 channel.write(ret);
-        } else if (cmd == Command.CAS) {
-            String ret = getStoreResponseString(command.response);
-            if (!command.cmd.noreply) channel.write(ret);
-        } else if (cmd == Command.ADD) {
-            String ret = getStoreResponseString(command.response);
-            if (!command.cmd.noreply) channel.write(ret);
-        } else if (cmd == Command.REPLACE) {
-            String ret = getStoreResponseString(command.response);
-            if (!command.cmd.noreply) channel.write(ret);
-        } else if (cmd == Command.APPEND) {
-            String ret = getStoreResponseString(command.response);
-            if (!command.cmd.noreply) channel.write(ret);
-        } else if (cmd == Command.PREPEND) {
-            String ret = getStoreResponseString(command.response);
-            if (!command.cmd.noreply) channel.write(ret);
-        } else if (cmd == Command.INCR) {
-            String ret = getAddResponse(command.incrDecrResponse);
-            if (!command.cmd.noreply) channel.write(ret);
-        } else if (cmd == Command.DECR) {
-            String ret = getAddResponse(command.incrDecrResponse);
+        } else if (cmd == Command.INCR || cmd == Command.DECR) {
+            String ret = incrDecrResponseString(command.incrDecrResponse);
             if (!command.cmd.noreply) channel.write(ret);
         } else if (cmd == Command.DELETE) {
-            String ret = getDeleteResponseString(command.deleteResponse);
+            String ret = deleteResponseString(command.deleteResponse);
             if (!command.cmd.noreply) channel.write(ret);
         } else if (cmd == Command.STATS) {
             channel.write(command.stats);
@@ -104,19 +88,18 @@ public class MemcachedResponseEncoder extends SimpleChannelUpstreamHandler {
         }
     }
 
-    private String getDeleteResponseString(Cache.DeleteResponse deleteResponse) {
+    private String deleteResponseString(Cache.DeleteResponse deleteResponse) {
         if (deleteResponse == Cache.DeleteResponse.DELETED) return "DELETED\r\n";
         else return "NOT_FOUND\r\n";
     }
 
 
-    private String getAddResponse(Integer ret) {
+    private String incrDecrResponseString(Integer ret) {
         if (ret == null)
             return "NOT_FOUND\r\n";
         else
             return valueOf(ret) + "\r\n";
     }
-
 
     /**
      * Find the string response message which is equivalent to a response to a set/add/replace message
@@ -125,7 +108,7 @@ public class MemcachedResponseEncoder extends SimpleChannelUpstreamHandler {
      * @param storeResponse the response code
      * @return the string to output on the network
      */
-    private String getStoreResponseString(Cache.StoreResponse storeResponse) {
+    private String storeResponseString(Cache.StoreResponse storeResponse) {
         switch (storeResponse) {
             case EXISTS:
                 return "EXISTS\r\n";
