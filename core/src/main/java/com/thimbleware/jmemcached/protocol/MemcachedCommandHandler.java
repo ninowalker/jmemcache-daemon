@@ -19,6 +19,7 @@ package com.thimbleware.jmemcached.protocol;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.jboss.netty.channel.*;
+import org.jboss.netty.channel.group.DefaultChannelGroup;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.String.valueOf;
@@ -67,6 +68,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
     /**
      */
     private Cache cache;
+    private DefaultChannelGroup channelGroup;
 
     /**
      * Construct the server session handler
@@ -75,26 +77,29 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      * @param memcachedVersion the version string to return to clients
      * @param verbosity        verbosity level for debugging
      * @param idle             how long sessions can be idle for
-     * @param status
+     * @param channelGroup
      */
-    public MemcachedCommandHandler(Cache cache, String memcachedVersion, boolean verbosity, int idle) {
-
+    public MemcachedCommandHandler(Cache cache, String memcachedVersion, boolean verbosity, int idle, DefaultChannelGroup channelGroup) {
         this.cache = cache;
 
         version = memcachedVersion;
         verbose = verbosity;
         idle_limit = idle;
+        this.channelGroup = channelGroup;
     }
+
 
     @Override
     public void channelOpen(ChannelHandlerContext channelHandlerContext, ChannelStateEvent channelStateEvent) throws Exception {
         total_conns.incrementAndGet();
         curr_conns.incrementAndGet();
+        channelGroup.add(channelHandlerContext.getChannel());
     }
 
     @Override
     public void channelClosed(ChannelHandlerContext channelHandlerContext, ChannelStateEvent channelStateEvent) throws Exception {
         curr_conns.decrementAndGet();
+        channelGroup.remove(channelHandlerContext.getChannel());
     }
 
     @Override
@@ -191,7 +196,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
         } else if (cmd == Command.VERSION) {
             channel.write("VERSION " + version + "\r\n");
         } else if (cmd == Command.QUIT) {
-            channel.close();
+            channel.disconnect();
         } else if (cmd == Command.FLUSH_ALL) {
 
             String ret = flush_all(command.time);

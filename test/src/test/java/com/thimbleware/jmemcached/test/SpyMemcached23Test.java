@@ -43,6 +43,7 @@ public class SpyMemcached23Test {
 
     @After
     public void tearDown() throws Exception {
+        _client.shutdown();
         _daemon.stop();
     }
 

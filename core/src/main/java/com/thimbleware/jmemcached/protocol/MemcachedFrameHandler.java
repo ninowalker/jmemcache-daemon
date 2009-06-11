@@ -8,6 +8,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.thimbleware.jmemcached.protocol.exceptions.IncorrectlyTerminatedPayloadException;
@@ -31,8 +32,8 @@ public class MemcachedFrameHandler extends FrameDecoder {
      * Creates a new instance.
      *
      * @param maxFrameLength  the maximum length of the decoded frame.
-     *                        A {@link TooLongFrameException} is thrown if
-     *                        the length of the frame exceeds this value.
+     *                        A {@link org.jboss.netty.handler.codec.frame.TooLongFrameException} is thrown if
+     * @param channelGroup
      */
     public MemcachedFrameHandler(SessionStatus status, int maxFrameLength) {
         this.status = status;

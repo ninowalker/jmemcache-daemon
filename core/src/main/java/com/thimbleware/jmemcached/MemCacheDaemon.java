@@ -17,8 +17,9 @@ package com.thimbleware.jmemcached;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.group.DefaultChannelGroup;
+import org.jboss.netty.channel.group.ChannelGroupFuture;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 
@@ -46,7 +47,9 @@ public class MemCacheDaemon {
     private Cache cache;
 
     private boolean running = false;
-    private Channel serverChannel;
+    private NioServerSocketChannelFactory channelFactory;
+    private DefaultChannelGroup allChannels;
+
 
     public MemCacheDaemon() {
     }
@@ -61,28 +64,36 @@ public class MemCacheDaemon {
      * @throws IOException
      */
     public void start() throws IOException {
-        ChannelFactory factory =
-            new NioServerSocketChannelFactory(
-                    Executors.newCachedThreadPool(),
-                    Executors.newCachedThreadPool());
+        channelFactory =
+                new NioServerSocketChannelFactory(
+                        Executors.newCachedThreadPool(),
+                        Executors.newCachedThreadPool());
 
-        ServerBootstrap bootstrap = new ServerBootstrap(factory);
+        ServerBootstrap bootstrap = new ServerBootstrap(channelFactory);
+        allChannels = new DefaultChannelGroup("jmemcachedChannelGroup");
 
-        bootstrap.setPipelineFactory(new MemcachedPipelineFactory(cache, memcachedVersion, verbose, idleTime, receiveBufferSize));
+        bootstrap.setPipelineFactory(new MemcachedPipelineFactory(cache, memcachedVersion, verbose, idleTime, receiveBufferSize, allChannels));
+
+        Channel serverChannel = bootstrap.bind(addr);
+        allChannels.add(serverChannel);
 
         bootstrap.setOption("child.tcpNoDelay", true);
         bootstrap.setOption("child.keepAlive", true);
-
-        serverChannel = bootstrap.bind(addr);
 
         logger.info("Listening on " + String.valueOf(addr.getHostName()) + ":" + addr.getPort());
         running = true;
     }
 
     public void stop() {
-        serverChannel.close().awaitUninterruptibly();
+        ChannelGroupFuture future = allChannels.close();
+        future.awaitUninterruptibly();
+        if (!future.isCompleteSuccess()) {
+            System.err.println("shit");
+        }
+        channelFactory.releaseExternalResources();
+        running = false;
     }
-    
+
     public static void setMemcachedVersion(String memcachedVersion) {
         MemCacheDaemon.memcachedVersion = memcachedVersion;
     }
