@@ -382,22 +382,24 @@ public class Cache {
             startCacheRead();
             MCElement[] elements = new MCElement[keys.length];
             int x = 0;
+            int hits = 0;
+            int misses = 0;
             for (String key : keys) {
                 MCElement e = this.cacheStorage.get(key);
 
-                if (e == null) {
-                    getMisses.incrementAndGet();//update stats
-                    elements[x] = null;
-                } else if (isExpired(e) || e.blocked) {
-                    getMisses.incrementAndGet();//update stats
+                if (e == null || isExpired(e) || e.blocked) {
+                    misses++;
 
                     elements[x] = null;
                 } else {
-                    getHits.incrementAndGet();//update stats
+                    hits++;
+
                     elements[x] = e;
                 }
                 x++;
             }
+            getMisses.addAndGet(misses);
+            getHits.addAndGet(hits);
 
             return elements;
         } finally {
