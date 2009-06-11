@@ -1,8 +1,10 @@
 package com.thimbleware.jmemcached.storage.mmap;
 
-import java.io.*;
-import java.nio.*;
-import static java.nio.channels.FileChannel.MapMode.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.MappedByteBuffer;
+import static java.nio.channels.FileChannel.MapMode.PRIVATE;
 import java.util.*;
 
 /**

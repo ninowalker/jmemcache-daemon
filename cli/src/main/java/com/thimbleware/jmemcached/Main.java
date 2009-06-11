@@ -43,13 +43,14 @@ public class Main {
         Options options = new Options();
         options.addOption("h", "help", false, "print this help screen");
         options.addOption("f", "mapped-file", true, "use external (from JVM) heap through a memory mapped file");
-        options.addOption("b", "block-size", true, "block size (in bytes) for external memory mapped file allocator.  default is 8 bytes");
+        options.addOption("bs", "block-size", true, "block size (in bytes) for external memory mapped file allocator.  default is 8 bytes");
         options.addOption("i", "idle", true, "disconnect after idle <x> seconds");
         options.addOption("p", "port", true, "port to listen on");
         options.addOption("m", "memory", true, "max memory to use; in bytes, specify K, kb, M, GB for larger units");
         options.addOption("c", "ceiling", true, "ceiling memory to use; in bytes, specify K, kb, M, GB for larger units");
         options.addOption("l", "listen", true, "Address to listen on");
         options.addOption("s", "size", true, "max items");
+        options.addOption("b", "binary", false, "binary protocol mode");
         options.addOption("V", false, "Show version number");
         options.addOption("v", false, "verbose (show commands)");
 
@@ -131,11 +132,16 @@ public class Main {
             return;
         }
 
+        boolean binary = false;
+        if (cmdline.hasOption("b")) {
+            binary = true;
+        }
+
         int blockSize = 8;
-        if (!memoryMapped && (cmdline.hasOption("b") || cmdline.hasOption("block-size"))) {
+        if (!memoryMapped && (cmdline.hasOption("bs") || cmdline.hasOption("block-size"))) {
             System.out.println("WARN : block size option is only valid for memory mapped external heap storage; ignoring");
-        } else if (cmdline.hasOption("b")) {
-            blockSize = Integer.parseInt(cmdline.getOptionValue("b"));
+        } else if (cmdline.hasOption("bs")) {
+            blockSize = Integer.parseInt(cmdline.getOptionValue("bs"));
         } else if (cmdline.hasOption("block-size")) {
             blockSize = Integer.parseInt(cmdline.getOptionValue("block-size"));
         }
@@ -173,11 +179,12 @@ public class Main {
         else
             cacheStorage = new LRUCacheStorageDelegate(max_size, maxBytes, ceiling);
         daemon.setCache(new Cache(cacheStorage));
+        daemon.setBinary(binary);
         daemon.setAddr(addr);
         daemon.setIdleTime(idle);
         daemon.setVerbose(verbose);
         daemon.start();
-
+        
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             public void run() {
                 if (daemon != null && daemon.isRunning()) daemon.stop();

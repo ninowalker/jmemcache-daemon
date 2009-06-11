@@ -1,6 +1,9 @@
-package com.thimbleware.jmemcached.protocol;
+package com.thimbleware.jmemcached.protocol.text;
 
 import com.thimbleware.jmemcached.MCElement;
+import com.thimbleware.jmemcached.protocol.Command;
+import com.thimbleware.jmemcached.protocol.CommandMessage;
+import com.thimbleware.jmemcached.protocol.SessionStatus;
 import com.thimbleware.jmemcached.protocol.exceptions.InvalidProtocolStateException;
 import com.thimbleware.jmemcached.protocol.exceptions.MalformedCommandException;
 import com.thimbleware.jmemcached.protocol.exceptions.UnknownCommandException;

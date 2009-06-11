@@ -15,19 +15,20 @@
  */
 package com.thimbleware.jmemcached;
 
+import com.thimbleware.jmemcached.protocol.text.MemcachedPipelineFactory;
+import com.thimbleware.jmemcached.protocol.binary.MemcachedBinaryPipelineFactory;
+import org.jboss.netty.bootstrap.ServerBootstrap;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.group.ChannelGroupFuture;
+import org.jboss.netty.channel.group.DefaultChannelGroup;
+import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.group.DefaultChannelGroup;
-import org.jboss.netty.channel.group.ChannelGroupFuture;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jboss.netty.bootstrap.ServerBootstrap;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
-
-import com.thimbleware.jmemcached.protocol.MemcachedPipelineFactory;
 
 /**
  * The actual daemon - responsible for the binding and configuration of the network configuration.
@@ -41,6 +42,7 @@ public class MemCacheDaemon {
     private int receiveBufferSize = 32768 * 1024;
     private int sendBufferSize = 32768;
 
+    private boolean binary = false;
     private boolean verbose;
     private int idleTime;
     private InetSocketAddress addr;
@@ -72,7 +74,13 @@ public class MemCacheDaemon {
         ServerBootstrap bootstrap = new ServerBootstrap(channelFactory);
         allChannels = new DefaultChannelGroup("jmemcachedChannelGroup");
 
-        bootstrap.setPipelineFactory(new MemcachedPipelineFactory(cache, memcachedVersion, verbose, idleTime, receiveBufferSize, allChannels));
+        ChannelPipelineFactory pipelineFactory;
+        if (binary)
+            pipelineFactory = new MemcachedBinaryPipelineFactory(cache, memcachedVersion, verbose, idleTime, allChannels);
+        else
+            pipelineFactory = new MemcachedPipelineFactory(cache, memcachedVersion, verbose, idleTime, receiveBufferSize, allChannels);
+
+        bootstrap.setPipelineFactory(pipelineFactory);
 
         Channel serverChannel = bootstrap.bind(addr);
         allChannels.add(serverChannel);
@@ -129,5 +137,13 @@ public class MemCacheDaemon {
 
     public boolean isRunning() {
         return running;
+    }
+
+    public boolean isBinary() {
+        return binary;
+    }
+
+    public void setBinary(boolean binary) {
+        this.binary = binary;
     }
 }

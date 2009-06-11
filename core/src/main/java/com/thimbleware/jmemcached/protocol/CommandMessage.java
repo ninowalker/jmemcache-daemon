@@ -25,6 +25,7 @@ import java.util.List;
  * The payload object holding the parsed message.
  */
 public final class CommandMessage implements Serializable {
+
     public static enum ErrorType {
         OK, ERROR, CLIENT_ERROR
     }
@@ -37,7 +38,9 @@ public final class CommandMessage implements Serializable {
     public int time = 0;
     public ErrorType error = ErrorType.OK;
     public String errorString;
-
+    public int opaque;
+    public boolean addKeyToResponse = false;
+    
     private CommandMessage(Command cmd) {
         this.cmd = cmd;
         element = null;

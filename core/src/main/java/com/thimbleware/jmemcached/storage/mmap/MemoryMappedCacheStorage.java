@@ -3,10 +3,10 @@ package com.thimbleware.jmemcached.storage.mmap;
 import com.thimbleware.jmemcached.MCElement;
 import com.thimbleware.jmemcached.storage.CacheStorage;
 
-import java.util.Set;
-import java.util.Map;
-import java.util.LinkedHashMap;
 import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Cache storage delegate for the memory mapped storage mechanism.

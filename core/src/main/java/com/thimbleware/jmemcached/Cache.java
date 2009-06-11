@@ -15,21 +15,19 @@
  */
 package com.thimbleware.jmemcached;
 
+import com.thimbleware.jmemcached.storage.CacheStorage;
+
 import static java.lang.Integer.parseInt;
 import static java.lang.String.valueOf;
+import java.nio.ByteBuffer;
 import java.util.Set;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.nio.ByteBuffer;
-
-import com.thimbleware.jmemcached.storage.CacheStorage;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  */

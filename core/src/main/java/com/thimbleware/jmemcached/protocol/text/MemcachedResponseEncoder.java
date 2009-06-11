@@ -1,7 +1,9 @@
-package com.thimbleware.jmemcached.protocol;
+package com.thimbleware.jmemcached.protocol.text;
 
 import com.thimbleware.jmemcached.Cache;
 import com.thimbleware.jmemcached.MCElement;
+import com.thimbleware.jmemcached.protocol.Command;
+import com.thimbleware.jmemcached.protocol.ResponseMessage;
 import com.thimbleware.jmemcached.protocol.exceptions.ClientException;
 import org.jboss.netty.channel.*;
 import org.slf4j.Logger;

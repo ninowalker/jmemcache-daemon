@@ -1,5 +1,6 @@
-package com.thimbleware.jmemcached.protocol;
+package com.thimbleware.jmemcached.protocol.text;
 
+import com.thimbleware.jmemcached.protocol.SessionStatus;
 import com.thimbleware.jmemcached.protocol.exceptions.IncorrectlyTerminatedPayloadException;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;

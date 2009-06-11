@@ -5,12 +5,12 @@ import java.io.Serializable;
 /**
  * Class for holding the current session status.
  */
-final class SessionStatus implements Serializable {
+final public class SessionStatus implements Serializable {
 
     /**
      * Possible states that the current session is in.
      */
-    enum State {
+    public static enum State {
         WAITING_FOR_DATA,
         READY,
         PROCESSING,
