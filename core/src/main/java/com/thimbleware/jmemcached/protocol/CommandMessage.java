@@ -29,7 +29,7 @@ public final class CommandMessage implements Serializable {
         OK, ERROR, CLIENT_ERROR
     }
 
-    public String cmd;
+    public Command cmd;
     public MCElement element;
     public List<String> keys;
     public boolean noreply;
@@ -38,7 +38,7 @@ public final class CommandMessage implements Serializable {
     public ErrorType error = ErrorType.OK;
     public String errorString;
 
-    private CommandMessage(String cmd) {
+    private CommandMessage(Command cmd) {
         this.cmd = cmd;
         element = null;
         keys = new ArrayList<String>();
@@ -58,7 +58,7 @@ public final class CommandMessage implements Serializable {
         return errcmd;
     }
     
-    public static CommandMessage command(String cmd) {
+    public static CommandMessage command(Command cmd) {
         return new CommandMessage(cmd);
     }
 }

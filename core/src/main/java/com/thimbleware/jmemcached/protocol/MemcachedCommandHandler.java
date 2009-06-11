@@ -22,8 +22,6 @@ import org.jboss.netty.channel.*;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.String.valueOf;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetEncoder;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -118,7 +116,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
         }
 
         CommandMessage command = (CommandMessage) messageEvent.getMessage();
-        String cmd = command.cmd;
+        Command cmd = command.cmd;
         int cmdKeysSize = command.keys.size();
 
         // first process any messages in the delete queue
@@ -138,57 +136,57 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
         }
 
         Channel channel = messageEvent.getChannel();
-        if (cmd == Commands.GET || cmd == Commands.GETS) {
+        if (cmd == Command.GET || cmd == Command.GETS) {
             MCElement[] results = get(command.keys.toArray(new String[command.keys.size()]));
             for (MCElement result : results) {
                 if (result != null) {
                     channel.write(VALUE);
-                    channel.write(result.keystring + " " + result.flags + " " + result.dataLength + (cmd == Commands.GETS ? " " + result.cas_unique : "") + "\r\n");
+                    channel.write(result.keystring + " " + result.flags + " " + result.dataLength + (cmd == Command.GETS ? " " + result.cas_unique : "") + "\r\n");
                     channel.write(new String(result.data));
                     channel.write("\r\n");
                     channelHandlerContext.sendUpstream(messageEvent);
                 }
             }
             channel.write("END\r\n");
-        } else if (cmd == Commands.SET) {
+        } else if (cmd == Command.SET) {
             String ret = set(command.element);
             if (!command.noreply)
                 channel.write(ret);
-        } else if (cmd == Commands.CAS) {
+        } else if (cmd == Command.CAS) {
             String ret = cas(command.cas_key, command.element);
             if (!command.noreply) channel.write(ret);
-        } else if (cmd == Commands.ADD) {
+        } else if (cmd == Command.ADD) {
             String ret = add(command.element);
             if (!command.noreply) channel.write(ret);
-        } else if (cmd == Commands.REPLACE) {
+        } else if (cmd == Command.REPLACE) {
             String ret = replace(command.element);
             if (!command.noreply) channel.write(ret);
-        } else if (cmd == Commands.APPEND) {
+        } else if (cmd == Command.APPEND) {
             String ret = append(command.element);
             if (!command.noreply) channel.write(ret);
-        } else if (cmd == Commands.PREPEND) {
+        } else if (cmd == Command.PREPEND) {
             String ret = prepend(command.element);
             if (!command.noreply) channel.write(ret);
-        } else if (cmd == Commands.INCR) {
+        } else if (cmd == Command.INCR) {
             String ret = get_add(command.keys.get(0), parseInt(command.keys.get(1)));
             if (!command.noreply) channel.write(ret);
-        } else if (cmd == Commands.DECR) {
+        } else if (cmd == Command.DECR) {
             String ret = get_add(command.keys.get(0), -1 * parseInt(command.keys.get(1)));
             if (!command.noreply) channel.write(ret);
-        } else if (cmd == Commands.DELETE) {
+        } else if (cmd == Command.DELETE) {
             String ret = delete(command.keys.get(0), command.time);
             if (!command.noreply) channel.write(ret);
-        } else if (cmd == Commands.STATS) {
+        } else if (cmd == Command.STATS) {
             String option = "";
             if (cmdKeysSize > 0) {
                 option = command.keys.get(0);
             }
             channel.write(stat(option));
-        } else if (cmd == Commands.VERSION) {
+        } else if (cmd == Command.VERSION) {
             channel.write("VERSION " + version + "\r\n");
-        } else if (cmd == Commands.QUIT) {
+        } else if (cmd == Command.QUIT) {
             channel.close();
-        } else if (cmd == Commands.FLUSH_ALL) {
+        } else if (cmd == Command.FLUSH_ALL) {
 
             String ret = flush_all(command.time);
             if (!command.noreply)

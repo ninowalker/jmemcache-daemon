@@ -4,7 +4,6 @@ import org.jboss.netty.channel.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.Arrays;
 
 import com.thimbleware.jmemcached.MCElement;
@@ -60,15 +59,15 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
      */
     private void processLine(String[] parts, Channel channel, ChannelHandlerContext channelHandlerContext) throws UnknownCommandException, MalformedCommandException {
         final int numParts = parts.length;
-        final String cmdType = parts[0].toUpperCase().intern();
+        final Command cmdType = Command.valueOf(parts[0].toUpperCase());
         CommandMessage cmd = CommandMessage.command(cmdType);
 
-        if (cmdType == Commands.ADD ||
-                cmdType == Commands.SET ||
-                cmdType == Commands.REPLACE ||
-                cmdType == Commands.CAS ||
-                cmdType == Commands.APPEND ||
-                cmdType == Commands.PREPEND) {
+        if (cmdType == Command.ADD ||
+                cmdType == Command.SET ||
+                cmdType == Command.REPLACE ||
+                cmdType == Command.CAS ||
+                cmdType == Command.APPEND ||
+                cmdType == Command.PREPEND) {
 
             // if we don't have all the parts, it's malformed
             if (numParts < 5) {
@@ -82,8 +81,8 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
 
             // look for cas and "noreply" elements
             if (numParts > 5) {
-                int noreply = cmdType == Commands.CAS ? 6 : 5;
-                if (cmdType == Commands.CAS) {
+                int noreply = cmdType == Command.CAS ? 6 : 5;
+                if (cmdType == Command.CAS) {
                     cmd.cas_key = Long.valueOf(parts[5]);
                 }
 
@@ -92,11 +91,11 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
             }
 
             status.needMore(size, cmd);
-        } else if (cmdType == Commands.GET ||
-                cmdType == Commands.GETS ||
-                cmdType == Commands.STATS ||
-                cmdType == Commands.QUIT ||
-                cmdType == Commands.VERSION) {
+        } else if (cmdType == Command.GET ||
+                cmdType == Command.GETS ||
+                cmdType == Command.STATS ||
+                cmdType == Command.QUIT ||
+                cmdType == Command.VERSION) {
 
             // CMD <options>*
             cmd.keys.addAll(Arrays.asList(parts).subList(1, numParts));
@@ -104,8 +103,8 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
             Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
 
             status.ready();
-        } else if (cmdType == Commands.INCR ||
-                cmdType == Commands.DECR) {
+        } else if (cmdType == Command.INCR ||
+                cmdType == Command.DECR) {
 
             if (numParts < 2 || numParts > 3)
                 throw new MalformedCommandException("invalid increment command");
@@ -119,7 +118,7 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
             Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
 
             status.ready();
-        } else if (cmdType == Commands.DELETE) {
+        } else if (cmdType == Command.DELETE) {
             cmd.keys.add(parts[1]);
 
             if (numParts >= 2) {
@@ -133,7 +132,7 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
             Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
 
             status.ready();
-        } else if (cmdType == Commands.FLUSH_ALL) {
+        } else if (cmdType == Command.FLUSH_ALL) {
             if (numParts >= 1) {
                 if (parts[numParts - 1].equalsIgnoreCase(NOREPLY)) {
                     cmd.noreply = true;
