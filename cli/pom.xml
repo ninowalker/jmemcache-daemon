@@ -8,7 +8,7 @@
     <parent>
         <groupId>com.thimbleware.jmemcached</groupId>
         <artifactId>jmemcached-parent</artifactId>
-        <version>0.7-SNAPSHOT</version>
+        <version>0.7</version>
         <relativePath>../</relativePath>
     </parent>
 
@@ -63,25 +63,23 @@
                         <configuration>
                             <tasks>
 
-                                <taskdef name="deb" classname="org.vafer.jdeb.ant.DebAntTask"/>
+                                <taskdef name="deb" classname="org.vafer.jdeb.ant.DebAntTask" />
 
                                 <copy todir="${project.build.directory}/control">
-                                    <fileset dir="src/main/resources/deb/control"/>
+                                    <fileset dir="src/main/resources/deb/control" />
                                     <filterset begintoken="[[" endtoken="]]">
-                                        <filter token="version" value="${project.version}"/>
+                                        <filter token="version" value="${project.version}" />
                                     </filterset>
                                 </copy>
 
-                                <mkdir dir="${project.build.directory}/deb-jar-contents/usr/share/jmemcached"/>
+                                <mkdir dir="${project.build.directory}/deb-jar-contents/usr/share/jmemcached" />
 
-                                <copy file="${project.build.directory}/${project.artifactId}-${project.version}-main.jar" todir="${project.build.directory}/deb-jar-contents/usr/share/jmemcached"/>
+                                <copy file="${project.build.directory}/${project.artifactId}-${project.version}-main.jar" todir="${project.build.directory}/deb-jar-contents/usr/share/jmemcached" />
 
                                 <deb destfile="${project.build.directory}/${project.artifactId}-${project.version}.deb" control="${project.build.directory}/control">
-                                    <tarfileset dir="${project.build.directory}/classes/deb/init.d/"
-                                                prefix="/etc/init.d"
-                                                filemode="755"/>
+                                    <tarfileset dir="${project.build.directory}/classes/deb/init.d/" prefix="/etc/init.d" filemode="755" />
 
-                                    <data src="${project.build.directory}/deb-jar-contents"/>
+                                    <data src="${project.build.directory}/deb-jar-contents" />
                                 </deb>
 
                             </tasks>
