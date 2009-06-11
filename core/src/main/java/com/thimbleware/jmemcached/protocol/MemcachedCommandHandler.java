@@ -225,17 +225,6 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
 
     }
 
-
-    /**
-     * Get an element from the cache
-     *
-     * @param key the key for the element to lookup
-     * @return the element, or 'null' in case of cache miss.
-     */
-    private MCElement get(String key) {
-        return cache.get(key)[0];
-    }
-
     /**
      * Get an element from the cache
      *

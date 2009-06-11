@@ -9,10 +9,7 @@ import java.util.*;
 import java.util.concurrent.Future;
 import java.util.concurrent.ExecutionException;
 
-import net.spy.memcached.MemcachedClient;
-import net.spy.memcached.CASValue;
-import net.spy.memcached.CASMutator;
-import net.spy.memcached.CASMutation;
+import net.spy.memcached.*;
 import net.spy.memcached.transcoders.IntegerTranscoder;
 
 import org.junit.After;
@@ -76,18 +73,15 @@ public class SpyMemcached23Test {
 
     @Test
     public void testCAS() throws Exception {
-        _client.set("foo", 0, 123);
-        Assert.assertEquals( 123, _client.get( "foo" ));
+        _client.set("foo", 32000, 123);
+        CASValue<Object> casValue = _client.gets("foo");
+        Assert.assertEquals( 123, casValue.getValue());
 
-        CASMutator<Integer> mutator = new CASMutator<Integer>(_client, new IntegerTranscoder());
-        Integer result = mutator.cas("foo", 123, 0, new CASMutation<Integer>() {
-            public Integer getNewValue(Integer integer) {
-                System.err.println(integer);
-                return 456;
-            }
-        });
+        CASResponse cr = _client.cas("foo", casValue.getCas(), 456);
 
-        Assert.assertEquals(456, result, 0);
+        Assert.assertEquals(CASResponse.OK, cr);
+
+        Assert.assertEquals(456, _client.get("foo"));
     }
 
     @Test
