@@ -100,11 +100,13 @@ public final class LRUCache<ID_TYPE, ITEM_TYPE> {
         if (aId == null) throw new IllegalArgumentException("Id must not be null.");
 
         ITEM_TYPE result;
-        if (items.containsKey(aId)) {
-            result = items.get(aId).item;
+        CacheEntry<ITEM_TYPE> entry = items.get(aId);
+        if (entry != null) {
+            result = entry.item;
             if (result == null) {
                 throw new IllegalStateException("Stored item should not be null. Id:" + aId);
             }
+
         } else {
             return null;
         }
@@ -126,8 +128,9 @@ public final class LRUCache<ID_TYPE, ITEM_TYPE> {
         if (aItem == null) throw new IllegalArgumentException("Item must not be null.");
 
         // if the item already exists in the cache, subtract its old size
-        if (items.containsKey(aId)) {
-            size -= items.get(aId).size;
+        CacheEntry<ITEM_TYPE> entry = items.get(aId);
+        if (entry != null) {
+            size -= entry.size;
         }
         items.put(aId, new CacheEntry<ITEM_TYPE>(item_size, aItem));
         size += item_size;
