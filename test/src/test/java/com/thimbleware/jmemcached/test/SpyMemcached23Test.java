@@ -10,6 +10,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ExecutionException;
 
 import net.spy.memcached.MemcachedClient;
+import net.spy.memcached.CASValue;
+import net.spy.memcached.CASMutator;
+import net.spy.memcached.CASMutation;
+import net.spy.memcached.transcoders.IntegerTranscoder;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -58,6 +62,41 @@ public class SpyMemcached23Test {
     public void testGetSet() throws IOException, InterruptedException {
         _client.set( "foo", 5000, "bar" );
         Assert.assertEquals( "bar", _client.get( "foo" ) );
+    }
+
+    @Test
+    public void testIncrDecr() {
+        _client.set( "foo", 0, "1");
+        Assert.assertEquals( "1", _client.get( "foo" ) );
+        _client.incr( "foo", 5 );
+        Assert.assertEquals( "6", _client.get( "foo" ) );
+        _client.decr( "foo", 10 );
+        Assert.assertEquals( "0", _client.get( "foo" ) );
+    }
+
+    @Test
+    public void testCAS() throws Exception {
+        _client.set("foo", 0, 123);
+        Assert.assertEquals( 123, _client.get( "foo" ));
+
+        CASMutator<Integer> mutator = new CASMutator<Integer>(_client, new IntegerTranscoder());
+        Integer result = mutator.cas("foo", 123, 0, new CASMutation<Integer>() {
+            public Integer getNewValue(Integer integer) {
+                System.err.println(integer);
+                return 456;
+            }
+        });
+
+        Assert.assertEquals(456, result, 0);
+    }
+
+    @Test
+    public void testAppendPrepend() throws Exception {
+        _client.set( "foo", 0, "foo" );
+        _client.append(0, "foo", "bar");
+        Assert.assertEquals( "foobar", _client.get( "foo" ));
+        _client.prepend(0, "foo", "baz");
+        Assert.assertEquals( "bazfoobar", _client.get( "foo" ));
     }
 
     @Test
