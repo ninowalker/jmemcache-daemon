@@ -49,17 +49,11 @@ public class MemcachedFrameHandler extends FrameDecoder {
         if (status.state == SessionStatus.State.WAITING_FOR_DATA) {
             if (buffer.readableBytes() < status.bytesNeeded + delimiter.capacity()) return null;
 
-            // verify that the delimiter is in the buffer, and in the right position
-            int minFrameLength = Integer.MAX_VALUE;
-            ChannelBuffer foundDelimiter = null;
-            int frameLength = indexOf(buffer, delimiter);
-            if (frameLength >= 0 && frameLength < minFrameLength) {
-                minFrameLength = frameLength;
-                foundDelimiter = delimiter;
-            }
+            // verify delimiter matches at the right location
+            ChannelBuffer dest = ChannelBuffers.buffer(delimiter.capacity());
+            buffer.getBytes(status.bytesNeeded + buffer.readerIndex(), dest);
 
-
-            if (foundDelimiter == null || frameLength != status.bytesNeeded){
+            if (!dest.equals(delimiter)) {
                 // before we throw error... we're ready for the next command
                 status.ready();
 
