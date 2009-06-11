@@ -7,12 +7,18 @@ import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.Channels;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import com.thimbleware.jmemcached.protocol.exceptions.IncorrectlyTerminatedPayloadException;
 
 
 /**
  */
 @ChannelPipelineCoverage("one")
 public class MemcachedFrameHandler extends FrameDecoder {
+
+    final Logger logger = LoggerFactory.getLogger(MemcachedFrameHandler.class);
 
     private SessionStatus status;
 
@@ -53,7 +59,14 @@ public class MemcachedFrameHandler extends FrameDecoder {
             }
 
 
-            if (foundDelimiter != null) {
+            if (foundDelimiter == null || frameLength != status.bytesNeeded){
+                // before we throw error... we're ready for the next command
+                status.ready();
+
+                // error, no delimiter at end of payload
+                throw new IncorrectlyTerminatedPayloadException("payload not terminated correctly");
+            } else {
+
                 status.processingMultiline();
 
                 // There's enough bytes in the buffer and the delimiter is at the end. Read it.
@@ -64,14 +77,7 @@ public class MemcachedFrameHandler extends FrameDecoder {
                 // Consume
                 buffer.skipBytes(delimiter.capacity());
 
-
                 return result;
-            } else {
-                // before we throw error... we're ready for the next command
-                status.ready();
-
-                // error, no delimiter at end of payload
-                throw new IncorrectlyTerminatedPayloadException("payload not terminated correctly");
             }
 
         } else {
@@ -120,13 +126,6 @@ public class MemcachedFrameHandler extends FrameDecoder {
                 return null;
             }
         }
-    }
-
-     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
-            throws Exception {
-        e.getCause().printStackTrace();
-        // We don't close the channel because we can keep serving requests.
     }
 
     private void fail(long frameLength) throws TooLongFrameException {

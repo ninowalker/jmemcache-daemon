@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.thimbleware.jmemcached.Cache;
 import com.thimbleware.jmemcached.MCElement;
+import com.thimbleware.jmemcached.protocol.exceptions.ClientException;
 
 // TODO implement flush_all delay
 
@@ -91,6 +92,22 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
         curr_conns.decrementAndGet();
 
     }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
+            throws Exception
+    {
+        if (e.getCause() instanceof ClientException) {
+            logger.debug("client error", e.getCause().getMessage());
+
+            ctx.getChannel().write("CLIENT_ERROR\r\n");
+        } else {
+            logger.error("error", e.getCause());
+
+            ctx.getChannel().write("ERROR\r\n");
+        }
+    }
+
 
     @Override
     public void messageReceived(ChannelHandlerContext channelHandlerContext, MessageEvent messageEvent) throws Exception {
@@ -182,12 +199,6 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
         }
 
     }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext channelHandlerContext, ExceptionEvent exceptionEvent) throws Exception {
-        logger.error("client error", exceptionEvent);
-    }
-
 
 
     /**

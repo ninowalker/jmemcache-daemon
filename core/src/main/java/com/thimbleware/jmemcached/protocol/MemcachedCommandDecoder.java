@@ -1,16 +1,23 @@
 package com.thimbleware.jmemcached.protocol;
 
 import org.jboss.netty.channel.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Arrays;
 
 import com.thimbleware.jmemcached.MCElement;
+import com.thimbleware.jmemcached.protocol.exceptions.UnknownCommandException;
+import com.thimbleware.jmemcached.protocol.exceptions.InvalidProtocolStateException;
+import com.thimbleware.jmemcached.protocol.exceptions.MalformedCommandException;
 
 /**
  */
 @ChannelPipelineCoverage("one")
 public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
+
+    final Logger logger = LoggerFactory.getLogger(MemcachedCommandDecoder.class);
 
     private SessionStatus status;
 
@@ -36,7 +43,7 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
         } else {
             status.ready();
 
-            throw new RuntimeException("invalid protocol state");
+            throw new InvalidProtocolStateException("invalid protocol state");
         }
 
 
@@ -51,7 +58,7 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
      * @param channelHandlerContext
      * @return the session status we want to set the session to
      */
-    private void processLine(String[] parts, Channel channel, ChannelHandlerContext channelHandlerContext) {
+    private void processLine(String[] parts, Channel channel, ChannelHandlerContext channelHandlerContext) throws UnknownCommandException, MalformedCommandException {
         final int numParts = parts.length;
         final String cmdType = parts[0].toUpperCase().intern();
         CommandMessage cmd = CommandMessage.command(cmdType);
@@ -65,7 +72,7 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
 
             // if we don't have all the parts, it's malformed
             if (numParts < 5) {
-                throw new RuntimeException("invalid command length");
+                throw new MalformedCommandException("invalid command length");
             }
 
             int size = Integer.parseInt(parts[4]);
@@ -101,7 +108,7 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
                 cmdType == Commands.DECR) {
 
             if (numParts < 2 || numParts > 3)
-                throw new RuntimeException("invalid increment command");
+                throw new MalformedCommandException("invalid increment command");
 
             cmd.keys.add(parts[1]);
             cmd.keys.add(parts[2]);
@@ -140,7 +147,7 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
             status.ready();
         } else {
             status.ready();
-            throw new RuntimeException("unknown command: " + cmdType);
+            throw new UnknownCommandException("unknown command: " + cmdType);
         }
     }
 

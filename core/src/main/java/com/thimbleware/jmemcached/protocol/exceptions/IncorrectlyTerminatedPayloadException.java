@@ -1,8 +1,8 @@
-package com.thimbleware.jmemcached.protocol;
+package com.thimbleware.jmemcached.protocol.exceptions;
 
 /**
  */
-public class IncorrectlyTerminatedPayloadException extends Exception {
+public class IncorrectlyTerminatedPayloadException extends ClientException {
     public IncorrectlyTerminatedPayloadException() {
     }
 
