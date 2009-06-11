@@ -36,28 +36,37 @@ import com.thimbleware.jmemcached.protocol.exceptions.ClientException;
  * sessions, keeping cache statistics, and (most importantly) processing inbound (parsed) commands and then passing on
  * a response message for output.
  */
-@ChannelPipelineCoverage("one")
+@ChannelPipelineCoverage("all")
 public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler {
 
     final Logger logger = LoggerFactory.getLogger(MemcachedCommandHandler.class);
 
     public final String version;
-    public final AtomicInteger curr_conns = new AtomicInteger();
-    public final AtomicInteger total_conns = new AtomicInteger();
-    public final AtomicInteger started = new AtomicInteger();          /* when the process was started */
+    public static final AtomicInteger curr_conns = new AtomicInteger();
+    public static final AtomicInteger total_conns = new AtomicInteger();
+    public static final AtomicInteger started = new AtomicInteger();          /* when the process was started */
 
-    public final AtomicLong bytes_read = new AtomicLong();
-    public final AtomicLong bytes_written = new AtomicLong();
-    public final AtomicLong curr_bytes = new AtomicLong();
+    public static final AtomicLong bytes_read = new AtomicLong();
+    public static final AtomicLong bytes_written = new AtomicLong();
+    public static final AtomicLong curr_bytes = new AtomicLong();
 
     public final int idle_limit;
     public final boolean verbose;
 
     public static final String VALUE = "VALUE ";
 
+    static {
+        curr_bytes.set(0);
+        curr_conns.set(0);
+        total_conns.set(0);
+        bytes_read.set(0);
+        bytes_written.set(0);
+        started.set(Now());
+    }
+
     /**
      */
-    protected Cache cache;
+    private Cache cache;
 
     /**
      * Construct the server session handler
@@ -68,12 +77,10 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      * @param idle             how long sessions can be idle for
      * @param status
      */
-    public MemcachedCommandHandler(Cache cache, String memcachedVersion, boolean verbosity, int idle, SessionStatus status) {
-        initStats();
+    public MemcachedCommandHandler(Cache cache, String memcachedVersion, boolean verbosity, int idle) {
 
         this.cache = cache;
 
-        started.set(Now());
         version = memcachedVersion;
         verbose = verbosity;
         idle_limit = idle;
@@ -81,14 +88,13 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
 
     @Override
     public void channelOpen(ChannelHandlerContext channelHandlerContext, ChannelStateEvent channelStateEvent) throws Exception {
-        int conn = total_conns.incrementAndGet();
+        total_conns.incrementAndGet();
         curr_conns.incrementAndGet();
     }
 
     @Override
     public void channelClosed(ChannelHandlerContext channelHandlerContext, ChannelStateEvent channelStateEvent) throws Exception {
         curr_conns.decrementAndGet();
-
     }
 
     @Override
@@ -206,7 +212,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      * @param time only delete the element if time (time in seconds)
      * @return the message response
      */
-    protected String delete(String key, int time) {
+    private  String delete(String key, int time) {
         return getDeleteResponseString(cache.delete(key, time));
     }
 
@@ -221,7 +227,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      * @param e the element to add
      * @return the message response string
      */
-    protected String add(MCElement e) {
+    private String add(MCElement e) {
         return getStoreResponseString(cache.add(e));
     }
 
@@ -232,7 +238,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      * @param storeResponse the response code
      * @return the string to output on the network
      */
-    protected String getStoreResponseString(Cache.StoreResponse storeResponse) {
+    private  String getStoreResponseString(Cache.StoreResponse storeResponse) {
         switch (storeResponse) {
             case EXISTS:
                 return "EXISTS\r\n";
@@ -252,7 +258,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      * @param e the element to replace
      * @return the message response string
      */
-    protected String replace(MCElement e) {
+    private  String replace(MCElement e) {
         return getStoreResponseString(cache.replace(e));
     }
 
@@ -261,7 +267,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      * @param element the element to append to
      * @return the message response string
      */
-    protected String append(MCElement element) {
+    private  String append(MCElement element) {
         return getStoreResponseString(cache.append(element));
     }
 
@@ -270,7 +276,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      * @param element the element to append to
      * @return the message response string
      */
-    protected String prepend(MCElement element) {
+    private  String prepend(MCElement element) {
         return getStoreResponseString(cache.prepend(element));
     }
 
@@ -280,7 +286,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      * @param e the element to set
      * @return the message response string
      */
-    protected String set(MCElement e) {
+    private  String set(MCElement e) {
         return getStoreResponseString(cache.set(e));
     }
 
@@ -291,7 +297,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      * @param e       the element to set @return the message response string
      * @return the message response string
      */
-    protected String cas(Long cas_key, MCElement e) {
+    private  String cas(Long cas_key, MCElement e) {
         return getStoreResponseString(cache.cas(cas_key, e));
     }
 
@@ -302,23 +308,12 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      * @param mod the amount to add to the value
      * @return the message response
      */
-    protected String get_add(String key, int mod) {
+    private  String get_add(String key, int mod) {
         Integer ret = cache.get_add(key, mod);
         if (ret == null)
             return "NOT_FOUND\r\n";
         else
             return valueOf(ret)  + "\r\n";
-    }
-
-
-    /**
-     * Check whether an element is in the cache and non-expired
-     *
-     * @param key the key for the element to lookup
-     * @return whether the element is in the cache and is live
-     */
-    protected boolean is_there(String key) {
-        return cache.isThere(key);
     }
 
     /**
@@ -327,7 +322,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      * @param key the key for the element to lookup
      * @return the element, or 'null' in case of cache miss.
      */
-    protected MCElement get(String key) {
+    private  MCElement get(String key) {
         return cache.get(key)[0];
     }
 
@@ -337,7 +332,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      * @param keys the key for the element to lookup
      * @return the element, or 'null' in case of cache miss.
      */
-    protected MCElement[] get(String ... keys) {
+    private MCElement[] get(String ... keys) {
         return cache.get(keys);
     }
 
@@ -345,20 +340,10 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
     /**
      * @return the current time in seconds (from epoch), used for expiries, etc.
      */
-    protected final int Now() {
+    private static int Now() {
         return (int) (System.currentTimeMillis() / 1000);
     }
 
-    /**
-     * Initialize all statistic counters
-     */
-    protected void initStats() {
-        curr_bytes.set(0);
-        curr_conns.set(0);
-        total_conns.set(0);
-        bytes_read.set(0);
-        bytes_written.set(0);
-    }
 
     /**
      * Return runtime statistics
@@ -366,7 +351,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      * @param arg additional arguments to the stats command
      * @return the full command response
      */
-    protected String stat(String arg) {
+    private  String stat(String arg) {
 
         StringBuilder builder = new StringBuilder();
 
@@ -416,7 +401,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      *
      * @return command response
      */
-    protected boolean flush_all() {
+    private  boolean flush_all() {
         return cache.flush_all();
     }
 
@@ -426,7 +411,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      * @param expire the flush time in seconds
      * @return command response
      */
-    protected String flush_all(int expire) {
+    private  String flush_all(int expire) {
         return cache.flush_all(expire) ? "OK\r\n" : "ERROR\r\n";
     }
 
