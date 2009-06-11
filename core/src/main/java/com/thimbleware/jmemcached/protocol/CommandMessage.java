@@ -57,7 +57,7 @@ public final class CommandMessage implements Serializable {
         errcmd.errorString = errorString;
         return errcmd;
     }
-    
+
     public static CommandMessage command(Command cmd) {
         return new CommandMessage(cmd);
     }

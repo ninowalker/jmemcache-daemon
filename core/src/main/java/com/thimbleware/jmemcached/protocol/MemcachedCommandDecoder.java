@@ -1,17 +1,20 @@
 package com.thimbleware.jmemcached.protocol;
 
+import com.thimbleware.jmemcached.MCElement;
+import com.thimbleware.jmemcached.protocol.exceptions.InvalidProtocolStateException;
+import com.thimbleware.jmemcached.protocol.exceptions.MalformedCommandException;
+import com.thimbleware.jmemcached.protocol.exceptions.UnknownCommandException;
 import org.jboss.netty.channel.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 
-import com.thimbleware.jmemcached.MCElement;
-import com.thimbleware.jmemcached.protocol.exceptions.UnknownCommandException;
-import com.thimbleware.jmemcached.protocol.exceptions.InvalidProtocolStateException;
-import com.thimbleware.jmemcached.protocol.exceptions.MalformedCommandException;
-
 /**
+ * The MemcachedCommandDecoder is responsible for taking lines from the MemcachedFrameDecoder and parsing them
+ * into CommandMessage instances for handling by the MemcachedCommandHandler
+ * <p/>
+ * Protocol status is held in the SessionStatus instance which is shared between each of the decoders in the pipeline.
  */
 @ChannelPipelineCoverage("one")
 public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
@@ -26,42 +29,67 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
         this.status = status;
     }
 
+    /**
+     * Process an inbound string from the pipeline's downstream, and depending on the state (waiting for data or
+     * processing commands), turn them into the correct type of command.
+     *
+     * @param channelHandlerContext
+     * @param messageEvent
+     * @throws Exception
+     */
     @Override
     public void messageReceived(ChannelHandlerContext channelHandlerContext, MessageEvent messageEvent) throws Exception {
         String in = (String) messageEvent.getMessage();
 
-        // Because of the frame handler, we are assured that we are receiving only complete lines or payloads.
-        // Verify that we are in 'processing()' mode
-        if (status.state == SessionStatus.State.PROCESSING) {
-            // split into pieces
-            String[] commandPieces = in.split(" ");
+        try {
+            // Because of the frame handler, we are assured that we are receiving only complete lines or payloads.
+            // Verify that we are in 'processing()' mode
+            if (status.state == SessionStatus.State.PROCESSING) {
+                // split into pieces
+                String[] commandPieces = in.split(" ");
 
-            processLine(commandPieces, messageEvent.getChannel(), channelHandlerContext);
-        } else if (status.state == SessionStatus.State.PROCESSING_MULTILINE) {
-            continueSet(messageEvent.getChannel(), status, in.getBytes(), channelHandlerContext);
-        } else {
-            status.ready();
+                processLine(commandPieces, messageEvent.getChannel(), channelHandlerContext);
+            } else if (status.state == SessionStatus.State.PROCESSING_MULTILINE) {
+                continueSet(messageEvent.getChannel(), status, in.getBytes(), channelHandlerContext);
+            } else {
+                throw new InvalidProtocolStateException("invalid protocol state");
+            }
 
-            throw new InvalidProtocolStateException("invalid protocol state");
+        } finally {
+            // Now indicate that we need more for this command by changing the session status's state.
+            // This instructs the frame decoder to start collecting data for us.
+            // Note, we don't do this if we're waiting for data.
+            if (status.state != SessionStatus.State.WAITING_FOR_DATA) status.ready();
         }
-
-
     }
 
     /**
      * Process an individual complete protocol line and either passes the command for processing by the
      * session handler, or (in the case of SET-type commands) partially parses the command and sets the session into
      * a state to wait for additional data.
-     * @param parts the (originally space separated) parts of the command
+     *
+     * @param parts                 the (originally space separated) parts of the command
      * @param channel
      * @param channelHandlerContext
      * @return the session status we want to set the session to
      */
     private void processLine(String[] parts, Channel channel, ChannelHandlerContext channelHandlerContext) throws UnknownCommandException, MalformedCommandException {
         final int numParts = parts.length;
-        final Command cmdType = Command.valueOf(parts[0].toUpperCase());
+
+        // Turn the command into an enum for matching on
+        Command cmdType;
+        try {
+            cmdType = Command.valueOf(parts[0].toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new UnknownCommandException("unknown command: " + parts[0].toLowerCase());
+        }
+
+        // Produce the initial command message, for filling in later
         CommandMessage cmd = CommandMessage.command(cmdType);
 
+        // TODO there is a certain amount of fudgery here related to common things like 'noreply', etc. that could be refactored nicely
+
+        // Dispatch on the type of command
         if (cmdType == Command.ADD ||
                 cmdType == Command.SET ||
                 cmdType == Command.REPLACE ||
@@ -74,6 +102,7 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
                 throw new MalformedCommandException("invalid command length");
             }
 
+            // Fill in all the elements of the command
             int size = Integer.parseInt(parts[4]);
             int expire = Integer.parseInt(parts[3]);
             int flags = Integer.parseInt(parts[2]);
@@ -90,6 +119,8 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
                     cmd.noreply = true;
             }
 
+            // Now indicate that we need more for this command by changing the session status's state.
+            // This instructs the frame decoder to start collecting data for us.
             status.needMore(size, cmd);
         } else if (cmdType == Command.GET ||
                 cmdType == Command.GETS ||
@@ -97,15 +128,15 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
                 cmdType == Command.QUIT ||
                 cmdType == Command.VERSION) {
 
-            // CMD <options>*
+            // Get all the keys
             cmd.keys.addAll(Arrays.asList(parts).subList(1, numParts));
 
+            // Pass it on.
             Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
-
-            status.ready();
         } else if (cmdType == Command.INCR ||
                 cmdType == Command.DECR) {
 
+            // Malformed
             if (numParts < 2 || numParts > 3)
                 throw new MalformedCommandException("invalid increment command");
 
@@ -116,8 +147,6 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
             }
 
             Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
-
-            status.ready();
         } else if (cmdType == Command.DELETE) {
             cmd.keys.add(parts[1]);
 
@@ -130,8 +159,6 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
                     cmd.time = Integer.valueOf(parts[2]);
             }
             Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
-
-            status.ready();
         } else if (cmdType == Command.FLUSH_ALL) {
             if (numParts >= 1) {
                 if (parts[numParts - 1].equalsIgnoreCase(NOREPLY)) {
@@ -142,19 +169,17 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
                     cmd.time = Integer.valueOf(parts[1]);
             }
             Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
-
-            status.ready();
         } else {
-            status.ready();
             throw new UnknownCommandException("unknown command: " + cmdType);
         }
+
     }
 
     /**
      * Handles the continuation of a SET/ADD/REPLACE command with the data it was waiting for.
      *
-     * @param state the current session status (unused)
-     * @param remainder the bytes picked up
+     * @param state                 the current session status (unused)
+     * @param remainder             the bytes picked up
      * @param channelHandlerContext
      * @return the new status to set the session to
      */

@@ -1,25 +1,26 @@
 package com.thimbleware.jmemcached.protocol;
 
+import com.thimbleware.jmemcached.protocol.exceptions.IncorrectlyTerminatedPayloadException;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.thimbleware.jmemcached.protocol.exceptions.IncorrectlyTerminatedPayloadException;
 
 
 /**
+ * The frame decoder is responsible for breaking the original stream up into a series of lines.
+ * <p/>
+ * The code here is heavily based on Netty's DelimiterBasedFrameDecoder, but has been modified because the
+ * memcached protocol has two states: 1) processing CRLF delimited lines and 2) spooling results for SET/ADD
  */
 @ChannelPipelineCoverage("one")
-public class MemcachedFrameHandler extends FrameDecoder {
+public class MemcachedFrameDecoder extends FrameDecoder {
 
-    final Logger logger = LoggerFactory.getLogger(MemcachedFrameHandler.class);
+    final Logger logger = LoggerFactory.getLogger(MemcachedFrameDecoder.class);
 
     private SessionStatus status;
 
@@ -31,14 +32,14 @@ public class MemcachedFrameHandler extends FrameDecoder {
     /**
      * Creates a new instance.
      *
-     * @param maxFrameLength  the maximum length of the decoded frame.
-     *                        A {@link org.jboss.netty.handler.codec.frame.TooLongFrameException} is thrown if
-     * @param channelGroup
+     * @param status         session status instance for holding state of the session
+     * @param maxFrameLength the maximum length of the decoded frame.
+     *                       A {@link org.jboss.netty.handler.codec.frame.TooLongFrameException} is thrown if frame length is exceeded
      */
-    public MemcachedFrameHandler(SessionStatus status, int maxFrameLength) {
+    public MemcachedFrameDecoder(SessionStatus status, int maxFrameLength) {
         this.status = status;
         validateMaxFrameLength(maxFrameLength);
-        this.delimiter = ChannelBuffers.wrappedBuffer(new byte[] { '\r', '\n' });
+        this.delimiter = ChannelBuffers.wrappedBuffer(new byte[]{'\r', '\n'});
         this.maxFrameLength = maxFrameLength;
     }
 
@@ -134,14 +135,14 @@ public class MemcachedFrameHandler extends FrameDecoder {
      * found in the haystack.
      */
     private static int indexOf(ChannelBuffer haystack, ChannelBuffer needle) {
-        for (int i = haystack.readerIndex(); i < haystack.writerIndex(); i ++) {
+        for (int i = haystack.readerIndex(); i < haystack.writerIndex(); i++) {
             int haystackIndex = i;
             int needleIndex;
-            for (needleIndex = 0; needleIndex < needle.capacity(); needleIndex ++) {
+            for (needleIndex = 0; needleIndex < needle.capacity(); needleIndex++) {
                 if (haystack.getByte(haystackIndex) != needle.getByte(needleIndex)) {
                     break;
                 } else {
-                    haystackIndex ++;
+                    haystackIndex++;
                     if (haystackIndex == haystack.writerIndex() &&
                             needleIndex != needle.capacity() - 1) {
                         return -1;
@@ -156,7 +157,6 @@ public class MemcachedFrameHandler extends FrameDecoder {
         }
         return -1;
     }
-
 
 
     private static void validateMaxFrameLength(int maxFrameLength) {
