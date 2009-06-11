@@ -41,7 +41,7 @@ public class Cache {
     private AtomicInteger getHits = new AtomicInteger();
     private AtomicInteger getMisses = new AtomicInteger();
 
-    private AtomicLong casCounter = new AtomicLong();
+    private AtomicLong casCounter = new AtomicLong(1);
 
     protected CacheStorage cacheStorage;
 
