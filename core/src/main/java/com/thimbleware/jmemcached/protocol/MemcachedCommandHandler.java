@@ -193,10 +193,10 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
             ret = cache.prepend(command.element);
             Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withResponse(ret), channel.getRemoteAddress());
         } else if (cmd == Command.INCR) {
-            Integer incrDecrResp = cache.get_add(command.keys.get(0), parseInt(command.keys.get(1)));
+            Integer incrDecrResp = cache.get_add(command.keys.get(0), command.incrAmount); // TODO support default value and expiry!!
             Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withIncrDecrResponse(incrDecrResp), channel.getRemoteAddress());
         } else if (cmd == Command.DECR) {
-            Integer incrDecrResp = cache.get_add(command.keys.get(0), -1 * parseInt(command.keys.get(1)));
+            Integer incrDecrResp = cache.get_add(command.keys.get(0), -1 * command.incrAmount);
             Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withIncrDecrResponse(incrDecrResp), channel.getRemoteAddress());
         } else if (cmd == Command.DELETE) {
             Cache.DeleteResponse dr = cache.delete(command.keys.get(0), command.time);

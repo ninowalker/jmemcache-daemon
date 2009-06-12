@@ -144,7 +144,8 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
                 throw new MalformedCommandException("invalid increment command");
 
             cmd.keys.add(parts[1]);
-            cmd.keys.add(parts[2]);
+            cmd.incrAmount = Integer.valueOf(parts[2]);
+            
             if (numParts == 3 && parts[2].equalsIgnoreCase(NOREPLY)) {
                 cmd.noreply = true;
             }

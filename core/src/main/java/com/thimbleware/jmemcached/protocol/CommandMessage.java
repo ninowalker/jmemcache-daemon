@@ -40,6 +40,10 @@ public final class CommandMessage implements Serializable {
     public String errorString;
     public int opaque;
     public boolean addKeyToResponse = false;
+
+    public Integer incrDefault;
+    public int incrExpiry;
+    public int incrAmount;
     
     private CommandMessage(Command cmd) {
         this.cmd = cmd;

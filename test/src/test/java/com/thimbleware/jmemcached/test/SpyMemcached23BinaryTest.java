@@ -59,6 +59,8 @@ public class SpyMemcached23BinaryTest {
     public void testGetSet() throws IOException, InterruptedException {
         _client.set( "foo", 5000, "bar" );
         Assert.assertEquals( "bar", _client.get( "foo" ) );
+        _client.set( "bar", 5000, 123 );
+        Assert.assertEquals( 123, _client.get( "bar" ) );
     }
 
     @Test

@@ -109,9 +109,6 @@ public class MemcachedBinaryCommandDecoder extends FrameDecoder {
         int opaque = headerBuffer.readInt();
         long cas = headerBuffer.readLong();
 
-
-
-
         // we want the whole of totalBodyLength; otherwise, keep waiting.
         if (channelBuffer.readableBytes() < totalBodyLength) {
             channelBuffer.resetReaderIndex();
@@ -147,24 +144,27 @@ public class MemcachedBinaryCommandDecoder extends FrameDecoder {
             if (cmdType == Command.ADD ||
                     cmdType == Command.SET ||
                     cmdType == Command.REPLACE ||
-                    cmdType == Command.CAS ||
                     cmdType == Command.APPEND ||
                     cmdType == Command.PREPEND)
             {
-
-                // flags is in first half of extras
-                // expiry is in the second half of extras
-                short flags = extrasBuffer.readShort();
-                short expire = extrasBuffer.readShort();
-
+                // TODO these are backwards from the spec, but seem to be what spymemcached demands -- which has the mistake?!
+                short expire = (short) (extrasBuffer.capacity() != 0 ? extrasBuffer.readUnsignedShort() : 0);
+                short flags = (short) (extrasBuffer.capacity() != 0 ? extrasBuffer.readUnsignedShort() : 0);
+                
                 // the remainder of the message -- that is, totalLength - (keyLength + extraLength) should be the payload
                 int size = totalBodyLength - keyLength - extraLength;
-                ChannelBuffer payload = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, size);
-                channelBuffer.readBytes(payload);
 
                 cmdMessage.element = new MCElement(key, flags, expire != 0 && expire < MCElement.THIRTY_DAYS ? MCElement.Now() + expire : expire, size);
                 cmdMessage.element.data = new byte[size];
-                payload.readBytes(cmdMessage.element.data);
+                channelBuffer.readBytes(cmdMessage.element.data, 0, size);
+            } else if (cmdType == Command.INCR || cmdType == Command.DECR) {
+                long initialValue = extrasBuffer.readUnsignedInt();
+                long amount = extrasBuffer.readUnsignedInt();
+                long expiration = extrasBuffer.readUnsignedInt();
+
+                cmdMessage.incrAmount = (int) amount;
+                cmdMessage.incrDefault = (int) initialValue;
+                cmdMessage.incrExpiry = (int) expiration;
             }
         }
 
