@@ -12,8 +12,10 @@ import java.nio.ByteOrder;
 
 /**
  */
-@ChannelPipelineCoverage("all")
+@ChannelPipelineCoverage("one")
 public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler {
+
+    private ChannelBuffer corkedResponse = null;
 
     public static enum ResponseCode {
         /**
@@ -78,7 +80,7 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
     }
 
     public ChannelBuffer constructHeader(MemcachedBinaryCommandDecoder.BinaryCommand bcmd, ResponseMessage command, ChannelBuffer extrasBuffer, ChannelBuffer keyBuffer, ChannelBuffer valueBuffer) {
-         // take the ResponseMessage and turn it into a binary payload.
+        // take the ResponseMessage and turn it into a binary payload.
         ChannelBuffer header = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, 24);
         header.writeByte((byte)0x81);  // magic
         header.writeByte(bcmd.code); // opcode
@@ -102,6 +104,7 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
     public void messageReceived(ChannelHandlerContext channelHandlerContext, MessageEvent messageEvent) throws Exception {
         ResponseMessage command = (ResponseMessage) messageEvent.getMessage();
         MemcachedBinaryCommandDecoder.BinaryCommand bcmd = MemcachedBinaryCommandDecoder.BinaryCommand.forCommandMessage(command.cmd);
+
 
         // write extras == flags & expiry
         ChannelBuffer extrasBuffer = null;
@@ -133,13 +136,43 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
             valueBuffer.writeLong(command.incrDecrResponse);
         }
 
-        // write the header
-        messageEvent.getChannel().write(constructHeader(bcmd, command, extrasBuffer, keyBuffer, valueBuffer));
-        if (extrasBuffer != null)
-            messageEvent.getChannel().write(extrasBuffer);
-        if (keyBuffer != null)
-            messageEvent.getChannel().write(keyBuffer);
-        if (valueBuffer != null)
-            messageEvent.getChannel().write(valueBuffer);
+        ChannelBuffer headerBuffer = constructHeader(bcmd, command, extrasBuffer, keyBuffer, valueBuffer);
+
+        // write everything
+        // is the command 'quiet?' if so, then we append to our 'corked' buffer until a non-corked command comes along
+        if (bcmd.noreply) {
+            int totalCapacity = headerBuffer.capacity() + (extrasBuffer != null ? extrasBuffer.capacity() : 0)
+                    + (keyBuffer != null ? keyBuffer.capacity() : 0) + (valueBuffer != null ? valueBuffer.capacity() : 0);
+            if (corkedResponse != null) {
+                ChannelBuffer oldBuffer = corkedResponse;
+                corkedResponse = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, totalCapacity);
+                corkedResponse.writeBytes(oldBuffer);
+                oldBuffer.clear();
+            } else {
+                corkedResponse = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, totalCapacity);
+            }
+
+            corkedResponse.writeBytes(headerBuffer);
+            if (extrasBuffer != null)
+                corkedResponse.writeBytes(extrasBuffer);
+            if (keyBuffer != null)
+                corkedResponse.writeBytes(keyBuffer);
+            if (valueBuffer != null)
+                corkedResponse.writeBytes(valueBuffer);
+        } else {
+            // first write out any corked responses
+            if (corkedResponse != null) {
+                messageEvent.getChannel().write(corkedResponse);
+                corkedResponse = null;
+            }
+
+            messageEvent.getChannel().write(headerBuffer);
+            if (extrasBuffer != null)
+                messageEvent.getChannel().write(extrasBuffer);
+            if (keyBuffer != null)
+                messageEvent.getChannel().write(keyBuffer);
+            if (valueBuffer != null)
+                messageEvent.getChannel().write(valueBuffer);
+        }
     }
 }

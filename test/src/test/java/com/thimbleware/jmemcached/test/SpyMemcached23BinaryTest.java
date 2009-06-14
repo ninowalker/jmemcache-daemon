@@ -98,7 +98,8 @@ public class SpyMemcached23BinaryTest {
     @Test
     public void testBulkGet() throws IOException, InterruptedException, ExecutionException {
         ArrayList<String> allStrings = new ArrayList<String>();
-        for (int i = 0; i < 10000; i++) {
+        int testSize = 10000;
+        for (int i = 0; i < testSize; i++) {
             _client.set("foo" + i, 360000, "bar" + i);
             allStrings.add("foo" + i);
         }
@@ -106,7 +107,7 @@ public class SpyMemcached23BinaryTest {
         Future<Map<String, Object>> future = _client.asyncGetBulk(allStrings);
         Map<String, Object> results = future.get();
 
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < testSize; i++) {
             Assert.assertEquals("bar" + i, results.get("foo" + i));
         }
 

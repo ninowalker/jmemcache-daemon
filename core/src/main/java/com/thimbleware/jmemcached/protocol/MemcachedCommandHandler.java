@@ -218,6 +218,9 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
             channel.disconnect();
         } else if (cmd == Command.FLUSH_ALL) {
             Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withFlushResponse(cache.flush_all(command.time)), channel.getRemoteAddress());
+        } else if (cmd == null) {
+            // NOOP
+            Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command));
         } else {
             throw new UnknownCommandException("unknown command:" + cmd);
 
