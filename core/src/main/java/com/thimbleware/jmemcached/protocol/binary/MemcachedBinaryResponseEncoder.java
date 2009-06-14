@@ -12,7 +12,7 @@ import java.nio.ByteOrder;
 
 /**
  */
-@ChannelPipelineCoverage("one")
+@ChannelPipelineCoverage("all")
 public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler {
 
     private ChannelBuffer corkedResponse = null;

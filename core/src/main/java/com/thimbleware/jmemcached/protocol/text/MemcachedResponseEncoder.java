@@ -14,6 +14,7 @@ import static java.lang.String.valueOf;
 /**
  * Response encoder for the memcached text protocol. Produces strings destined for the StringEncoder
  */
+@ChannelPipelineCoverage("one")
 public class MemcachedResponseEncoder extends SimpleChannelUpstreamHandler {
 
     final Logger logger = LoggerFactory.getLogger(MemcachedResponseEncoder.class);
@@ -84,6 +85,8 @@ public class MemcachedResponseEncoder extends SimpleChannelUpstreamHandler {
 
                 channel.write(ret);
             }
+        } else if (cmd == Command.QUIT) {
+            channel.disconnect();
         } else {
             channel.write("ERROR\r\n");
             logger.error("error; unrecognized command: " + cmd);

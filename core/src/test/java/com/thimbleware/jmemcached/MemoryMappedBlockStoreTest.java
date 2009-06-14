@@ -41,7 +41,7 @@ public class MemoryMappedBlockStoreTest {
             assertNotNull("region returned", region);
             assertTrue("size is less or equal to region size", region.size <= region.physicalSize);
             assertTrue("region is valid", region.valid);
-            assertEquals("rounded up to nearest region boundary", region.physicalSize, 8, 0);
+            assertEquals("rounded up to nearest region boundary", region.physicalSize, 8L);
 
             byte[] receivedData = bs.get(region);
             assertEquals("region data matches",  new String(sentData), new String(receivedData));
