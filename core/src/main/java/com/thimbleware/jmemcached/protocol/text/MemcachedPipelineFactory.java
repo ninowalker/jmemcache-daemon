@@ -35,8 +35,7 @@ public class MemcachedPipelineFactory implements ChannelPipelineFactory {
         ChannelPipeline pipeline = Channels.pipeline();
         SessionStatus status = new SessionStatus().ready();
         pipeline.addLast("frameHandler", new MemcachedFrameDecoder(status, frameSize));
-        pipeline.addAfter("frameHandler", "stringDecoder", new StringDecoder());
-        pipeline.addAfter("stringDecoder", "commandDecoder", new MemcachedCommandDecoder(status));
+        pipeline.addAfter("frameHandler", "commandDecoder", new MemcachedCommandDecoder(status));
         pipeline.addAfter("commandDecoder", "commandHandler", new MemcachedCommandHandler(cache, version, verbose, idleTime, channelGroup));
         pipeline.addAfter("commandHandler", "responseEncoder", new MemcachedResponseEncoder());
         pipeline.addAfter("responseEncoder", "responseHandler", new StringEncoder());

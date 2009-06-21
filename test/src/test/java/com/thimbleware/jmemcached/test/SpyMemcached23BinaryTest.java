@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.concurrent.Future;
@@ -11,6 +12,7 @@ import java.util.concurrent.ExecutionException;
 
 import net.spy.memcached.*;
 import net.spy.memcached.transcoders.IntegerTranscoder;
+import net.spy.memcached.transcoders.Transcoder;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -49,6 +51,21 @@ public class SpyMemcached23BinaryTest {
     }
 
     @Test
+    public void testBinaryCompressed(){
+        _client.add("foo", 86400, "foobarshoe");
+        assertEquals("wrong value returned from cache","foobarshoe",  _client.get("foo"));
+        StringBuilder sb = new StringBuilder();
+        sb.append("hello world");
+        for(int i=0;i<20;i++){
+            sb.append(sb);
+        }
+        System.out.println("length is: "+sb.length());
+        _client.add("sb",86400, sb.toString());
+        assertNotNull("null get when sb.length()="+sb.length(), _client.get("sb"));
+        assertEquals("wrong length for sb",sb.length(), _client.get("sb").toString().length());
+    }
+
+    @Test
     public void testPresence() {
         assertNotNull(_daemon.getCache());
         assertEquals("initial cache is empty", 0, _daemon.getCache().getCurrentItems());
@@ -83,7 +100,9 @@ public class SpyMemcached23BinaryTest {
 
         Assert.assertEquals(CASResponse.OK, cr);
 
-        Assert.assertEquals(456, _client.get("foo"));
+        Future<Object> rf = _client.asyncGet("foo");
+
+        Assert.assertEquals(456, rf.get());
     }
 
     @Test
@@ -121,6 +140,15 @@ public class SpyMemcached23BinaryTest {
         daemon.setAddr( address );
         daemon.setVerbose(false);
         return daemon;
+    }
+
+
+    class Item implements Serializable {
+        public String val;
+
+        Item(String val) {
+            this.val = val;
+        }
     }
 
 }

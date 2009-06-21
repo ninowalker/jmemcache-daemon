@@ -69,7 +69,8 @@ public class MemcachedFrameDecoder extends FrameDecoder {
                 // There's enough bytes in the buffer and the delimiter is at the end. Read it.
 
                 // Successfully decoded a frame.  Return the decoded frame.
-                ChannelBuffer result = buffer.readBytes(status.bytesNeeded);
+                ChannelBuffer result = ChannelBuffers.buffer(status.bytesNeeded);
+                buffer.readBytes(result);
 
                 // Consume
                 buffer.skipBytes(delimiter.capacity());

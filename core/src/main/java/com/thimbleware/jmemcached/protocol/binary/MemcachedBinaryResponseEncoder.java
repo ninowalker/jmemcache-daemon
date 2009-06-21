@@ -12,6 +12,9 @@ import java.nio.ByteOrder;
 
 /**
  */
+// TODO exception handling from downstream errors
+// TODO quit - disconnect
+// TODO refactor so this can be unit tested separate from netty?
 @ChannelPipelineCoverage("all")
 public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler {
 
@@ -75,7 +78,7 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
             return ResponseCode.OK;
         } else if (cmd == Command.FLUSH_ALL) {
             return ResponseCode.OK;
-        }
+        } 
         return ResponseCode.UNKNOWN;
     }
 
@@ -95,8 +98,11 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
         int dataLength = valueBuffer != null ? valueBuffer.capacity() : 0;
         header.writeInt(dataLength + keyLength + extrasLength); // data length
         header.writeInt(command.cmd.opaque); // opaque
-        header.writeLong(command.cmd.cas_key);
-
+        if (command.elements != null && command.elements.length != 0 && command.elements[0] != null)
+            header.writeLong(command.elements[0].cas_unique);
+        else
+            header.writeLong(0);
+        
         return header;
     }
 
@@ -125,8 +131,9 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
             extrasBuffer.writeShort((short) (element != null ? element.flags : 0));
 
             if ((command.cmd.cmd == Command.GET || command.cmd.cmd == Command.GETS)) {
-                valueBuffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, element.dataLength);
-                valueBuffer.writeBytes(element.data);
+                valueBuffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, (element != null ? element.dataLength : 0));
+                if (element != null)
+                    valueBuffer.writeBytes(element.data);
             } else if (command.cmd.cmd == Command.INCR || command.cmd.cmd == Command.DECR) {
                 valueBuffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, 8);
                 valueBuffer.writeLong(command.incrDecrResponse);

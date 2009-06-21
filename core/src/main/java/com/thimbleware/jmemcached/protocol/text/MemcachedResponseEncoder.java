@@ -6,6 +6,8 @@ import com.thimbleware.jmemcached.protocol.Command;
 import com.thimbleware.jmemcached.protocol.ResponseMessage;
 import com.thimbleware.jmemcached.protocol.exceptions.ClientException;
 import org.jboss.netty.channel.*;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,42 +55,42 @@ public class MemcachedResponseEncoder extends SimpleChannelUpstreamHandler {
             MCElement[] results = command.elements;
             for (MCElement result : results) {
                 if (result != null) {
-                    channel.write(VALUE);
-                    channel.write(result.keystring + " " + result.flags + " " + result.dataLength + (cmd == Command.GETS ? " " + result.cas_unique : "") + "\r\n");
-                    channel.write(new String(result.data));
-                    channel.write("\r\n");
+                    writeString(channel, VALUE);
+                    writeString(channel, result.keystring + " " + result.flags + " " + result.dataLength + (cmd == Command.GETS ? " " + result.cas_unique : "") + "\r\n");
+                    ChannelBuffer outputbuffer = ChannelBuffers.buffer(result.dataLength);
+                    outputbuffer.writeBytes(result.data);
+                    channel.write(outputbuffer);
+                    writeString(channel, "\r\n");
 
                     // send response immediately
                     channelHandlerContext.sendUpstream(messageEvent);
                 }
             }
-            channel.write("END\r\n");
+            writeString(channel, "END\r\n");
         } else if (cmd == Command.SET || cmd == Command.CAS || cmd == Command.ADD || cmd == Command.REPLACE || cmd == Command.APPEND  || cmd == Command.PREPEND) {
             String ret = storeResponseString(command.response);
             if (!command.cmd.noreply)
-                channel.write(ret);
+                writeString(channel, ret);
         } else if (cmd == Command.INCR || cmd == Command.DECR) {
             String ret = incrDecrResponseString(command.incrDecrResponse);
-            if (!command.cmd.noreply) channel.write(ret);
+            if (!command.cmd.noreply) writeString(channel, ret);
         } else if (cmd == Command.DELETE) {
             String ret = deleteResponseString(command.deleteResponse);
-            if (!command.cmd.noreply) channel.write(ret);
+            if (!command.cmd.noreply) writeString(channel, ret);
         } else if (cmd == Command.STATS) {
-            channel.write(command.stats);
+            writeString(channel, command.stats);
         } else if (cmd == Command.VERSION) {
-            channel.write("VERSION " + command.version + "\r\n");
+            writeString(channel, "VERSION " + command.version + "\r\n");
         } else if (cmd == Command.QUIT) {
             channel.disconnect();
         } else if (cmd == Command.FLUSH_ALL) {
             if (!command.cmd.noreply) {
                 String ret = command.flushSuccess ? "OK\r\n" : "ERROR\r\n";
 
-                channel.write(ret);
+                writeString(channel, ret);
             }
-        } else if (cmd == Command.QUIT) {
-            channel.disconnect();
         } else {
-            channel.write("ERROR\r\n");
+            writeString(channel, "ERROR\r\n");
             logger.error("error; unrecognized command: " + cmd);
         }
     }
@@ -127,4 +129,9 @@ public class MemcachedResponseEncoder extends SimpleChannelUpstreamHandler {
         throw new RuntimeException("unknown store response from cache: " + storeResponse);
     }
 
+    private void writeString(Channel out, String str) {
+        ChannelBuffer outbuf = ChannelBuffers.buffer(str.length());
+        outbuf.writeBytes(str.getBytes());
+        out.write(outbuf);
+    }
 }

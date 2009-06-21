@@ -8,6 +8,7 @@ import com.thimbleware.jmemcached.protocol.exceptions.InvalidProtocolStateExcept
 import com.thimbleware.jmemcached.protocol.exceptions.MalformedCommandException;
 import com.thimbleware.jmemcached.protocol.exceptions.UnknownCommandException;
 import org.jboss.netty.channel.*;
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +31,7 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
 
     public MemcachedCommandDecoder(SessionStatus status) {
         this.status = status;
-    }
+    }                                     
 
     /**
      * Process an inbound string from the pipeline's downstream, and depending on the state (waiting for data or
@@ -42,18 +43,20 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
      */
     @Override
     public void messageReceived(ChannelHandlerContext channelHandlerContext, MessageEvent messageEvent) throws Exception {
-        String in = (String) messageEvent.getMessage();
+        ChannelBuffer in = (ChannelBuffer) messageEvent.getMessage();
 
         try {
             // Because of the frame handler, we are assured that we are receiving only complete lines or payloads.
             // Verify that we are in 'processing()' mode
             if (status.state == SessionStatus.State.PROCESSING) {
                 // split into pieces
-                String[] commandPieces = in.split(" ");
+                String[] commandPieces = in.toString("US-ASCII").split(" ");
 
                 processLine(commandPieces, messageEvent.getChannel(), channelHandlerContext);
             } else if (status.state == SessionStatus.State.PROCESSING_MULTILINE) {
-                continueSet(messageEvent.getChannel(), status, in.getBytes(), channelHandlerContext);
+                byte[] payload = new byte[in.capacity()];
+                in.readBytes(payload);
+                continueSet(messageEvent.getChannel(), status, payload, channelHandlerContext);
             } else {
                 throw new InvalidProtocolStateException("invalid protocol state");
             }
