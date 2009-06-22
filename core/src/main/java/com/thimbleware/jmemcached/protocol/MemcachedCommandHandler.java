@@ -28,6 +28,10 @@ import static java.lang.Integer.parseInt;
 import static java.lang.String.valueOf;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.HashMap;
 
 // TODO implement flush_all delay
 
@@ -202,8 +206,6 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
             Cache.DeleteResponse dr = cache.delete(command.keys.get(0), command.time);
             Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withDeleteResponse(dr), channel.getRemoteAddress());
         } else if (cmd == Command.STATS) {
-
-            // TODO stats has no equiv in binary protocol -- so we're sorta breaking encapsulation here by outputing the text protocol response here
             String option = "";
             if (cmdKeysSize > 0) {
                 option = command.keys.get(0);
@@ -253,50 +255,54 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      * @param arg additional arguments to the stats command
      * @return the full command response
      */
-    private String stat(String arg) {
-
-        StringBuilder builder = new StringBuilder();
+    private Map<String, Set<String>> stat(String arg) {
+        Map<String, Set<String>> result = new HashMap<String, Set<String>>();
 
         if (arg.equals("keys")) {
             for (String key : this.cache.keys()) {
-                builder.append("STAT key ").append(key).append("\r\n");
+                multiSet(result, "key", key);
             }
-            builder.append("END\r\n");
-            return builder.toString();
+
+            return result;
         }
 
         // stats we know
-        builder.append("STAT version ").append(version).append("\r\n");
-        builder.append("STAT cmd_gets ").append(valueOf(cache.getGetCmds())).append("\r\n");
-        builder.append("STAT cmd_sets ").append(valueOf(cache.getSetCmds())).append("\r\n");
-        builder.append("STAT get_hits ").append(valueOf(cache.getGetHits())).append("\r\n");
-        builder.append("STAT get_misses ").append(valueOf(cache.getGetMisses())).append("\r\n");
-        builder.append("STAT curr_connections ").append(valueOf(curr_conns)).append("\r\n");
-        builder.append("STAT total_connections ").append(valueOf(total_conns)).append("\r\n");
-        builder.append("STAT time ").append(valueOf(Now())).append("\r\n");
-        builder.append("STAT uptime ").append(valueOf(Now() - this.started.intValue())).append("\r\n");
-
-        builder.append("STAT cur_items ").append(valueOf(this.cache.getCurrentItems())).append("\r\n");
-        builder.append("STAT limit_maxbytes ").append(valueOf(this.cache.getLimitMaxBytes())).append("\r\n");
-        builder.append("STAT current_bytes ").append(valueOf(this.cache.getCurrentBytes())).append("\r\n");
-        builder.append("STAT free_bytes ").append(valueOf(Runtime.getRuntime().freeMemory())).append("\r\n");
+        multiSet(result, "version", version);
+        multiSet(result, "cmd_gets", valueOf(cache.getGetCmds()));
+        multiSet(result, "cmd_sets", valueOf(cache.getSetCmds()));
+        multiSet(result, "get_hits", valueOf(cache.getGetHits()));
+        multiSet(result, "get_misses", valueOf(cache.getGetMisses()));
+        multiSet(result, "curr_connections", valueOf(curr_conns));
+        multiSet(result, "total_connections", valueOf(total_conns));
+        multiSet(result, "time", valueOf(valueOf(Now())));
+        multiSet(result, "uptime", valueOf(Now() - this.started.intValue()));
+        multiSet(result, "cur_items", valueOf(this.cache.getCurrentItems()));
+        multiSet(result, "limit_maxbytes", valueOf(this.cache.getLimitMaxBytes()));
+        multiSet(result, "current_bytes", valueOf(this.cache.getCurrentBytes()));
+        multiSet(result, "free_bytes", valueOf(Runtime.getRuntime().freeMemory()));
 
         // Not really the same thing precisely, but meaningful nonetheless. potentially this should be renamed
-        builder.append("STAT pid " + Thread.currentThread().getId() + "\r\n");
+        multiSet(result, "pid", valueOf(Thread.currentThread().getId()));
 
         // stuff we know nothing about; gets faked only because some clients expect this
+        multiSet(result, "rusage_user", "0:0");
+        multiSet(result, "rusage_system", "0:0");
+        multiSet(result, "connection_structures", "0");
 
-        builder.append("STAT rusage_user 0:0\r\n");
-        builder.append("STAT rusage_system 0:0\r\n");
-        builder.append("STAT connection_structures 0\r\n");
+        // TODO we could collect these stats
+        multiSet(result, "bytes_read", "0");
+        multiSet(result, "bytes_written", "0");
 
-        // TODO we could collect these
-        builder.append("STAT bytes_read 0\r\n");
-        builder.append("STAT bytes_written 0\r\n");
-        builder.append("END\r\n");
-
-        return builder.toString();
+        return result;
     }
 
+    private void multiSet(Map<String, Set<String>> map, String key, String val) {
+        Set<String> cur = map.get(key);
+        if (cur == null) {
+            cur = new HashSet<String>();
+        }
+        cur.add(val);
+        map.put(key, cur);
+    }
 
 }

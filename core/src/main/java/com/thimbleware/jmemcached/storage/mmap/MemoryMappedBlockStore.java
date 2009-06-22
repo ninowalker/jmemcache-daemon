@@ -210,7 +210,7 @@ public final class MemoryMappedBlockStore {
 
             /** Split the free entry and add the entry to the allocated list
              */
-            freeList.remove(freeEntry.getKey());
+            freeList.remove(freeEntry.getKey());                                                                                                       
 
             /** Add it back to the free list if needed
              */

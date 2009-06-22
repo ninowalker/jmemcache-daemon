@@ -3,12 +3,13 @@ package com.thimbleware.jmemcached.protocol.binary;
 import com.thimbleware.jmemcached.protocol.Command;
 import com.thimbleware.jmemcached.protocol.ResponseMessage;
 import com.thimbleware.jmemcached.MCElement;
-import com.thimbleware.jmemcached.Cache;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.*;
 
 import java.nio.ByteOrder;
+import java.util.Set;
+import java.util.Map;
 
 /**
  */
@@ -21,16 +22,6 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
     private ChannelBuffer corkedResponse = null;
 
     public static enum ResponseCode {
-        /**
-         *       <t hangText="0x0000">No error</t>
-         <t hangText="0x0001">Key not found</t>
-         <t hangText="0x0002">Key exists</t>
-         <t hangText="0x0003">Value too large</t>
-         <t hangText="0x0004">Invalid arguments</t>
-         <t hangText="0x0005">Item not stored</t>
-         <t hangText="0x0081">Unknown command</t>
-         <t hangText="0x0082">Out of memory</t>
-         */
         OK(0x0000),
         KEYNF(0x0001),
         KEYEXISTS(0x0002),
@@ -78,7 +69,7 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
             return ResponseCode.OK;
         } else if (cmd == Command.FLUSH_ALL) {
             return ResponseCode.OK;
-        } 
+        }
         return ResponseCode.UNKNOWN;
     }
 
@@ -102,7 +93,7 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
             header.writeLong(command.elements[0].cas_unique);
         else
             header.writeLong(0);
-        
+
         return header;
     }
 
@@ -110,7 +101,6 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
     public void messageReceived(ChannelHandlerContext channelHandlerContext, MessageEvent messageEvent) throws Exception {
         ResponseMessage command = (ResponseMessage) messageEvent.getMessage();
         MemcachedBinaryCommandDecoder.BinaryCommand bcmd = MemcachedBinaryCommandDecoder.BinaryCommand.forCommandMessage(command.cmd);
-
 
         // write extras == flags & expiry
         ChannelBuffer extrasBuffer = null;
@@ -143,43 +133,78 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
             valueBuffer.writeLong(command.incrDecrResponse);
         }
 
-        ChannelBuffer headerBuffer = constructHeader(bcmd, command, extrasBuffer, keyBuffer, valueBuffer);
-
-        // write everything
-        // is the command 'quiet?' if so, then we append to our 'corked' buffer until a non-corked command comes along
-        if (bcmd.noreply) {
-            int totalCapacity = headerBuffer.capacity() + (extrasBuffer != null ? extrasBuffer.capacity() : 0)
-                    + (keyBuffer != null ? keyBuffer.capacity() : 0) + (valueBuffer != null ? valueBuffer.capacity() : 0);
-            if (corkedResponse != null) {
-                ChannelBuffer oldBuffer = corkedResponse;
-                corkedResponse = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, totalCapacity);
-                corkedResponse.writeBytes(oldBuffer);
-                oldBuffer.clear();
-            } else {
-                corkedResponse = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, totalCapacity);
-            }
-
-            corkedResponse.writeBytes(headerBuffer);
-            if (extrasBuffer != null)
-                corkedResponse.writeBytes(extrasBuffer);
-            if (keyBuffer != null)
-                corkedResponse.writeBytes(keyBuffer);
-            if (valueBuffer != null)
-                corkedResponse.writeBytes(valueBuffer);
-        } else {
+        // stats is special -- with it, we write N times, one for each stat, then an empty payload
+        if (command.cmd.cmd == Command.STATS) {
             // first write out any corked responses
             if (corkedResponse != null) {
                 messageEvent.getChannel().write(corkedResponse);
                 corkedResponse = null;
             }
 
-            messageEvent.getChannel().write(headerBuffer);
-            if (extrasBuffer != null)
-                messageEvent.getChannel().write(extrasBuffer);
-            if (keyBuffer != null)
-                messageEvent.getChannel().write(keyBuffer);
-            if (valueBuffer != null)
-                messageEvent.getChannel().write(valueBuffer);
+            for (Map.Entry<String, Set<String>> statsEntries : command.stats.entrySet()) {
+                for (String stat : statsEntries.getValue()) {
+
+                    keyBuffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, statsEntries.getKey().length());
+                    keyBuffer.writeBytes(statsEntries.getKey().getBytes("US-ASCII"));
+                    valueBuffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, stat.length());
+                    valueBuffer.writeBytes(stat.getBytes("US-ASCII"));
+
+                    ChannelBuffer headerBuffer = constructHeader(bcmd, command, extrasBuffer, keyBuffer, valueBuffer);
+
+                    writePayload(messageEvent, extrasBuffer, keyBuffer, valueBuffer, headerBuffer);
+                }
+            }
+
+            keyBuffer = null;
+            valueBuffer = null;
+
+            ChannelBuffer headerBuffer = constructHeader(bcmd, command, extrasBuffer, keyBuffer, valueBuffer);
+
+            writePayload(messageEvent, extrasBuffer, keyBuffer, valueBuffer, headerBuffer);
+
+        } else {
+            ChannelBuffer headerBuffer = constructHeader(bcmd, command, extrasBuffer, keyBuffer, valueBuffer);
+
+            // write everything
+            // is the command 'quiet?' if so, then we append to our 'corked' buffer until a non-corked command comes along
+            if (bcmd.noreply) {
+                int totalCapacity = headerBuffer.capacity() + (extrasBuffer != null ? extrasBuffer.capacity() : 0)
+                        + (keyBuffer != null ? keyBuffer.capacity() : 0) + (valueBuffer != null ? valueBuffer.capacity() : 0);
+                if (corkedResponse != null) {
+                    ChannelBuffer oldBuffer = corkedResponse;
+                    corkedResponse = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, totalCapacity);
+                    corkedResponse.writeBytes(oldBuffer);
+                    oldBuffer.clear();
+                } else {
+                    corkedResponse = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, totalCapacity);
+                }
+
+                corkedResponse.writeBytes(headerBuffer);
+                if (extrasBuffer != null)
+                    corkedResponse.writeBytes(extrasBuffer);
+                if (keyBuffer != null)
+                    corkedResponse.writeBytes(keyBuffer);
+                if (valueBuffer != null)
+                    corkedResponse.writeBytes(valueBuffer);
+            } else {
+                // first write out any corked responses
+                if (corkedResponse != null) {
+                    messageEvent.getChannel().write(corkedResponse);
+                    corkedResponse = null;
+                }
+
+                writePayload(messageEvent, extrasBuffer, keyBuffer, valueBuffer, headerBuffer);
+            }
         }
+    }
+
+    private void writePayload(MessageEvent messageEvent, ChannelBuffer extrasBuffer, ChannelBuffer keyBuffer, ChannelBuffer valueBuffer, ChannelBuffer headerBuffer) {
+        messageEvent.getChannel().write(headerBuffer);
+        if (extrasBuffer != null)
+            messageEvent.getChannel().write(extrasBuffer);
+        if (keyBuffer != null)
+            messageEvent.getChannel().write(keyBuffer);
+        if (valueBuffer != null)
+            messageEvent.getChannel().write(valueBuffer);
     }
 }

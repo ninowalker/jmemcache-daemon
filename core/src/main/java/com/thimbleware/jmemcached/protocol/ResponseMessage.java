@@ -4,6 +4,8 @@ import com.thimbleware.jmemcached.Cache;
 import com.thimbleware.jmemcached.MCElement;
 
 import java.io.Serializable;
+import java.util.Set;
+import java.util.Map;
 
 /**
  * Represents the response to a command.
@@ -17,7 +19,7 @@ public final class ResponseMessage implements Serializable {
     public CommandMessage cmd;
     public MCElement[] elements;
     public Cache.StoreResponse response;
-    public String stats;
+    public Map<String, Set<String>> stats;
     public String version;
     public Cache.DeleteResponse deleteResponse;
     public Integer incrDecrResponse;
@@ -44,7 +46,7 @@ public final class ResponseMessage implements Serializable {
         return this;
     }
 
-    public ResponseMessage withStatResponse(String stats) {
+    public ResponseMessage withStatResponse(Map<String, Set<String>> stats) {
         this.stats = stats;
 
         return this;

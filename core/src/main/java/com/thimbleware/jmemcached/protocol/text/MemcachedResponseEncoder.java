@@ -12,6 +12,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static java.lang.String.valueOf;
+import java.util.Set;
+import java.util.Map;
 
 /**
  * Response encoder for the memcached text protocol. Produces strings destined for the StringEncoder
@@ -78,7 +80,12 @@ public class MemcachedResponseEncoder extends SimpleChannelUpstreamHandler {
             String ret = deleteResponseString(command.deleteResponse);
             if (!command.cmd.noreply) writeString(channel, ret);
         } else if (cmd == Command.STATS) {
-            writeString(channel, command.stats);
+            for (Map.Entry<String, Set<String>> stat : command.stats.entrySet()) {
+                for (String statVal : stat.getValue()) {
+                    writeString(channel, "STAT " + stat.getKey() + " " + statVal + "\r\n");
+                }
+            }
+            writeString(channel, "END\r\n");
         } else if (cmd == Command.VERSION) {
             writeString(channel, "VERSION " + command.version + "\r\n");
         } else if (cmd == Command.QUIT) {
