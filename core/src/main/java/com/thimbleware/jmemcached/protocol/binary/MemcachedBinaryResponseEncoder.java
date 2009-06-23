@@ -2,24 +2,28 @@ package com.thimbleware.jmemcached.protocol.binary;
 
 import com.thimbleware.jmemcached.protocol.Command;
 import com.thimbleware.jmemcached.protocol.ResponseMessage;
+import com.thimbleware.jmemcached.protocol.exceptions.ClientException;
+import com.thimbleware.jmemcached.protocol.exceptions.UnknownCommandException;
 import com.thimbleware.jmemcached.MCElement;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteOrder;
 import java.util.Set;
 import java.util.Map;
 
 /**
+ * 
  */
-// TODO exception handling from downstream errors
-// TODO quit - disconnect
-// TODO refactor so this can be unit tested separate from netty?
-@ChannelPipelineCoverage("all")
+// TODO refactor so this can be unit tested separate from netty? scalacheck?
+@ChannelPipelineCoverage("one")
 public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler {
 
     private ChannelBuffer corkedResponse = null;
+    final Logger logger = LoggerFactory.getLogger(MemcachedBinaryResponseEncoder.class);
 
     public static enum ResponseCode {
         OK(0x0000),
@@ -73,7 +77,7 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
         return ResponseCode.UNKNOWN;
     }
 
-    public ChannelBuffer constructHeader(MemcachedBinaryCommandDecoder.BinaryCommand bcmd, ResponseMessage command, ChannelBuffer extrasBuffer, ChannelBuffer keyBuffer, ChannelBuffer valueBuffer) {
+    public ChannelBuffer constructHeader(MemcachedBinaryCommandDecoder.BinaryCommand bcmd, ChannelBuffer extrasBuffer, ChannelBuffer keyBuffer, ChannelBuffer valueBuffer, short responseCode, int opaqueValue, long casUnique) {
         // take the ResponseMessage and turn it into a binary payload.
         ChannelBuffer header = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, 24);
         header.writeByte((byte)0x81);  // magic
@@ -84,19 +88,36 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
         int extrasLength = extrasBuffer != null ? extrasBuffer.capacity() : 0;
         header.writeByte((byte) extrasLength); // extra length = flags + expiry
         header.writeByte((byte)0); // data type unused
-        header.writeShort(getStatusCode(command).code); // status code
+        header.writeShort(responseCode); // status code
 
         int dataLength = valueBuffer != null ? valueBuffer.capacity() : 0;
         header.writeInt(dataLength + keyLength + extrasLength); // data length
-        header.writeInt(command.cmd.opaque); // opaque
-        if (command.elements != null && command.elements.length != 0 && command.elements[0] != null)
-            header.writeLong(command.elements[0].cas_unique);
-        else
-            header.writeLong(0);
+        header.writeInt(opaqueValue); // opaque
+
+        header.writeLong(casUnique);
 
         return header;
     }
 
+    /**
+     * Handle exceptions in protocol processing. Exceptions are either client or internal errors.  Report accordingly.
+     *
+     * @param ctx
+     * @param e
+     * @throws Exception
+     */
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+        try {
+            throw e.getCause();
+        } catch (UnknownCommandException unknownCommand) {
+            ctx.getChannel().write(constructHeader(MemcachedBinaryCommandDecoder.BinaryCommand.Noop, null, null, null, (short)0x0081, 0, 0));
+        } catch (Throwable err) {
+            logger.error("error", err);
+            ctx.getChannel().close();
+        }
+    }
+    
     @Override
     public void messageReceived(ChannelHandlerContext channelHandlerContext, MessageEvent messageEvent) throws Exception {
         ResponseMessage command = (ResponseMessage) messageEvent.getMessage();
@@ -133,6 +154,11 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
             valueBuffer.writeLong(command.incrDecrResponse);
         }
 
+        long casUnique = 0;
+        if (command.elements != null && command.elements.length != 0 && command.elements[0] != null) {
+            casUnique = command.elements[0].cas_unique;
+        }
+
         // stats is special -- with it, we write N times, one for each stat, then an empty payload
         if (command.cmd.cmd == Command.STATS) {
             // first write out any corked responses
@@ -149,7 +175,7 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
                     valueBuffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, stat.length());
                     valueBuffer.writeBytes(stat.getBytes("US-ASCII"));
 
-                    ChannelBuffer headerBuffer = constructHeader(bcmd, command, extrasBuffer, keyBuffer, valueBuffer);
+                    ChannelBuffer headerBuffer = constructHeader(bcmd, extrasBuffer, keyBuffer, valueBuffer, getStatusCode(command).code, command.cmd.opaque, casUnique);
 
                     writePayload(messageEvent, extrasBuffer, keyBuffer, valueBuffer, headerBuffer);
                 }
@@ -158,12 +184,12 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
             keyBuffer = null;
             valueBuffer = null;
 
-            ChannelBuffer headerBuffer = constructHeader(bcmd, command, extrasBuffer, keyBuffer, valueBuffer);
+            ChannelBuffer headerBuffer = constructHeader(bcmd, extrasBuffer, keyBuffer, valueBuffer, getStatusCode(command).code, command.cmd.opaque, casUnique);
 
             writePayload(messageEvent, extrasBuffer, keyBuffer, valueBuffer, headerBuffer);
 
         } else {
-            ChannelBuffer headerBuffer = constructHeader(bcmd, command, extrasBuffer, keyBuffer, valueBuffer);
+            ChannelBuffer headerBuffer = constructHeader(bcmd, extrasBuffer, keyBuffer, valueBuffer, getStatusCode(command).code, command.cmd.opaque, casUnique);
 
             // write everything
             // is the command 'quiet?' if so, then we append to our 'corked' buffer until a non-corked command comes along
