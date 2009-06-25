@@ -31,7 +31,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  */
-public class Cache {
+public final class Cache {
     private AtomicInteger currentItems = new AtomicInteger();
     private AtomicInteger totalItems = new AtomicInteger();
     private AtomicInteger getCmds = new AtomicInteger();
@@ -376,13 +376,14 @@ public class Cache {
     public MCElement[] get(String ... keys) {
         getCmds.incrementAndGet();//updates stats
 
-        try {
+        MCElement[] elements = new MCElement[keys.length];
+        int x = 0;
+        int hits = 0;
+        int misses = 0;
+        for (String key : keys) {
             startCacheRead();
-            MCElement[] elements = new MCElement[keys.length];
-            int x = 0;
-            int hits = 0;
-            int misses = 0;
-            for (String key : keys) {
+
+            try {
                 MCElement e = this.cacheStorage.get(key);
 
                 if (e == null || isExpired(e) || e.blocked) {
@@ -395,14 +396,16 @@ public class Cache {
                     elements[x] = e;
                 }
                 x++;
+            } finally {
+                finishCacheRead();
             }
-            getMisses.addAndGet(misses);
-            getHits.addAndGet(hits);
 
-            return elements;
-        } finally {
-            finishCacheRead();
         }
+        getMisses.addAndGet(misses);
+        getHits.addAndGet(hits);
+
+        return elements;
+
     }
 
     /**
