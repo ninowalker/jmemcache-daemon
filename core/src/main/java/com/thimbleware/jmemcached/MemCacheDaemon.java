@@ -23,12 +23,15 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.group.ChannelGroupFuture;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Executor;
 
 /**
  * The actual daemon - responsible for the binding and configuration of the network configuration.
@@ -37,7 +40,7 @@ public class MemCacheDaemon {
 
     final Logger logger = LoggerFactory.getLogger(MemCacheDaemon.class);
 
-    public static String memcachedVersion = "0.7";
+    public static String memcachedVersion = "0.9";
 
     private int receiveBufferSize = 32768 * 1024;
     private int sendBufferSize = 32768;
@@ -71,22 +74,22 @@ public class MemCacheDaemon {
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool());
 
-        ServerBootstrap bootstrap = new ServerBootstrap(channelFactory);
         allChannels = new DefaultChannelGroup("jmemcachedChannelGroup");
 
+        ServerBootstrap bootstrap = new ServerBootstrap(channelFactory);
+      
         ChannelPipelineFactory pipelineFactory;
         if (binary)
             pipelineFactory = new MemcachedBinaryPipelineFactory(cache, memcachedVersion, verbose, idleTime, allChannels);
         else
             pipelineFactory = new MemcachedPipelineFactory(cache, memcachedVersion, verbose, idleTime, receiveBufferSize, allChannels);
 
+        bootstrap.setOption("child.tcpNoDelay", true);
+        bootstrap.setOption("child.keepAlive", true);
         bootstrap.setPipelineFactory(pipelineFactory);
 
         Channel serverChannel = bootstrap.bind(addr);
         allChannels.add(serverChannel);
-
-        bootstrap.setOption("child.tcpNoDelay", true);
-        bootstrap.setOption("child.keepAlive", true);
 
         logger.info("Listening on " + String.valueOf(addr.getHostName()) + ":" + addr.getPort());
         running = true;
