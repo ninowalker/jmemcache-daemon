@@ -42,6 +42,10 @@ public class SpyMemcached23IntegrationTest {
     private boolean binary;
     private InetSocketAddress address;
 
+    protected static final String KEY = "MyKey";
+
+    protected static final int TWO_WEEKS = 1209600; // 60*60*24*14 = 1209600 seconds in 2 weeks.
+
     @Parameterized.Parameters
     public static Collection clientParams() {
         return Arrays.asList(new Object[][]{{false}, {true}});
@@ -87,12 +91,26 @@ public class SpyMemcached23IntegrationTest {
     }
 
     @Test
+    public void testPresence() {
+        assertNotNull(_daemon.getCache());
+        assertEquals("initial cache is empty", 0, _daemon.getCache().getCurrentItems());
+        assertEquals("initialize size is empty", 0, _daemon.getCache().getCurrentBytes());
+    }
+
+    @Test
     public void testStats() {
         Map<SocketAddress, Map<String, String>> stats = _client.getStats();
         Map<String, String> statsMap = stats.get(address);
         assertNotNull(statsMap);
-        assertEquals(statsMap.get("cmd_gets"), "0");
-        assertEquals(statsMap.get("cmd_sets"), "0");
+        assertEquals("0", statsMap.get("cmd_gets"));
+        assertEquals("0", statsMap.get("cmd_sets"));
+        _client.set("foo", 86400, "bar");
+        _client.get("foo");
+        _client.get("bug");
+        stats = _client.getStats();
+        statsMap = stats.get(address);
+        assertEquals("2", statsMap.get("cmd_gets"));
+        assertEquals("1", statsMap.get("cmd_sets"));
     }
 
     @Test
@@ -104,19 +122,22 @@ public class SpyMemcached23IntegrationTest {
         for(int i=0; i<20; i++){
             sb.append(sb);
         }
-        System.out.println("length is: " + sb.length());
         _client.add("sb", 86400, sb.toString());
         assertNotNull("null get when sb.length()="+sb.length(), _client.get("sb"));
         assertEquals("wrong length for sb",sb.length(), _client.get("sb").toString().length());
     }
 
     @Test
-    public void testPresence() {
-        assertNotNull(_daemon.getCache());
-        assertEquals("initial cache is empty", 0, _daemon.getCache().getCurrentItems());
-        assertEquals("initialize size is empty", 0, _daemon.getCache().getCurrentBytes());
+    public void testBigBinaryObject() {
+        Object bigObject = getBigObject();
+        _client.set(KEY, TWO_WEEKS, bigObject);
+        final Map<String, Double> map = (Map<String, Double>)_client.get(KEY);
+        for (String key : map.keySet()) {
+            Integer kint = Integer.valueOf(key);
+            Double val = map.get(key);
+            assertEquals(val, kint/42.0, 0.0);
+        }
     }
-
 
     @Test
     public void testCAS() throws Exception {
@@ -157,6 +178,16 @@ public class SpyMemcached23IntegrationTest {
             Assert.assertEquals("bar" + i, results.get("foo" + i));
         }
 
+    }
+
+    protected static Object getBigObject() {
+        final Map<String, Double> map = new HashMap<String, Double>();
+
+        for (int i=0;i<130000;i++) {
+            map.put(Integer.toString(i), i/42.0);
+        }
+
+        return map;
     }
 
     private MemCacheDaemon createDaemon( final InetSocketAddress address ) throws IOException {
