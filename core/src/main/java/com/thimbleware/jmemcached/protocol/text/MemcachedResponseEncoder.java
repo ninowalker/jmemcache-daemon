@@ -18,7 +18,7 @@ import java.util.Map;
 /**
  * Response encoder for the memcached text protocol. Produces strings destined for the StringEncoder
  */
-@ChannelPipelineCoverage("one")
+@ChannelPipelineCoverage("all")
 public class MemcachedResponseEncoder extends SimpleChannelUpstreamHandler {
 
     final Logger logger = LoggerFactory.getLogger(MemcachedResponseEncoder.class);
@@ -33,16 +33,16 @@ public class MemcachedResponseEncoder extends SimpleChannelUpstreamHandler {
      * @throws Exception
      */
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
-            throws Exception {
-        if (e.getCause() instanceof ClientException) {
-            logger.debug("client error", e.getCause().getMessage());
-
-            ctx.getChannel().write("CLIENT_ERROR\r\n");
-        } else {
-            logger.error("error", e.getCause());
-
-            ctx.getChannel().write("ERROR\r\n");
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+        try {
+            throw e.getCause();
+        } catch (ClientException ce) {
+            if (ctx.getChannel().isOpen())
+                ctx.getChannel().write("CLIENT_ERROR\r\n");
+        } catch (Throwable tr) {
+            logger.error("error", tr);
+            if (ctx.getChannel().isOpen())
+                ctx.getChannel().write("ERROR\r\n");
         }
     }
 
@@ -100,6 +100,7 @@ public class MemcachedResponseEncoder extends SimpleChannelUpstreamHandler {
             writeString(channel, "ERROR\r\n");
             logger.error("error; unrecognized command: " + cmd);
         }
+        
     }
 
     private String deleteResponseString(Cache.DeleteResponse deleteResponse) {

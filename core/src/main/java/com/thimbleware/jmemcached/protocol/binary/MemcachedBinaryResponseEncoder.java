@@ -16,7 +16,7 @@ import java.util.Set;
 import java.util.Map;
 
 /**
- * 
+ *
  */
 // TODO refactor so this can be unit tested separate from netty? scalacheck?
 @ChannelPipelineCoverage("one")
@@ -111,13 +111,15 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
         try {
             throw e.getCause();
         } catch (UnknownCommandException unknownCommand) {
-            ctx.getChannel().write(constructHeader(MemcachedBinaryCommandDecoder.BinaryCommand.Noop, null, null, null, (short)0x0081, 0, 0));
+            if (ctx.getChannel().isOpen())
+                ctx.getChannel().write(constructHeader(MemcachedBinaryCommandDecoder.BinaryCommand.Noop, null, null, null, (short)0x0081, 0, 0));
         } catch (Throwable err) {
             logger.error("error", err);
-            ctx.getChannel().close();
+            if (ctx.getChannel().isOpen())
+                ctx.getChannel().close();
         }
     }
-    
+
     @Override
     public void messageReceived(ChannelHandlerContext channelHandlerContext, MessageEvent messageEvent) throws Exception {
         ResponseMessage command = (ResponseMessage) messageEvent.getMessage();
