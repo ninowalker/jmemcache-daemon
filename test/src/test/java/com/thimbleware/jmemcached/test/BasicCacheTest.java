@@ -5,7 +5,7 @@ import com.thimbleware.jmemcached.*;
 import com.thimbleware.jmemcached.util.Bytes;
 import com.thimbleware.jmemcached.storage.hash.LRUCacheStorageDelegate;
 import com.thimbleware.jmemcached.storage.mmap.MemoryMappedBlockStore;
-import com.thimbleware.jmemcached.storage.mmap.MemoryMappedCacheStorage;
+import com.thimbleware.jmemcached.storage.bytebuffer.ByteBufferCacheStorage;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
 import org.junit.After;
@@ -58,7 +58,7 @@ public class BasicCacheTest {
             LRUCacheStorageDelegate cacheStorage = new LRUCacheStorageDelegate(MAX_SIZE, MAX_BYTES, CEILING_SIZE);
             daemon.setCache(new Cache(cacheStorage));
         } else {
-            MemoryMappedCacheStorage cacheStorage = new MemoryMappedCacheStorage(
+            ByteBufferCacheStorage cacheStorage = new ByteBufferCacheStorage(
                     new MemoryMappedBlockStore(MAX_BYTES, "block_store.dat", blockSize), MAX_SIZE, CEILING_SIZE);
             daemon.setCache(new Cache(cacheStorage));
         }

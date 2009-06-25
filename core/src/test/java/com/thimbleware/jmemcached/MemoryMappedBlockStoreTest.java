@@ -8,6 +8,7 @@ import static org.junit.Assert.*;
 import java.io.IOException;
 
 import com.thimbleware.jmemcached.storage.mmap.MemoryMappedBlockStore;
+import com.thimbleware.jmemcached.storage.bytebuffer.Region;
 
 /**
  */
@@ -33,7 +34,7 @@ public class MemoryMappedBlockStoreTest {
             sentData[2] = '\n';
 
             long before = bs.getFreeBytes();
-            MemoryMappedBlockStore.Region region = bs.alloc(3, sentData);
+            Region region = bs.alloc(3, sentData);
 
             long after = bs.getFreeBytes();
             assertEquals("after allocating region, free space available", after, before - region.physicalSize);

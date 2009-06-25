@@ -1,4 +1,4 @@
-package com.thimbleware.jmemcached.storage.mmap;
+package com.thimbleware.jmemcached.storage.bytebuffer;
 
 import com.thimbleware.jmemcached.MCElement;
 import com.thimbleware.jmemcached.storage.CacheStorage;
@@ -11,34 +11,36 @@ import java.util.Set;
 /**
  * Cache storage delegate for the memory mapped storage mechanism.
  */
-public class MemoryMappedCacheStorage implements CacheStorage {
+public final class ByteBufferCacheStorage implements CacheStorage {
     private int maximumItems;
     private long ceilingBytes;
+    private int curItems = 0;
 
     class StoredValue {
         int flags;
         int expire;
-        MemoryMappedBlockStore.Region region;
+        Region region;
 
-        StoredValue(int flags, int expire, MemoryMappedBlockStore.Region region) {
+        StoredValue(int flags, int expire, Region region) {
             this.flags = flags;
             this.expire = expire;
             this.region = region;
         }
     }
 
-    private MemoryMappedBlockStore store;
+    private ByteBufferBlockStore store;
     private Map<String, StoredValue> index;
 
-    public MemoryMappedCacheStorage(final MemoryMappedBlockStore store, int maximumItems, long ceilingBytes) {
+    public ByteBufferCacheStorage(final ByteBufferBlockStore store, int maximumItems, long ceilingBytes) {
         this.maximumItems = maximumItems;
         this.ceilingBytes = ceilingBytes;
         this.store = store;
         this.index = new LinkedHashMap<String, StoredValue>() {
             @Override
             protected boolean removeEldestEntry(Map.Entry<String, StoredValue> stringStoredValueEntry) {
-                if (store.getFreeBytes() < getCeilingBytes() || size() > getMaximumItems()) {
+                if (store.getFreeBytes() < getCeilingBytes() || curItems > getMaximumItems()) {
                     store.free(stringStoredValueEntry.getValue().region);
+                    curItems--;
                     return true;
                 } else return false;
             }
@@ -48,15 +50,9 @@ public class MemoryMappedCacheStorage implements CacheStorage {
     public MCElement get(String keystring) {
         if (keystring == null) throw new IllegalArgumentException("Id must not be null.");
 
-        StoredValue result;
-        if (index.containsKey(keystring)) {
-            result = index.get(keystring);
-            if (result == null) {
-                throw new IllegalStateException("Stored item should not be null. Id:" + keystring);
-            }
-        } else {
-            return null;
-        }
+        StoredValue result = index.get(keystring);
+        if (result == null) return null;
+        
         MCElement el = new MCElement(keystring, result.flags, result.expire, result.region.size);
         el.data = store.get(result.region);
 
@@ -73,8 +69,9 @@ public class MemoryMappedCacheStorage implements CacheStorage {
             store.free(val.region);
         }
 
-        MemoryMappedBlockStore.Region region = store.alloc(dataLength, item.data);
+        Region region = store.alloc(dataLength, item.data);
 
+        curItems++;
         index.put(id, new StoredValue(item.flags, item.expire, region));
     }
 
@@ -85,6 +82,7 @@ public class MemoryMappedCacheStorage implements CacheStorage {
             index.remove(keystring);
             store.free(item.region);
         }
+        curItems--;
     }
 
     public Set<String> keys() {
@@ -94,6 +92,7 @@ public class MemoryMappedCacheStorage implements CacheStorage {
     public void clear() {
         index.clear();
         store.clear();
+        curItems = 0;
     }
 
     public void close() {
@@ -105,23 +104,23 @@ public class MemoryMappedCacheStorage implements CacheStorage {
         }
     }
 
-    public long getCurrentSizeBytes() {
+    public final long getCurrentSizeBytes() {
         return store.getStoreSizeBytes() - store.getFreeBytes();
     }
 
-    public int getMaximumItems() {
+    public final int getMaximumItems() {
         return maximumItems;
     }
 
-    public long getMaximumSizeBytes() {
+    public final long getMaximumSizeBytes() {
         return store.getStoreSizeBytes();
     }
 
-    public long getCurrentItemCount() {
+    public final long getCurrentItemCount() {
         return index.size();
     }
 
-    public long getCeilingBytes() {
+    public final long getCeilingBytes() {
         return ceilingBytes;
     }
 }

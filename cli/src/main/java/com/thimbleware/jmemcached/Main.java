@@ -18,14 +18,13 @@ package com.thimbleware.jmemcached;
 import org.apache.commons.cli.*;
 
 import java.net.InetSocketAddress;
-import java.text.NumberFormat;
-import java.util.regex.Matcher;
-import java.util.Locale;
+import java.nio.ByteBuffer;
 
-import com.thimbleware.jmemcached.storage.hash.LRUCacheStorageDelegate;
-import com.thimbleware.jmemcached.storage.mmap.MemoryMappedCacheStorage;
 import com.thimbleware.jmemcached.storage.mmap.MemoryMappedBlockStore;
 import com.thimbleware.jmemcached.storage.CacheStorage;
+import com.thimbleware.jmemcached.storage.hash.LRUCacheStorageDelegate;
+import com.thimbleware.jmemcached.storage.bytebuffer.ByteBufferBlockStore;
+import com.thimbleware.jmemcached.storage.bytebuffer.ByteBufferCacheStorage;
 import com.thimbleware.jmemcached.util.Bytes;
 
 
@@ -86,7 +85,7 @@ public class Main {
             addr = new InetSocketAddress(cmdline.getOptionValue("listen"), port);
         }
 
-        int max_size = 10000;
+        int max_size = 1000000;
         if (cmdline.hasOption("s"))
             max_size = (int)Bytes.valueOf(cmdline.getOptionValue("s")).bytes();
         else if (cmdline.hasOption("size"))
@@ -174,10 +173,11 @@ public class Main {
         CacheStorage cacheStorage;
         if (memoryMapped) {
             MemoryMappedBlockStore mappedBlockStore = new MemoryMappedBlockStore((int)maxBytes, mmapFile, blockSize);
-            cacheStorage = new MemoryMappedCacheStorage(mappedBlockStore, max_size, (int)ceiling);
+            cacheStorage = new ByteBufferCacheStorage(mappedBlockStore, max_size, (int)ceiling);
         }
         else
             cacheStorage = new LRUCacheStorageDelegate(max_size, maxBytes, ceiling);
+        
         daemon.setCache(new Cache(cacheStorage));
         daemon.setBinary(binary);
         daemon.setAddr(addr);

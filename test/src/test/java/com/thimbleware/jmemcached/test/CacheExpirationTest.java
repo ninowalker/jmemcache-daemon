@@ -13,8 +13,8 @@ import java.util.Arrays;
 
 import com.thimbleware.jmemcached.MemCacheDaemon;
 import com.thimbleware.jmemcached.storage.hash.LRUCacheStorageDelegate;
-import com.thimbleware.jmemcached.storage.mmap.MemoryMappedCacheStorage;
 import com.thimbleware.jmemcached.storage.mmap.MemoryMappedBlockStore;
+import com.thimbleware.jmemcached.storage.bytebuffer.ByteBufferCacheStorage;
 import com.thimbleware.jmemcached.Cache;
 import com.thimbleware.jmemcached.MCElement;
 import com.thimbleware.jmemcached.util.Bytes;
@@ -45,7 +45,7 @@ public class CacheExpirationTest {
     }
 
     @Parameterized.Parameters
-    public static Collection regExValues() {
+    public static Collection blockSizeValues() {
         return Arrays.asList(new Object[][] {
                 {CacheType.LOCAL, 1 },
                 {CacheType.MAPPED, 8 }});
@@ -60,7 +60,7 @@ public class CacheExpirationTest {
             LRUCacheStorageDelegate cacheStorage = new LRUCacheStorageDelegate(MAX_SIZE, MAX_BYTES, CEILING_SIZE);
             daemon.setCache(new Cache(cacheStorage));
         } else {
-            MemoryMappedCacheStorage cacheStorage = new MemoryMappedCacheStorage(
+            ByteBufferCacheStorage cacheStorage = new ByteBufferCacheStorage(
                     new MemoryMappedBlockStore(MAX_BYTES, "block_store.dat", blockSize), MAX_SIZE, CEILING_SIZE);
             daemon.setCache(new Cache(cacheStorage));
         }
@@ -106,6 +106,7 @@ public class CacheExpirationTest {
             if (i < MAX_SIZE) {
                 assertTrue(result == null);
             } else {
+                assertNotNull(i + "th result is there", result.keystring);
                 assertEquals("key matches" , "" + i, result.keystring);
                 assertEquals(new String(result.data), i + "x");
             }
