@@ -59,8 +59,7 @@ public class MemcachedResponseEncoder extends SimpleChannelUpstreamHandler {
                 if (result != null) {
                     writeString(channel, VALUE);
                     writeString(channel, result.keystring + " " + result.flags + " " + result.dataLength + (cmd == Command.GETS ? " " + result.cas_unique : "") + "\r\n");
-                    ChannelBuffer outputbuffer = ChannelBuffers.buffer(result.dataLength);
-                    outputbuffer.writeBytes(result.data);
+                    ChannelBuffer outputbuffer = ChannelBuffers.wrappedBuffer(result.data);
                     channel.write(outputbuffer);
                     writeString(channel, "\r\n");
 
@@ -138,8 +137,7 @@ public class MemcachedResponseEncoder extends SimpleChannelUpstreamHandler {
     }
 
     private void writeString(Channel out, String str) {
-        ChannelBuffer outbuf = ChannelBuffers.buffer(str.length());
-        outbuf.writeBytes(str.getBytes());
+        ChannelBuffer outbuf = ChannelBuffers.wrappedBuffer(str.getBytes());
         out.write(outbuf);
     }
 }

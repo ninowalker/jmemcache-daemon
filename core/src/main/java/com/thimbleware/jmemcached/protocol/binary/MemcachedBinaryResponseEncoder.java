@@ -131,8 +131,7 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
         // write key if there is one
         ChannelBuffer keyBuffer = null;
         if (bcmd.addKeyToResponse && command.cmd.keys != null && command.cmd.keys.size() != 0) {
-            keyBuffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, command.cmd.keys.get(0).length());
-            keyBuffer.writeBytes(command.cmd.keys.get(0).getBytes());
+            keyBuffer = ChannelBuffers.wrappedBuffer(ByteOrder.BIG_ENDIAN, command.cmd.keys.get(0).getBytes());
         }
 
         // write value if there is one
@@ -144,9 +143,11 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
             extrasBuffer.writeShort((short) (element != null ? element.flags : 0));
 
             if ((command.cmd.cmd == Command.GET || command.cmd.cmd == Command.GETS)) {
-                valueBuffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, (element != null ? element.dataLength : 0));
-                if (element != null)
-                    valueBuffer.writeBytes(element.data);
+                if (element != null) {
+                    valueBuffer = ChannelBuffers.wrappedBuffer(ByteOrder.BIG_ENDIAN, element.data);
+                } else {
+                    valueBuffer = ChannelBuffers.buffer(0);
+                }
             } else if (command.cmd.cmd == Command.INCR || command.cmd.cmd == Command.DECR) {
                 valueBuffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, 8);
                 valueBuffer.writeLong(command.incrDecrResponse);
@@ -172,10 +173,8 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
             for (Map.Entry<String, Set<String>> statsEntries : command.stats.entrySet()) {
                 for (String stat : statsEntries.getValue()) {
 
-                    keyBuffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, statsEntries.getKey().length());
-                    keyBuffer.writeBytes(statsEntries.getKey().getBytes("US-ASCII"));
-                    valueBuffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, stat.length());
-                    valueBuffer.writeBytes(stat.getBytes("US-ASCII"));
+                    keyBuffer = ChannelBuffers.wrappedBuffer(ByteOrder.BIG_ENDIAN, statsEntries.getKey().getBytes("US-ASCII"));
+                    valueBuffer = ChannelBuffers.wrappedBuffer(ByteOrder.BIG_ENDIAN, stat.getBytes("US-ASCII"));
 
                     ChannelBuffer headerBuffer = constructHeader(bcmd, extrasBuffer, keyBuffer, valueBuffer, getStatusCode(command).code, command.cmd.opaque, casUnique);
 
@@ -227,12 +226,14 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
     }
 
     private void writePayload(MessageEvent messageEvent, ChannelBuffer extrasBuffer, ChannelBuffer keyBuffer, ChannelBuffer valueBuffer, ChannelBuffer headerBuffer) {
-        messageEvent.getChannel().write(headerBuffer);
-        if (extrasBuffer != null)
-            messageEvent.getChannel().write(extrasBuffer);
-        if (keyBuffer != null)
-            messageEvent.getChannel().write(keyBuffer);
-        if (valueBuffer != null)
-            messageEvent.getChannel().write(valueBuffer);
+        if (messageEvent.getChannel().isOpen()) {
+            messageEvent.getChannel().write(headerBuffer);
+            if (extrasBuffer != null)
+                messageEvent.getChannel().write(extrasBuffer);
+            if (keyBuffer != null)
+                messageEvent.getChannel().write(keyBuffer);
+            if (valueBuffer != null)
+                messageEvent.getChannel().write(valueBuffer);
+        }
     }
 }
