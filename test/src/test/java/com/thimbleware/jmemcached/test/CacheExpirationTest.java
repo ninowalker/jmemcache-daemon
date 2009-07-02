@@ -106,6 +106,7 @@ public class CacheExpirationTest {
             if (i < MAX_SIZE) {
                 assertTrue(result == null);
             } else {
+                assertNotNull(result);
                 assertNotNull(i + "th result is there", result.keystring);
                 assertEquals("key matches" , "" + i, result.keystring);
                 assertEquals(new String(result.data), i + "x");
