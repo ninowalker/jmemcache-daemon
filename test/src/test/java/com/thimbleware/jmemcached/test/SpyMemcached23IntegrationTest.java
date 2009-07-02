@@ -119,7 +119,7 @@ public class SpyMemcached23IntegrationTest {
         assertEquals("wrong value returned from cache", "foobarshoe",  _client.get("foo"));
         StringBuilder sb = new StringBuilder();
         sb.append("hello world");
-        for(int i=0; i<20; i++){
+        for(int i=0; i<15; i++){
             sb.append(sb);
         }
         _client.add("sb", 86400, sb.toString());
