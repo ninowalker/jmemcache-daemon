@@ -80,9 +80,9 @@ public class MemCacheDaemon {
       
         ChannelPipelineFactory pipelineFactory;
         if (binary)
-            pipelineFactory = new MemcachedBinaryPipelineFactory(cache, memcachedVersion, verbose, idleTime, allChannels);
+            pipelineFactory = createMemcachedBinaryPipelineFactory(cache, memcachedVersion, verbose, idleTime, allChannels);
         else
-            pipelineFactory = new MemcachedPipelineFactory(cache, memcachedVersion, verbose, idleTime, receiveBufferSize, allChannels);
+            pipelineFactory = createMemcachedPipelineFactory(cache, memcachedVersion, verbose, idleTime, receiveBufferSize, allChannels);
 
         bootstrap.setOption("child.tcpNoDelay", true);
         bootstrap.setOption("child.keepAlive", true);
@@ -93,6 +93,16 @@ public class MemCacheDaemon {
 
         logger.info("Listening on " + String.valueOf(addr.getHostName()) + ":" + addr.getPort());
         running = true;
+    }
+
+    protected ChannelPipelineFactory createMemcachedBinaryPipelineFactory(
+            Cache cache, String memcachedVersion, boolean verbose, int idleTime, DefaultChannelGroup allChannels) {
+        return new MemcachedBinaryPipelineFactory(cache, memcachedVersion, verbose, idleTime, allChannels);
+    }
+
+    protected ChannelPipelineFactory createMemcachedPipelineFactory(
+            Cache cache, String memcachedVersion, boolean verbose, int idleTime, int receiveBufferSize, DefaultChannelGroup allChannels) {
+        return new MemcachedPipelineFactory(cache, memcachedVersion, verbose, idleTime, receiveBufferSize, allChannels);
     }
 
     public void stop() {

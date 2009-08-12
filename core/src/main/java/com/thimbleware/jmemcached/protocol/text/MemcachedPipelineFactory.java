@@ -7,7 +7,6 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
-import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 
 /**
@@ -35,11 +34,27 @@ public class MemcachedPipelineFactory implements ChannelPipelineFactory {
         ChannelPipeline pipeline = Channels.pipeline();
         SessionStatus status = new SessionStatus().ready();
         pipeline.addLast("frameHandler", new MemcachedFrameDecoder(status, frameSize));
-        pipeline.addAfter("frameHandler", "commandDecoder", new MemcachedCommandDecoder(status));
-        pipeline.addAfter("commandDecoder", "commandHandler", new MemcachedCommandHandler(cache, version, verbose, idleTime, channelGroup));
-        pipeline.addAfter("commandHandler", "responseEncoder", new MemcachedResponseEncoder());
-        pipeline.addAfter("responseEncoder", "responseHandler", new StringEncoder());
+        pipeline.addAfter("frameHandler", "commandDecoder", createMemcachedCommandDecoder(status));
+        pipeline.addAfter("commandDecoder", "commandHandler", createMemcachedCommandHandler(cache, version, verbose, idleTime, channelGroup));
+        pipeline.addAfter("commandHandler", "responseEncoder", createMemcachedResponseEncoder());
+        pipeline.addAfter("responseEncoder", "responseHandler", createResponseEncoder());
 
         return pipeline;
+    }
+
+    private StringEncoder createResponseEncoder() {
+        return new StringEncoder();
+    }
+
+    private MemcachedResponseEncoder createMemcachedResponseEncoder() {
+        return new MemcachedResponseEncoder();
+    }
+
+    private MemcachedCommandDecoder createMemcachedCommandDecoder(SessionStatus status) {
+        return new MemcachedCommandDecoder(status);
+    }
+
+    protected MemcachedCommandHandler createMemcachedCommandHandler(Cache cache, String version, boolean verbose, int idleTime, DefaultChannelGroup channelGroup) {
+        return new MemcachedCommandHandler(cache, version, verbose, idleTime, channelGroup);
     }
 }

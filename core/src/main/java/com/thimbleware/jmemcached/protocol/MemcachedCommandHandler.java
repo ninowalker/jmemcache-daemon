@@ -175,59 +175,124 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
         Channel channel = messageEvent.getChannel();
         Cache.StoreResponse ret;
         if (cmd == Command.GET || cmd == Command.GETS) {
-            MCElement[] results = get(command.keys.toArray(new String[command.keys.size()]));
-            ResponseMessage resp = new ResponseMessage(command).withElements(results);
-            Channels.fireMessageReceived(channelHandlerContext, resp, channel.getRemoteAddress());
+            handleGets(channelHandlerContext, command, channel);
         } else if (cmd == Command.SET) {
-            ret = cache.set(command.element);
-            Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withResponse(ret), channel.getRemoteAddress());
+            handleSet(channelHandlerContext, command, channel);
         } else if (cmd == Command.CAS) {
-            ret = cache.cas(command.cas_key, command.element);
-            Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withResponse(ret), channel.getRemoteAddress());
+            handleCas(channelHandlerContext, command, channel);
         } else if (cmd == Command.ADD) {
-            ret = cache.add(command.element);
-            Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withResponse(ret), channel.getRemoteAddress());
+            handleAdd(channelHandlerContext, command, channel);
         } else if (cmd == Command.REPLACE) {
-            ret = cache.replace(command.element);
-            Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withResponse(ret), channel.getRemoteAddress());
+            handleReplace(channelHandlerContext, command, channel);
         } else if (cmd == Command.APPEND) {
-            ret = cache.append(command.element);
-            Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withResponse(ret), channel.getRemoteAddress());
+            handleAppend(channelHandlerContext, command, channel);
         } else if (cmd == Command.PREPEND) {
-            ret = cache.prepend(command.element);
-            Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withResponse(ret), channel.getRemoteAddress());
+            handlePrepend(channelHandlerContext, command, channel);
         } else if (cmd == Command.INCR) {
-            Integer incrDecrResp = cache.get_add(command.keys.get(0), command.incrAmount); // TODO support default value and expiry!!
-            Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withIncrDecrResponse(incrDecrResp), channel.getRemoteAddress());
+            handleIncr(channelHandlerContext, command, channel);
         } else if (cmd == Command.DECR) {
-            Integer incrDecrResp = cache.get_add(command.keys.get(0), -1 * command.incrAmount);
-            Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withIncrDecrResponse(incrDecrResp), channel.getRemoteAddress());
+            handleDecr(channelHandlerContext, command, channel);
         } else if (cmd == Command.DELETE) {
-            Cache.DeleteResponse dr = cache.delete(command.keys.get(0), command.time);
-            Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withDeleteResponse(dr), channel.getRemoteAddress());
+            handleDelete(channelHandlerContext, command, channel);
         } else if (cmd == Command.STATS) {
-            String option = "";
-            if (cmdKeysSize > 0) {
-                option = command.keys.get(0);
-            }
-            Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withStatResponse(stat(option)), channel.getRemoteAddress());
-
+            handleStats(channelHandlerContext, command, cmdKeysSize, channel);
         } else if (cmd == Command.VERSION) {
-            ResponseMessage responseMessage = new ResponseMessage(command);
-            responseMessage.version = version;
-            Channels.fireMessageReceived(channelHandlerContext, responseMessage, channel.getRemoteAddress());
+            handleVersion(channelHandlerContext, command, channel);
         } else if (cmd == Command.QUIT) {
-            channel.disconnect();
+            handleQuit(channel);
         } else if (cmd == Command.FLUSH_ALL) {
-            Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withFlushResponse(cache.flush_all(command.time)), channel.getRemoteAddress());
+            handleFlush(channelHandlerContext, command, channel);
         } else if (cmd == null) {
             // NOOP
-            Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command));
+            handleNoOp(channelHandlerContext, command);
         } else {
             throw new UnknownCommandException("unknown command:" + cmd);
 
         }
 
+    }
+
+    protected void handleNoOp(ChannelHandlerContext channelHandlerContext, CommandMessage command) {
+        Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command));
+    }
+
+    protected void handleFlush(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
+        Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withFlushResponse(cache.flush_all(command.time)), channel.getRemoteAddress());
+    }
+
+    protected void handleQuit(Channel channel) {
+        channel.disconnect();
+    }
+
+    protected void handleVersion(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
+        ResponseMessage responseMessage = new ResponseMessage(command);
+        responseMessage.version = version;
+        Channels.fireMessageReceived(channelHandlerContext, responseMessage, channel.getRemoteAddress());
+    }
+
+    protected void handleStats(ChannelHandlerContext channelHandlerContext, CommandMessage command, int cmdKeysSize, Channel channel) {
+        String option = "";
+        if (cmdKeysSize > 0) {
+            option = command.keys.get(0);
+        }
+        Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withStatResponse(stat(option)), channel.getRemoteAddress());
+    }
+
+    protected void handleDelete(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
+        Cache.DeleteResponse dr = cache.delete(command.keys.get(0), command.time);
+        Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withDeleteResponse(dr), channel.getRemoteAddress());
+    }
+
+    protected void handleDecr(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
+        Integer incrDecrResp = cache.get_add(command.keys.get(0), -1 * command.incrAmount);
+        Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withIncrDecrResponse(incrDecrResp), channel.getRemoteAddress());
+    }
+
+    protected void handleIncr(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
+        Integer incrDecrResp = cache.get_add(command.keys.get(0), command.incrAmount); // TODO support default value and expiry!!
+        Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withIncrDecrResponse(incrDecrResp), channel.getRemoteAddress());
+    }
+
+    protected void handlePrepend(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
+        Cache.StoreResponse ret;
+        ret = cache.prepend(command.element);
+        Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withResponse(ret), channel.getRemoteAddress());
+    }
+
+    protected void handleAppend(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
+        Cache.StoreResponse ret;
+        ret = cache.append(command.element);
+        Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withResponse(ret), channel.getRemoteAddress());
+    }
+
+    protected void handleReplace(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
+        Cache.StoreResponse ret;
+        ret = cache.replace(command.element);
+        Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withResponse(ret), channel.getRemoteAddress());
+    }
+
+    protected void handleAdd(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
+        Cache.StoreResponse ret;
+        ret = cache.add(command.element);
+        Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withResponse(ret), channel.getRemoteAddress());
+    }
+
+    protected void handleCas(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
+        Cache.StoreResponse ret;
+        ret = cache.cas(command.cas_key, command.element);
+        Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withResponse(ret), channel.getRemoteAddress());
+    }
+
+    protected void handleSet(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
+        Cache.StoreResponse ret;
+        ret = cache.set(command.element);
+        Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withResponse(ret), channel.getRemoteAddress());
+    }
+
+    protected void handleGets(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
+        MCElement[] results = get(command.keys.toArray(new String[command.keys.size()]));
+        ResponseMessage resp = new ResponseMessage(command).withElements(results);
+        Channels.fireMessageReceived(channelHandlerContext, resp, channel.getRemoteAddress());
     }
 
     /**
