@@ -48,7 +48,7 @@ public class CacheExpirationTest {
     public static Collection blockSizeValues() {
         return Arrays.asList(new Object[][] {
                 {CacheType.LOCAL, 1 },
-                {CacheType.MAPPED, 8 }});
+                {CacheType.MAPPED, 4 }});
     }
 
 
@@ -81,19 +81,15 @@ public class CacheExpirationTest {
         // max MAX_SIZE items in cache, so create fillSize items and then verify that only a MAX_SIZE are ever in the cache
         int fillSize = 2000;
 
-        long totalSize = 0;
         for (int i = 0; i < fillSize; i++) {
             String testvalue = i + "x";
             MCElement el = createElement("" + i , testvalue);
-
-            totalSize += MemoryMappedBlockStore.roundUp(blockSize, testvalue.length());
 
             assertEquals(daemon.getCache().add(el), Cache.StoreResponse.STORED);
 
             // verify that the size of the cache is correct
             int maximum = i < MAX_SIZE ? i + 1 : MAX_SIZE;
 
-//            assertEquals("correct number of bytes stored", totalSize, daemon.getCache().getCurrentBytes());
             assertEquals("correct number of items stored", maximum, daemon.getCache().getCurrentItems());
         }
 
@@ -104,10 +100,10 @@ public class CacheExpirationTest {
         for (int i = 0; i < fillSize; i++) {
             MCElement result = daemon.getCache().get("" + i)[0];
             if (i < MAX_SIZE) {
-                assertTrue(result == null);
+                assertTrue(i + "th result absence", result == null);
             } else {
-                assertNotNull(result);
-                assertNotNull(i + "th result is there", result.keystring);
+                assertNotNull(i + "th result presence", result);
+                assertNotNull(i + "th result's presence", result.keystring);
                 assertEquals("key matches" , "" + i, result.keystring);
                 assertEquals(new String(result.data), i + "x");
             }
