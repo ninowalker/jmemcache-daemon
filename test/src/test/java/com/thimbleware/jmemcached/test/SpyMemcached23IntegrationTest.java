@@ -2,6 +2,7 @@ package com.thimbleware.jmemcached.test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -75,19 +76,21 @@ public class SpyMemcached23IntegrationTest {
 
 
     @Test
-    public void testGetSet() throws IOException, InterruptedException {
-        _client.set( "foo", 5000, "bar" );
-        Assert.assertEquals( "bar", _client.get( "foo" ) );
+    public void testGetSet() throws IOException, InterruptedException, ExecutionException {
+        Future<Boolean> future = _client.set("foo", 5000, "bar");
+        assertTrue(future.get());
+        assertEquals( "bar", _client.get( "foo" ) );
     }
 
     @Test
-    public void testIncrDecr() {
-        _client.set( "foo", 0, "1");
-        Assert.assertEquals( "1", _client.get( "foo" ) );
+    public void testIncrDecr() throws ExecutionException, InterruptedException {
+        Future<Boolean> future = _client.set("foo", 0, "1");
+        assertTrue(future.get());
+        assertEquals( "1", _client.get( "foo" ) );
         _client.incr( "foo", 5 );
-        Assert.assertEquals( "6", _client.get( "foo" ) );
+        assertEquals( "6", _client.get( "foo" ) );
         _client.decr( "foo", 10 );
-        Assert.assertEquals( "0", _client.get( "foo" ) );
+        assertEquals( "0", _client.get( "foo" ) );
     }
 
     @Test
@@ -98,13 +101,14 @@ public class SpyMemcached23IntegrationTest {
     }
 
     @Test
-    public void testStats() {
+    public void testStats() throws ExecutionException, InterruptedException {
         Map<SocketAddress, Map<String, String>> stats = _client.getStats();
         Map<String, String> statsMap = stats.get(address);
         assertNotNull(statsMap);
         assertEquals("0", statsMap.get("cmd_gets"));
         assertEquals("0", statsMap.get("cmd_sets"));
-        _client.set("foo", 86400, "bar");
+        Future<Boolean> future = _client.set("foo", 86400, "bar");
+        assertTrue(future.get());
         _client.get("foo");
         _client.get("bug");
         stats = _client.getStats();
@@ -114,8 +118,9 @@ public class SpyMemcached23IntegrationTest {
     }
 
     @Test
-    public void testBinaryCompressed(){
-        _client.add("foo", 86400, "foobarshoe");
+    public void testBinaryCompressed() throws ExecutionException, InterruptedException {
+        Future<Boolean> future = _client.add("foo", 86400, "foobarshoe");
+        assertEquals(true, future.get());
         assertEquals("wrong value returned from cache", "foobarshoe",  _client.get("foo"));
         StringBuilder sb = new StringBuilder();
         sb.append("hello world");
@@ -128,9 +133,10 @@ public class SpyMemcached23IntegrationTest {
     }
 
     @Test
-    public void testBigBinaryObject() {
+    public void testBigBinaryObject() throws ExecutionException, InterruptedException {
         Object bigObject = getBigObject();
-        _client.set(KEY, TWO_WEEKS, bigObject);
+        Future<Boolean> future = _client.set(KEY, TWO_WEEKS, bigObject);
+        assertTrue(future.get());
         final Map<String, Double> map = (Map<String, Double>)_client.get(KEY);
         for (String key : map.keySet()) {
             Integer kint = Integer.valueOf(key);
@@ -141,41 +147,51 @@ public class SpyMemcached23IntegrationTest {
 
     @Test
     public void testCAS() throws Exception {
-        _client.set("foo", 32000, 123);
+        Future<Boolean> future = _client.set("foo", 32000, 123);
+        assertTrue(future.get());
         CASValue<Object> casValue = _client.gets("foo");
-        Assert.assertEquals( 123, casValue.getValue());
+        assertEquals( 123, casValue.getValue());
 
         CASResponse cr = _client.cas("foo", casValue.getCas(), 456);
 
-        Assert.assertEquals(CASResponse.OK, cr);
+        assertEquals(CASResponse.OK, cr);
 
         Future<Object> rf = _client.asyncGet("foo");
 
-        Assert.assertEquals(456, rf.get());
+        assertEquals(456, rf.get());
     }
 
     @Test
     public void testAppendPrepend() throws Exception {
-        _client.set( "foo", 0, "foo" );
+        Future<Boolean> future = _client.set("foo", 0, "foo");
+        assertTrue(future.get());
+        
         _client.append(0, "foo", "bar");
-        Assert.assertEquals( "foobar", _client.get( "foo" ));
+        assertEquals( "foobar", _client.get( "foo" ));
         _client.prepend(0, "foo", "baz");
-        Assert.assertEquals( "bazfoobar", _client.get( "foo" ));
+        assertEquals( "bazfoobar", _client.get( "foo" ));
     }
 
     @Test
     public void testBulkGet() throws IOException, InterruptedException, ExecutionException {
         ArrayList<String> allStrings = new ArrayList<String>();
+        ArrayList<Future<Boolean>> futures = new ArrayList<Future<Boolean>>();
         for (int i = 0; i < 10000; i++) {
-            _client.set("foo" + i, 360000, "bar" + i);
+            futures.add(_client.set("foo" + i, 360000, "bar" + i));
             allStrings.add("foo" + i);
         }
+
+        // wait for all the sets to complete
+        for (Future<Boolean> future : futures) {
+            assertTrue(future.get());
+        }
+
         // doing a regular get, we are just too slow for spymemcached's tolerances... for now
         Future<Map<String, Object>> future = _client.asyncGetBulk(allStrings);
         Map<String, Object> results = future.get();
 
         for (int i = 0; i < 10000; i++) {
-            Assert.assertEquals("bar" + i, results.get("foo" + i));
+            assertEquals("bar" + i, results.get("foo" + i));
         }
 
     }
