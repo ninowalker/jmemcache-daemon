@@ -21,6 +21,9 @@ import static java.lang.Integer.parseInt;
 import static java.lang.String.valueOf;
 import java.nio.ByteBuffer;
 import java.util.Set;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
@@ -32,6 +35,19 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  */
 public final class Cache {
+
+    /**
+     * The following state variables are universal for the entire daemon. These are used for statistics gathering.
+     * In order for these values to work properly, the handler _must_ be declared with a ChannelPipelineCoverage
+     * of "all".
+     */
+    public final AtomicInteger curr_conns = new AtomicInteger();
+    public final AtomicInteger total_conns = new AtomicInteger();
+    public final AtomicInteger started = new AtomicInteger();          /* when the process was started */
+    public final AtomicLong bytes_read = new AtomicLong();
+    public final AtomicLong bytes_written = new AtomicLong();
+    public final AtomicLong curr_bytes = new AtomicLong();
+
     private AtomicInteger currentItems = new AtomicInteger();
     private AtomicInteger totalItems = new AtomicInteger();
     private AtomicInteger getCmds = new AtomicInteger();
@@ -47,6 +63,17 @@ public final class Cache {
 
     private final ReadWriteLock deleteQueueReadWriteLock;
 
+/**
+ * Initialize base values for status.
+ */
+    {
+        curr_bytes.set(0);
+        curr_conns.set(0);
+        total_conns.set(0);
+        bytes_read.set(0);
+        bytes_written.set(0);
+        started.set(Now());
+    }
 
 
     public enum StoreResponse {
@@ -93,7 +120,6 @@ public final class Cache {
     public Cache(CacheStorage cacheStorage) {
         initStats();
         this.cacheStorage = cacheStorage;
-
         this.deleteQueue = new DelayQueue<DelayedMCElement>();
 
         cacheReadWriteLock = new ReentrantReadWriteLock();
@@ -550,4 +576,59 @@ public final class Cache {
         return getMisses.get();
     }
 
+    /**
+     * Return runtime statistics
+     *
+     * @param arg additional arguments to the stats command
+     * @return the full command response
+     */
+    public Map<String, Set<String>> stat(String arg) {
+        Map<String, Set<String>> result = new HashMap<String, Set<String>>();
+
+        if ("keys".equals(arg)) {
+            for (String key : this.keys()) {
+                multiSet(result, "key", key);
+            }
+
+            return result;
+        }
+
+        // stats we know
+        multiSet(result, "version", MemCacheDaemon.memcachedVersion);
+        multiSet(result, "cmd_gets", valueOf(getGetCmds()));
+        multiSet(result, "cmd_sets", valueOf(getSetCmds()));
+        multiSet(result, "get_hits", valueOf(getGetHits()));
+        multiSet(result, "get_misses", valueOf(getGetMisses()));
+        multiSet(result, "curr_connections", valueOf(curr_conns));
+        multiSet(result, "total_connections", valueOf(total_conns));
+        multiSet(result, "time", valueOf(valueOf(Now())));
+        multiSet(result, "uptime", valueOf(Now() - this.started.intValue()));
+        multiSet(result, "cur_items", valueOf(this.getCurrentItems()));
+        multiSet(result, "limit_maxbytes", valueOf(this.getLimitMaxBytes()));
+        multiSet(result, "current_bytes", valueOf(this.getCurrentBytes()));
+        multiSet(result, "free_bytes", valueOf(Runtime.getRuntime().freeMemory()));
+
+        // Not really the same thing precisely, but meaningful nonetheless. potentially this should be renamed
+        multiSet(result, "pid", valueOf(Thread.currentThread().getId()));
+
+        // stuff we know nothing about; gets faked only because some clients expect this
+        multiSet(result, "rusage_user", "0:0");
+        multiSet(result, "rusage_system", "0:0");
+        multiSet(result, "connection_structures", "0");
+
+        // TODO we could collect these stats
+        multiSet(result, "bytes_read", "0");
+        multiSet(result, "bytes_written", "0");
+
+        return result;
+    }
+
+    private void multiSet(Map<String, Set<String>> map, String key, String val) {
+        Set<String> cur = map.get(key);
+        if (cur == null) {
+            cur = new HashSet<String>();
+        }
+        cur.add(val);
+        map.put(key, cur);
+    }
 }

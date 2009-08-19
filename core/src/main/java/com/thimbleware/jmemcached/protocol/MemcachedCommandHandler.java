@@ -55,28 +55,11 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      * of "all".
      */
     public final String version;
-    public final AtomicInteger curr_conns = new AtomicInteger();
-    public final AtomicInteger total_conns = new AtomicInteger();
-    public final AtomicInteger started = new AtomicInteger();          /* when the process was started */
-    public final AtomicLong bytes_read = new AtomicLong();
-    public final AtomicLong bytes_written = new AtomicLong();
-    public final AtomicLong curr_bytes = new AtomicLong();
 
     public final int idle_limit;
     public final boolean verbose;
 
 
-    /**
-     * Initialize base values for status.
-     */
-    {
-        curr_bytes.set(0);
-        curr_conns.set(0);
-        total_conns.set(0);
-        bytes_read.set(0);
-        bytes_written.set(0);
-        started.set(Now());
-    }
 
     /**
      * The actual physical data storage.
@@ -116,8 +99,8 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      */
     @Override
     public void channelOpen(ChannelHandlerContext channelHandlerContext, ChannelStateEvent channelStateEvent) throws Exception {
-        total_conns.incrementAndGet();
-        curr_conns.incrementAndGet();
+        cache.total_conns.incrementAndGet();
+        cache.curr_conns.incrementAndGet();
         channelGroup.add(channelHandlerContext.getChannel());
     }
 
@@ -130,7 +113,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      */
     @Override
     public void channelClosed(ChannelHandlerContext channelHandlerContext, ChannelStateEvent channelStateEvent) throws Exception {
-        curr_conns.decrementAndGet();
+        cache.curr_conns.decrementAndGet();
         channelGroup.remove(channelHandlerContext.getChannel());
     }
 
@@ -235,7 +218,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
         if (cmdKeysSize > 0) {
             option = command.keys.get(0);
         }
-        Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withStatResponse(stat(option)), channel.getRemoteAddress());
+        Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withStatResponse(cache.stat(option)), channel.getRemoteAddress());
     }
 
     protected void handleDelete(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
@@ -314,60 +297,6 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
     }
 
 
-    /**
-     * Return runtime statistics
-     *
-     * @param arg additional arguments to the stats command
-     * @return the full command response
-     */
-    private Map<String, Set<String>> stat(String arg) {
-        Map<String, Set<String>> result = new HashMap<String, Set<String>>();
 
-        if (arg.equals("keys")) {
-            for (String key : this.cache.keys()) {
-                multiSet(result, "key", key);
-            }
-
-            return result;
-        }
-
-        // stats we know
-        multiSet(result, "version", version);
-        multiSet(result, "cmd_gets", valueOf(cache.getGetCmds()));
-        multiSet(result, "cmd_sets", valueOf(cache.getSetCmds()));
-        multiSet(result, "get_hits", valueOf(cache.getGetHits()));
-        multiSet(result, "get_misses", valueOf(cache.getGetMisses()));
-        multiSet(result, "curr_connections", valueOf(curr_conns));
-        multiSet(result, "total_connections", valueOf(total_conns));
-        multiSet(result, "time", valueOf(valueOf(Now())));
-        multiSet(result, "uptime", valueOf(Now() - this.started.intValue()));
-        multiSet(result, "cur_items", valueOf(this.cache.getCurrentItems()));
-        multiSet(result, "limit_maxbytes", valueOf(this.cache.getLimitMaxBytes()));
-        multiSet(result, "current_bytes", valueOf(this.cache.getCurrentBytes()));
-        multiSet(result, "free_bytes", valueOf(Runtime.getRuntime().freeMemory()));
-
-        // Not really the same thing precisely, but meaningful nonetheless. potentially this should be renamed
-        multiSet(result, "pid", valueOf(Thread.currentThread().getId()));
-
-        // stuff we know nothing about; gets faked only because some clients expect this
-        multiSet(result, "rusage_user", "0:0");
-        multiSet(result, "rusage_system", "0:0");
-        multiSet(result, "connection_structures", "0");
-
-        // TODO we could collect these stats
-        multiSet(result, "bytes_read", "0");
-        multiSet(result, "bytes_written", "0");
-
-        return result;
-    }
-
-    private void multiSet(Map<String, Set<String>> map, String key, String val) {
-        Set<String> cur = map.get(key);
-        if (cur == null) {
-            cur = new HashSet<String>();
-        }
-        cur.add(val);
-        map.put(key, cur);
-    }
 
 }
