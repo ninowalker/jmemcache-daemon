@@ -16,9 +16,12 @@
 package com.thimbleware.jmemcached.storage.hash;
 
 import com.thimbleware.jmemcached.MCElement;
+import com.thimbleware.jmemcached.Cache;
 import com.thimbleware.jmemcached.storage.CacheStorage;
 
 import java.util.Set;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * A delegate around the internal thread-safe LRUCache implementation.
@@ -27,6 +30,12 @@ public final class LRUCacheStorageDelegate implements CacheStorage {
 
     private LRUCache<String, MCElement> cache;
 
+    /**
+     * Read-write lock allows maximal concurrency, since readers can share access;
+     * only writers need sole access.
+     */
+    private final ReadWriteLock cacheReadWriteLock = new ReentrantReadWriteLock();
+    
     public LRUCacheStorageDelegate(int maxSize, long maxBytes, long ceilingSize) {
         //Create a CacheStorage specifying its configuration.
         cache = new LRUCache<String, MCElement>(maxSize, maxBytes, ceilingSize);
@@ -70,5 +79,48 @@ public final class LRUCacheStorageDelegate implements CacheStorage {
 
     public long getMaximumSizeBytes() {
         return cache.getMaximumSizeBytes();
+    }
+
+    /**
+     * Blocks of code in which the contents of the cache
+     * are examined in any way must be surrounded by calls to <code>startRead</code>
+     * and <code>finishRead</code>. See documentation for ReadWriteLock.
+     * @param cache
+     */
+    public void finishCacheRead(Cache cache) {
+        cacheReadWriteLock.readLock().unlock();
+    }
+
+    /**
+     * Blocks of code in which the contents of the cache
+     * are examined in any way must be surrounded by calls to <code>startRead</code>
+     * and <code>finishRead</code>. See documentation for ReadWriteLock.
+     * @param cache
+     */
+    public void startCacheRead(Cache cache) {
+        cacheReadWriteLock.readLock().lock();
+
+    }
+
+    /**
+     * Blocks of code in which the contents of the cache
+     * are changed in any way must be surrounded by calls to <code>startWrite</code> and
+     * <code>finishWrite</code>. See documentation for ReadWriteLock.
+     * protect the higher layers from implementation details.
+     * @param cache
+     */
+    public void startCacheWrite(Cache cache) {
+        cacheReadWriteLock.writeLock().lock();
+
+    }
+
+    /**
+     * Blocks of code in which the contents of the cache
+     * are changed in any way must be surrounded by calls to <code>startWrite</code> and
+     * <code>finishWrite</code>. See documentation for ReadWriteLock.
+     * @param cache
+     */
+    public void finishCacheWrite(Cache cache) {
+        cacheReadWriteLock.writeLock().unlock();
     }
 }

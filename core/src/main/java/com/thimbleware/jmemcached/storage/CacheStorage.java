@@ -17,6 +17,7 @@
 package com.thimbleware.jmemcached.storage;
 
 import com.thimbleware.jmemcached.MCElement;
+import com.thimbleware.jmemcached.Cache;
 
 import java.util.Set;
 
@@ -89,4 +90,37 @@ public interface CacheStorage {
      * @return the maximum number of items this cache can hold
      */
     int getMaximumItems();
+
+    /**
+     * Blocks of code in which the contents of the cache
+     * are examined in any way must be surrounded by calls to <code>startRead</code>
+     * and <code>finishRead</code>. See documentation for ReadWriteLock.
+     * @param cache
+     */
+    void finishCacheRead(Cache cache);
+
+    /**
+     * Blocks of code in which the contents of the cache
+     * are examined in any way must be surrounded by calls to <code>startRead</code>
+     * and <code>finishRead</code>. See documentation for ReadWriteLock.
+     * @param cache
+     */
+    void startCacheRead(Cache cache);
+
+    /**
+     * Blocks of code in which the contents of the cache
+     * are changed in any way must be surrounded by calls to <code>startWrite</code> and
+     * <code>finishWrite</code>. See documentation for ReadWriteLock.
+     * protect the higher layers from implementation details.
+     * @param cache
+     */
+    void startCacheWrite(Cache cache);
+
+    /**
+     * Blocks of code in which the contents of the cache
+     * are changed in any way must be surrounded by calls to <code>startWrite</code> and
+     * <code>finishWrite</code>. See documentation for ReadWriteLock.
+     * @param cache
+     */
+    void finishCacheWrite(Cache cache);
 }

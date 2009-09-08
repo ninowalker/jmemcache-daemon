@@ -85,12 +85,6 @@ public final class Cache {
     }
 
     /**
-     * Read-write lock allows maximal concurrency, since readers can share access;
-     * only writers need sole access.
-     */
-    private final ReadWriteLock cacheReadWriteLock;
-
-    /**
      * Delayed key blocks get processed occasionally.
      */
     private class DelayedMCElement implements Delayed {
@@ -122,7 +116,6 @@ public final class Cache {
         this.cacheStorage = cacheStorage;
         this.deleteQueue = new DelayQueue<DelayedMCElement>();
 
-        cacheReadWriteLock = new ReentrantReadWriteLock();
         deleteQueueReadWriteLock = new ReentrantReadWriteLock();
     }
 
@@ -135,7 +128,7 @@ public final class Cache {
      */
     public DeleteResponse delete(String key, int time) {
         try {
-            startCacheWrite();
+            cacheStorage.startCacheWrite(this);
 
             if (isThere(key)) {
                 if (time != 0) {
@@ -164,7 +157,7 @@ public final class Cache {
                 return DeleteResponse.NOT_FOUND;
             }
         } finally {
-            finishCacheWrite();
+            cacheStorage.finishCacheWrite(this);
         }
     }
 
@@ -178,12 +171,12 @@ public final class Cache {
             DelayedMCElement toDelete = deleteQueue.poll();
             if (toDelete != null) {
                 try {
-                    startCacheWrite();
+                    cacheStorage.startCacheWrite(this);
                     if (this.cacheStorage.get(toDelete.element.keystring) != null) {
                         this.cacheStorage.remove(toDelete.element.keystring);
                     }
                 } finally {
-                    finishCacheWrite();
+                    cacheStorage.finishCacheWrite(this);
                 }
             }
 
@@ -200,11 +193,11 @@ public final class Cache {
      */
     public StoreResponse add(MCElement e) {
         try {
-            startCacheWrite();
+            cacheStorage.startCacheWrite(this);
             if (!isThere(e.keystring)) return set(e);
             else return StoreResponse.NOT_STORED;
         } finally {
-            finishCacheWrite();
+            cacheStorage.finishCacheWrite(this);
         }
     }
 
@@ -216,11 +209,11 @@ public final class Cache {
      */
     public StoreResponse replace(MCElement e) {
         try {
-            startCacheWrite();
+            cacheStorage.startCacheWrite(this);
             if (isThere(e.keystring)) return set(e);
             else return StoreResponse.NOT_STORED;
         } finally {
-            finishCacheWrite();
+            cacheStorage.finishCacheWrite(this);
         }
     }
 
@@ -232,7 +225,7 @@ public final class Cache {
      */
     public StoreResponse append(MCElement element) {
         try {
-            startCacheWrite();
+            cacheStorage.startCacheWrite(this);
             MCElement ret = get(element.keystring)[0];
             if (ret == null || isBlocked(ret) || isExpired(ret))
                 return StoreResponse.NOT_FOUND;
@@ -250,7 +243,7 @@ public final class Cache {
                 return StoreResponse.STORED;
             }
         } finally {
-            finishCacheWrite();
+            cacheStorage.finishCacheWrite(this);
         }
     }
 
@@ -262,7 +255,7 @@ public final class Cache {
      */
     public StoreResponse prepend(MCElement element) {
         try {
-            startCacheWrite();
+            cacheStorage.startCacheWrite(this);
             MCElement ret = get(element.keystring)[0];
             if (ret == null || isBlocked(ret) || isExpired(ret))
                 return StoreResponse.NOT_FOUND;
@@ -280,7 +273,7 @@ public final class Cache {
                 return StoreResponse.STORED;
             }
         } finally {
-            finishCacheWrite();
+            cacheStorage.finishCacheWrite(this);
         }
     }
     /**
@@ -291,7 +284,7 @@ public final class Cache {
      */
     public StoreResponse set(MCElement e) {
         try {
-            startCacheWrite();
+            cacheStorage.startCacheWrite(this);
             setCmds.incrementAndGet();//update stats
 
             // increment the CAS counter; put in the new CAS
@@ -301,7 +294,7 @@ public final class Cache {
 
             return StoreResponse.STORED;
         } finally {
-            finishCacheWrite();
+            cacheStorage.finishCacheWrite(this);
         }
     }
 
@@ -314,7 +307,7 @@ public final class Cache {
      */
     public StoreResponse cas(Long cas_key, MCElement e) {
         try {
-            startCacheWrite();
+            cacheStorage.startCacheWrite(this);
             // have to get the element
             MCElement element = get(e.keystring)[0];
             if (element == null || isBlocked(element))
@@ -329,7 +322,7 @@ public final class Cache {
             }
 
         } finally {
-            finishCacheWrite();
+            cacheStorage.finishCacheWrite(this);
         }
     }
 
@@ -341,7 +334,7 @@ public final class Cache {
      */
     public Integer get_add(String key, int mod) {
         try {
-            startCacheWrite();
+            cacheStorage.startCacheWrite(this);
             MCElement e = this.cacheStorage.get(key);
             if (e == null) {
                 getMisses.incrementAndGet();//update stats
@@ -366,7 +359,7 @@ public final class Cache {
             this.cacheStorage.put(e.keystring, e, e.dataLength); // save new value
             return old_val;
         } finally {
-            finishCacheWrite();
+            cacheStorage.finishCacheWrite(this);
         }
     }
 
@@ -378,11 +371,11 @@ public final class Cache {
      */
     public boolean isThere(String key) {
         try {
-            startCacheRead();
+            cacheStorage.startCacheRead(this);
             MCElement e = this.cacheStorage.get(key);
             return e != null && !isExpired(e) && !isBlocked(e);
         } finally {
-            finishCacheRead();
+            cacheStorage.finishCacheRead(this);
         }
     }
 
@@ -407,7 +400,7 @@ public final class Cache {
         int hits = 0;
         int misses = 0;
         for (String key : keys) {
-            startCacheRead();
+            cacheStorage.startCacheRead(this);
 
             try {
                 MCElement e = this.cacheStorage.get(key);
@@ -423,7 +416,7 @@ public final class Cache {
                 }
                 x++;
             } finally {
-                finishCacheRead();
+                cacheStorage.finishCacheRead(this);
             }
 
         }
@@ -450,10 +443,10 @@ public final class Cache {
     public boolean flush_all(int expire) {
         // TODO implement this, it isn't right... but how to handle efficiently? (don't want to linear scan entire cacheStorage)
         try {
-            startCacheWrite();
+            cacheStorage.startCacheWrite(this);
             this.cacheStorage.clear();
         } finally {
-            finishCacheWrite();
+            cacheStorage.finishCacheWrite(this);
         }
         return true;
     }
@@ -482,79 +475,40 @@ public final class Cache {
     }
 
     public Set<String> keys() {
-        try { startCacheRead();
+        try { cacheStorage.startCacheRead(this);
             return cacheStorage.keys();
         } finally {
-            finishCacheRead();
+            cacheStorage.finishCacheRead(this);
         }
     }
 
     public long getCurrentItems() {
         try {
-            startCacheRead();
+            cacheStorage.startCacheRead(this);
             return  this.cacheStorage.getCurrentItemCount();
         } finally {
-            finishCacheRead();
+            cacheStorage.finishCacheRead(this);
         }
     }
 
     public long getLimitMaxBytes() {
         try {
-            startCacheRead();
+            cacheStorage.startCacheRead(this);
             return this.cacheStorage.getMaximumSizeBytes();
         } finally {
-            finishCacheRead();
+            cacheStorage.finishCacheRead(this);
         }
     }
 
     public long getCurrentBytes() {
         try {
-            startCacheRead();
+            cacheStorage.startCacheRead(this);
             return this.cacheStorage.getCurrentSizeBytes();
         } finally {
-            finishCacheRead();
+            cacheStorage.finishCacheRead(this);
         }
     }
 
-    /**
-     * Blocks of code in which the contents of the cache
-     * are examined in any way must be surrounded by calls to <code>startRead</code>
-     * and <code>finishRead</code>. See documentation for ReadWriteLock.
-     */
-    private void startCacheRead() {
-        cacheReadWriteLock.readLock().lock();
-
-    }
-
-    /**
-     * Blocks of code in which the contents of the cache
-     * are examined in any way must be surrounded by calls to <code>startRead</code>
-     * and <code>finishRead</code>. See documentation for ReadWriteLock.
-     */
-    private void finishCacheRead() {
-        cacheReadWriteLock.readLock().unlock();
-    }
-
-
-    /**
-     * Blocks of code in which the contents of the cache
-     * are changed in any way must be surrounded by calls to <code>startWrite</code> and
-     * <code>finishWrite</code>. See documentation for ReadWriteLock.
-     * protect the higher layers from implementation details.
-     */
-    private void startCacheWrite() {
-        cacheReadWriteLock.writeLock().lock();
-
-    }
-
-    /**
-     * Blocks of code in which the contents of the cache
-     * are changed in any way must be surrounded by calls to <code>startWrite</code> and
-     * <code>finishWrite</code>. See documentation for ReadWriteLock.
-     */
-    private void finishCacheWrite() {
-        cacheReadWriteLock.writeLock().unlock();
-    }
 
     public int getTotalItems() {
         return totalItems.get();
