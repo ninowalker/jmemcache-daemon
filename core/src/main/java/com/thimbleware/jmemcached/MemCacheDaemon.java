@@ -23,15 +23,12 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.group.ChannelGroupFuture;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Executor;
 
 /**
  * The actual daemon - responsible for the binding and configuration of the network configuration.
@@ -49,7 +46,7 @@ public class MemCacheDaemon {
     private boolean verbose;
     private int idleTime;
     private InetSocketAddress addr;
-    private Cache cache;
+    private CacheImpl cache;
 
     private boolean running = false;
     private NioServerSocketChannelFactory channelFactory;
@@ -59,7 +56,7 @@ public class MemCacheDaemon {
     public MemCacheDaemon() {
     }
 
-    public MemCacheDaemon(Cache cache) {
+    public MemCacheDaemon(CacheImpl cache) {
         this.cache = cache;
     }
 
@@ -96,12 +93,12 @@ public class MemCacheDaemon {
     }
 
     protected ChannelPipelineFactory createMemcachedBinaryPipelineFactory(
-            Cache cache, String memcachedVersion, boolean verbose, int idleTime, DefaultChannelGroup allChannels) {
+            CacheImpl cache, String memcachedVersion, boolean verbose, int idleTime, DefaultChannelGroup allChannels) {
         return new MemcachedBinaryPipelineFactory(cache, memcachedVersion, verbose, idleTime, allChannels);
     }
 
     protected ChannelPipelineFactory createMemcachedPipelineFactory(
-            Cache cache, String memcachedVersion, boolean verbose, int idleTime, int receiveBufferSize, DefaultChannelGroup allChannels) {
+            CacheImpl cache, String memcachedVersion, boolean verbose, int idleTime, int receiveBufferSize, DefaultChannelGroup allChannels) {
         return new MemcachedPipelineFactory(cache, memcachedVersion, verbose, idleTime, receiveBufferSize, allChannels);
     }
 
@@ -144,7 +141,7 @@ public class MemCacheDaemon {
         return cache;
     }
 
-    public void setCache(Cache cache) {
+    public void setCache(CacheImpl cache) {
         this.cache = cache;
     }
 

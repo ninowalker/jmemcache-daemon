@@ -16,8 +16,8 @@
 package com.thimbleware.jmemcached.protocol;
 
 
-import com.thimbleware.jmemcached.Cache;
 import com.thimbleware.jmemcached.MCElement;
+import com.thimbleware.jmemcached.CacheImpl;
 import com.thimbleware.jmemcached.protocol.exceptions.UnknownCommandException;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
@@ -26,12 +26,6 @@ import org.slf4j.LoggerFactory;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.String.valueOf;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.Map;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.HashMap;
 
 // TODO implement flush_all delay
 
@@ -64,7 +58,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
     /**
      * The actual physical data storage.
      */
-    private Cache cache;
+    private CacheImpl cache;
 
     /**
      * The channel group for the entire daemon, used for handling global cleanup on shutdown.
@@ -80,7 +74,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
      * @param idle             how long sessions can be idle for
      * @param channelGroup
      */
-    public MemcachedCommandHandler(Cache cache, String memcachedVersion, boolean verbosity, int idle, DefaultChannelGroup channelGroup) {
+    public MemcachedCommandHandler(CacheImpl cache, String memcachedVersion, boolean verbosity, int idle, DefaultChannelGroup channelGroup) {
         this.cache = cache;
 
         version = memcachedVersion;
@@ -156,7 +150,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
         }
 
         Channel channel = messageEvent.getChannel();
-        Cache.StoreResponse ret;
+        CacheImpl.StoreResponse ret;
         if (cmd == Command.GET || cmd == Command.GETS) {
             handleGets(channelHandlerContext, command, channel);
         } else if (cmd == Command.SET) {
@@ -222,7 +216,7 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
     }
 
     protected void handleDelete(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
-        Cache.DeleteResponse dr = cache.delete(command.keys.get(0), command.time);
+        CacheImpl.DeleteResponse dr = cache.delete(command.keys.get(0), command.time);
         Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withDeleteResponse(dr), channel.getRemoteAddress());
     }
 
@@ -237,37 +231,37 @@ public final class MemcachedCommandHandler extends SimpleChannelUpstreamHandler 
     }
 
     protected void handlePrepend(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
-        Cache.StoreResponse ret;
+        CacheImpl.StoreResponse ret;
         ret = cache.prepend(command.element);
         Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withResponse(ret), channel.getRemoteAddress());
     }
 
     protected void handleAppend(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
-        Cache.StoreResponse ret;
+        CacheImpl.StoreResponse ret;
         ret = cache.append(command.element);
         Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withResponse(ret), channel.getRemoteAddress());
     }
 
     protected void handleReplace(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
-        Cache.StoreResponse ret;
+        CacheImpl.StoreResponse ret;
         ret = cache.replace(command.element);
         Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withResponse(ret), channel.getRemoteAddress());
     }
 
     protected void handleAdd(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
-        Cache.StoreResponse ret;
+        CacheImpl.StoreResponse ret;
         ret = cache.add(command.element);
         Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withResponse(ret), channel.getRemoteAddress());
     }
 
     protected void handleCas(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
-        Cache.StoreResponse ret;
+        CacheImpl.StoreResponse ret;
         ret = cache.cas(command.cas_key, command.element);
         Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withResponse(ret), channel.getRemoteAddress());
     }
 
     protected void handleSet(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
-        Cache.StoreResponse ret;
+        CacheImpl.StoreResponse ret;
         ret = cache.set(command.element);
         Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withResponse(ret), channel.getRemoteAddress());
     }

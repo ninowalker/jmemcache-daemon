@@ -12,11 +12,8 @@ import java.util.Collection;
 import java.util.Arrays;
 
 import com.thimbleware.jmemcached.MemCacheDaemon;
-import com.thimbleware.jmemcached.storage.hash.LRUCacheStorageDelegate;
-import com.thimbleware.jmemcached.storage.mmap.MemoryMappedBlockStore;
-import com.thimbleware.jmemcached.storage.bytebuffer.ByteBufferCacheStorage;
-import com.thimbleware.jmemcached.Cache;
 import com.thimbleware.jmemcached.MCElement;
+import com.thimbleware.jmemcached.CacheImpl;
 import com.thimbleware.jmemcached.util.Bytes;
 import static com.thimbleware.jmemcached.MCElement.Now;
 import static junit.framework.Assert.*;
@@ -33,7 +30,7 @@ public class CacheExpirationTest {
     private int PORT;
 
     public static enum CacheType {
-        MAPPED, LOCAL
+        LOCAL
     }
 
     private CacheType cacheType;
@@ -47,28 +44,23 @@ public class CacheExpirationTest {
     @Parameterized.Parameters
     public static Collection blockSizeValues() {
         return Arrays.asList(new Object[][] {
-                {CacheType.LOCAL, 1 },
-                {CacheType.MAPPED, 4 }});
+                {CacheType.LOCAL, 1 }});
     }
 
 
-    @Before
+     @Before
     public void setup() throws IOException {
         // create daemon and start it
         daemon = new MemCacheDaemon();
-        if (cacheType == CacheType.LOCAL) {
-            LRUCacheStorageDelegate cacheStorage = new LRUCacheStorageDelegate(MAX_SIZE, MAX_BYTES, CEILING_SIZE);
-            daemon.setCache(new Cache(cacheStorage));
-        } else {
-            ByteBufferCacheStorage cacheStorage = new ByteBufferCacheStorage(
-                    new MemoryMappedBlockStore(MAX_BYTES, "block_store.dat", blockSize), MAX_SIZE, CEILING_SIZE);
-            daemon.setCache(new Cache(cacheStorage));
-        }
+
+            daemon.setCache(new CacheImpl(MAX_SIZE, MAX_BYTES));
         PORT = AvailablePortFinder.getNextAvailable();
         daemon.setAddr(new InetSocketAddress("localhost", PORT));
         daemon.setVerbose(false);
         daemon.start();
     }
+
+    
 
 
     @After
@@ -85,7 +77,7 @@ public class CacheExpirationTest {
             String testvalue = i + "x";
             MCElement el = createElement("" + i , testvalue);
 
-            assertEquals(daemon.getCache().add(el), Cache.StoreResponse.STORED);
+            assertEquals(daemon.getCache().add(el), CacheImpl.StoreResponse.STORED);
 
             // verify that the size of the cache is correct
             int maximum = i < MAX_SIZE ? i + 1 : MAX_SIZE;

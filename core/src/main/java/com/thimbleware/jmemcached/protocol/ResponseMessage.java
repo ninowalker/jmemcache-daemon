@@ -1,7 +1,7 @@
 package com.thimbleware.jmemcached.protocol;
 
-import com.thimbleware.jmemcached.Cache;
 import com.thimbleware.jmemcached.MCElement;
+import com.thimbleware.jmemcached.CacheImpl;
 
 import java.io.Serializable;
 import java.util.Set;
@@ -18,10 +18,10 @@ public final class ResponseMessage implements Serializable {
 
     public CommandMessage cmd;
     public MCElement[] elements;
-    public Cache.StoreResponse response;
+    public CacheImpl.StoreResponse response;
     public Map<String, Set<String>> stats;
     public String version;
-    public Cache.DeleteResponse deleteResponse;
+    public CacheImpl.DeleteResponse deleteResponse;
     public Integer incrDecrResponse;
     public boolean flushSuccess;
 
@@ -30,12 +30,12 @@ public final class ResponseMessage implements Serializable {
         return this;
     }
 
-    public ResponseMessage withResponse(Cache.StoreResponse response) {
+    public ResponseMessage withResponse(CacheImpl.StoreResponse response) {
         this.response = response;
         return this;
     }
 
-    public ResponseMessage withDeleteResponse(Cache.DeleteResponse deleteResponse) {
+    public ResponseMessage withDeleteResponse(CacheImpl.DeleteResponse deleteResponse) {
         this.deleteResponse = deleteResponse;
         return this;
     }

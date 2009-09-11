@@ -3,9 +3,6 @@ package com.thimbleware.jmemcached.test;
 import static com.thimbleware.jmemcached.MCElement.Now;
 import com.thimbleware.jmemcached.*;
 import com.thimbleware.jmemcached.util.Bytes;
-import com.thimbleware.jmemcached.storage.hash.LRUCacheStorageDelegate;
-import com.thimbleware.jmemcached.storage.mmap.MemoryMappedBlockStore;
-import com.thimbleware.jmemcached.storage.bytebuffer.ByteBufferCacheStorage;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
 import org.junit.After;
@@ -31,7 +28,7 @@ public class BasicCacheTest {
     private int PORT;
 
     public static enum CacheType {
-        MAPPED, LOCAL
+        LOCAL
     }
 
     private CacheType cacheType;
@@ -45,8 +42,7 @@ public class BasicCacheTest {
     @Parameterized.Parameters
     public static Collection regExValues() {
         return Arrays.asList(new Object[][] {
-                {CacheType.LOCAL, 1 },
-                {CacheType.MAPPED, 8 }});
+                {CacheType.LOCAL, 1 }});
     }
 
 
@@ -54,14 +50,8 @@ public class BasicCacheTest {
     public void setup() throws IOException {
         // create daemon and start it
         daemon = new MemCacheDaemon();
-        if (cacheType == CacheType.LOCAL) {
-            LRUCacheStorageDelegate cacheStorage = new LRUCacheStorageDelegate(MAX_SIZE, MAX_BYTES, CEILING_SIZE);
-            daemon.setCache(new Cache(cacheStorage));
-        } else {
-            ByteBufferCacheStorage cacheStorage = new ByteBufferCacheStorage(
-                    new MemoryMappedBlockStore(MAX_BYTES, "block_store.dat", blockSize), MAX_SIZE, CEILING_SIZE);
-            daemon.setCache(new Cache(cacheStorage));
-        }
+
+            daemon.setCache(new CacheImpl(MAX_SIZE, MAX_BYTES));
         PORT = AvailablePortFinder.getNextAvailable();
         daemon.setAddr(new InetSocketAddress("localhost", PORT));
         daemon.setVerbose(false);
@@ -90,7 +80,7 @@ public class BasicCacheTest {
         element.data = testvalue.getBytes();
 
         // put in cache
-        assertEquals(daemon.getCache().add(element), Cache.StoreResponse.STORED);
+        assertEquals(daemon.getCache().add(element), CacheImpl.StoreResponse.STORED);
 
         // get result
         MCElement result = daemon.getCache().get(testKey)[0];
@@ -117,7 +107,7 @@ public class BasicCacheTest {
         element.data = testvalue.getBytes();
 
         // put in cache
-        assertEquals(daemon.getCache().add(element), Cache.StoreResponse.STORED);
+        assertEquals(daemon.getCache().add(element), CacheImpl.StoreResponse.STORED);
 
         // get result
         MCElement result = daemon.getCache().get(testKey)[0];
@@ -139,7 +129,7 @@ public class BasicCacheTest {
         element.data = testvalue.getBytes();
 
         // put in cache
-        assertEquals(daemon.getCache().replace(element), Cache.StoreResponse.STORED);
+        assertEquals(daemon.getCache().replace(element), CacheImpl.StoreResponse.STORED);
 
         // get result
         result = daemon.getCache().get(testKey)[0];
@@ -165,7 +155,7 @@ public class BasicCacheTest {
         element.data = testvalue.getBytes();
 
         // put in cache
-        assertEquals(daemon.getCache().replace(element), Cache.StoreResponse.NOT_STORED);
+        assertEquals(daemon.getCache().replace(element), CacheImpl.StoreResponse.NOT_STORED);
 
         // get result
         MCElement result = daemon.getCache().get(testKey)[0];
@@ -187,7 +177,7 @@ public class BasicCacheTest {
         element.data = testvalue.getBytes();
 
         // put in cache
-        assertEquals(daemon.getCache().set(element), Cache.StoreResponse.STORED);
+        assertEquals(daemon.getCache().set(element), CacheImpl.StoreResponse.STORED);
 
         // get result
         MCElement result = daemon.getCache().get(testKey)[0];
@@ -214,10 +204,10 @@ public class BasicCacheTest {
         element.data = testvalue.getBytes();
 
         // put in cache
-        assertEquals(daemon.getCache().add(element), Cache.StoreResponse.STORED);
+        assertEquals(daemon.getCache().add(element), CacheImpl.StoreResponse.STORED);
 
         // put in cache again and fail
-        assertEquals(daemon.getCache().add(element), Cache.StoreResponse.NOT_STORED);
+        assertEquals(daemon.getCache().add(element), CacheImpl.StoreResponse.NOT_STORED);
 
         assertEquals("size of cache matches single element entered", element.dataLength, daemon.getCache().getCurrentBytes());
         assertEquals("cache has only 1 element", 1, daemon.getCache().getCurrentItems());
@@ -249,7 +239,7 @@ public class BasicCacheTest {
         element.data = testvalue.getBytes();
 
         // put in cache
-        assertEquals(daemon.getCache().set(element), Cache.StoreResponse.STORED);
+        assertEquals(daemon.getCache().set(element), CacheImpl.StoreResponse.STORED);
 
         // increment
         assertEquals("value correctly incremented", daemon.getCache().get_add(testKey, 1), (Integer)2);

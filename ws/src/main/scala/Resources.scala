@@ -6,12 +6,8 @@ import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import javax.ws.rs._
 import org.jboss.resteasy.spi.NotFoundException
-import com.thimbleware.jmemcached.{MemCacheDaemon, Cache, MCElement}
+import com.thimbleware.jmemcached.{MemCacheDaemon, CacheImpl, MCElement}
 import com.thimbleware.jmemcached.ws.StorageType
-import com.thimbleware.jmemcached.storage.bytebuffer.{ByteBufferBlockStore, ByteBufferCacheStorage}
-import com.thimbleware.jmemcached.storage.CacheStorage
-import com.thimbleware.jmemcached.storage.hash.LRUCacheStorageDelegate
-import com.thimbleware.jmemcached.storage.mmap.MemoryMappedBlockStore
 import scala.collection.JavaConversions._
 import xml.Elem
 
@@ -104,13 +100,7 @@ case class InstanceResource(id:Int,
     var daemon : MemCacheDaemon = null;
 
     def createDaemon() = {
-        val cacheStorage : CacheStorage =
-        if (storageType.isBlockStore) new ByteBufferCacheStorage(
-            if (storageType == StorageType.MMAPPED_BLOCK) new MemoryMappedBlockStore(maxMemorySize, memoryMappedFile, blockSize)
-            else new ByteBufferBlockStore(ByteBuffer.allocate(maxMemorySize.toInt), blockSize), maxItemsSize, ceilingBytes)
-        else new LRUCacheStorageDelegate(maxItemsSize, maxMemorySize, ceilingBytes);
-
-        daemon = new MemCacheDaemon(new Cache(cacheStorage));
+        daemon = new MemCacheDaemon(new CacheImpl(maxItemsSize, maxMemorySize));
         daemon.setBinary(binaryProtocol);
         daemon.setAddr(new InetSocketAddress(listenHost, port));
         daemon

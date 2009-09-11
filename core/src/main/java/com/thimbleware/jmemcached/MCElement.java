@@ -15,12 +15,14 @@
  */
 package com.thimbleware.jmemcached;
 
+import com.thimbleware.jmemcached.storage.hash.SizedItem;
+
 import java.io.Serializable;
 
 /**
  * Represents information about a cache entry.
  */
-public final class MCElement implements Serializable {
+public final class MCElement implements Serializable, SizedItem {
     public int expire = 0;
     public int flags;
     public int dataLength = 0;
@@ -46,5 +48,9 @@ public final class MCElement implements Serializable {
      */
     public static final int Now() {
         return (int) (System.currentTimeMillis() / 1000);
+    }
+
+    public int size() {
+        return dataLength;
     }
 }

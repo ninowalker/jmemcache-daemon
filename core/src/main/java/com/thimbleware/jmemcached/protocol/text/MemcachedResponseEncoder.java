@@ -1,7 +1,7 @@
 package com.thimbleware.jmemcached.protocol.text;
 
-import com.thimbleware.jmemcached.Cache;
 import com.thimbleware.jmemcached.MCElement;
+import com.thimbleware.jmemcached.CacheImpl;
 import com.thimbleware.jmemcached.protocol.Command;
 import com.thimbleware.jmemcached.protocol.ResponseMessage;
 import com.thimbleware.jmemcached.protocol.exceptions.ClientException;
@@ -102,8 +102,8 @@ public class MemcachedResponseEncoder extends SimpleChannelUpstreamHandler {
         
     }
 
-    private String deleteResponseString(Cache.DeleteResponse deleteResponse) {
-        if (deleteResponse == Cache.DeleteResponse.DELETED) return "DELETED\r\n";
+    private String deleteResponseString(CacheImpl.DeleteResponse deleteResponse) {
+        if (deleteResponse == CacheImpl.DeleteResponse.DELETED) return "DELETED\r\n";
         else return "NOT_FOUND\r\n";
     }
 
@@ -122,7 +122,7 @@ public class MemcachedResponseEncoder extends SimpleChannelUpstreamHandler {
      * @param storeResponse the response code
      * @return the string to output on the network
      */
-    private String storeResponseString(Cache.StoreResponse storeResponse) {
+    private String storeResponseString(CacheImpl.StoreResponse storeResponse) {
         switch (storeResponse) {
             case EXISTS:
                 return "EXISTS\r\n";

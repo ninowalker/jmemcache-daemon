@@ -12,18 +12,15 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ExecutionException;
 
 import net.spy.memcached.*;
-import net.spy.memcached.transcoders.IntegerTranscoder;
 
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import com.thimbleware.jmemcached.Cache;
 import com.thimbleware.jmemcached.MemCacheDaemon;
-import com.thimbleware.jmemcached.storage.hash.LRUCacheStorageDelegate;
+import com.thimbleware.jmemcached.CacheImpl;
 
 /**
  * Integration test using Spymemcached 2.3
@@ -208,8 +205,7 @@ public class SpyMemcached23IntegrationTest {
 
     private MemCacheDaemon createDaemon( final InetSocketAddress address ) throws IOException {
         final MemCacheDaemon daemon = new MemCacheDaemon();
-        final LRUCacheStorageDelegate cacheStorage = new LRUCacheStorageDelegate(40000, 1024*1024*1024, 1024000);
-        daemon.setCache(new Cache(cacheStorage));
+        daemon.setCache(new CacheImpl(40000, 1024*1024*1024));
         daemon.setAddr( address );
         daemon.setVerbose(false);
         daemon.setBinary(binary);

@@ -18,13 +18,7 @@ package com.thimbleware.jmemcached;
 import org.apache.commons.cli.*;
 
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 
-import com.thimbleware.jmemcached.storage.mmap.MemoryMappedBlockStore;
-import com.thimbleware.jmemcached.storage.CacheStorage;
-import com.thimbleware.jmemcached.storage.hash.LRUCacheStorageDelegate;
-import com.thimbleware.jmemcached.storage.bytebuffer.ByteBufferBlockStore;
-import com.thimbleware.jmemcached.storage.bytebuffer.ByteBufferCacheStorage;
 import com.thimbleware.jmemcached.util.Bytes;
 
 
@@ -170,15 +164,7 @@ public class Main {
 
         // create daemon and start it
         final MemCacheDaemon daemon = new MemCacheDaemon();
-        CacheStorage cacheStorage;
-        if (memoryMapped) {
-            MemoryMappedBlockStore mappedBlockStore = new MemoryMappedBlockStore((int)maxBytes, mmapFile, blockSize);
-            cacheStorage = new ByteBufferCacheStorage(mappedBlockStore, max_size, (int)ceiling);
-        }
-        else
-            cacheStorage = new LRUCacheStorageDelegate(max_size, maxBytes, ceiling);
-        
-        daemon.setCache(new Cache(cacheStorage));
+        daemon.setCache(new CacheImpl(max_size, maxBytes));
         daemon.setBinary(binary);
         daemon.setAddr(addr);
         daemon.setIdleTime(idle);
