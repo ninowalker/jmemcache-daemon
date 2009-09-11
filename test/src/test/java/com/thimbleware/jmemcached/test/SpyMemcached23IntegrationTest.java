@@ -40,7 +40,7 @@ public class SpyMemcached23IntegrationTest {
 
     private static final int MAX_BYTES = (int) Bytes.valueOf("32m").bytes();
     private static final int CEILING_SIZE = (int)Bytes.valueOf("4m").bytes();
-    private static final int MAX_SIZE = 1000;
+    private static final int MAX_SIZE = 50000;
 
     private MemCacheDaemon _daemon;
     private MemcachedClient _client;

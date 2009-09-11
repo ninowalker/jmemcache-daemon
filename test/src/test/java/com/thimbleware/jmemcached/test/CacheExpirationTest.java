@@ -64,7 +64,7 @@ public class CacheExpirationTest {
             daemon.setCache(new CacheImpl(cacheStorage));
         } else {
             cacheStorage = new ConcurrentSizedBlockStorageMap(
-                    new MemoryMappedBlockStore(MAX_BYTES, "block_store.dat", blockSize), MAX_SIZE, CEILING_SIZE);
+                    new MemoryMappedBlockStore(MAX_BYTES, "block_store.dat", blockSize), CEILING_SIZE, MAX_SIZE);
             daemon.setCache(new CacheImpl(cacheStorage));
         }
         PORT = AvailablePortFinder.getNextAvailable();

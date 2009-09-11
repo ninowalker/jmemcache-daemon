@@ -17,7 +17,6 @@ public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<
 
     final ByteBufferBlockStore blockStorage;
     final AtomicInteger ceilingBytes;
-    final AtomicInteger curItems;
     final AtomicInteger maximumItems;
     final LinkedHashMap<String, StoredValue> index;
 
@@ -39,17 +38,26 @@ public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<
         this.blockStorage = blockStorageParam;
         this.ceilingBytes = new AtomicInteger(ceilingBytesParam);
         this.maximumItems = new AtomicInteger(maximumItemsVal);
-        this.curItems = new AtomicInteger();
         this.storageLock = new ReentrantReadWriteLock();
 
         this.index = new LinkedHashMap<String, StoredValue>() {
             @Override
             protected boolean removeEldestEntry(Map.Entry<String, StoredValue> stringStoredValueEntry) {
-                if (blockStorage.getFreeBytes() < ceilingBytes.get() || curItems.get() > maximumItems.get()) {
-                    blockStorage.free(stringStoredValueEntry.getValue().region);
-                    curItems.decrementAndGet();
-                    return true;
-                } else return false;
+                try {
+                    storageLock.readLock().lock();
+                    if (blockStorage.getFreeBytes() < ceilingBytes.get() || index.size() > maximumItems.get()) {
+                        storageLock.readLock().unlock();
+                        storageLock.writeLock().lock();
+                        blockStorage.free(stringStoredValueEntry.getValue().region);
+                        storageLock.writeLock().unlock();
+                        storageLock.readLock().lock();
+
+                        return true;
+                    } else return false;
+                } finally {
+                    storageLock.readLock().unlock();
+                }
+
             }
         };
     }
@@ -214,7 +222,6 @@ public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<
             storageLock.writeLock().lock();
             Region region = blockStorage.alloc(item.dataLength, item.data);
 
-            curItems.incrementAndGet();
             index.put(key, new StoredValue(item.flags, item.expire, region));
 
             return null;
@@ -256,7 +263,6 @@ public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<
                 MCElement item = entry.getValue();
                 Region region = blockStorage.alloc(item.dataLength, item.data);
 
-                curItems.incrementAndGet();
                 index.put(key, new StoredValue(item.flags, item.expire, region));
 
             }
