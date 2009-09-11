@@ -14,6 +14,11 @@ import java.util.Arrays;
 import com.thimbleware.jmemcached.MemCacheDaemon;
 import com.thimbleware.jmemcached.MCElement;
 import com.thimbleware.jmemcached.CacheImpl;
+import com.thimbleware.jmemcached.storage.hash.ConcurrentLinkedHashMap;
+import com.thimbleware.jmemcached.storage.hash.SizedItem;
+import com.thimbleware.jmemcached.storage.mmap.MemoryMappedBlockStore;
+import com.thimbleware.jmemcached.storage.ConcurrentSizedBlockStorageMap;
+import com.thimbleware.jmemcached.storage.ConcurrentSizedMap;
 import com.thimbleware.jmemcached.util.Bytes;
 import static com.thimbleware.jmemcached.MCElement.Now;
 import static junit.framework.Assert.*;
@@ -30,7 +35,7 @@ public class CacheExpirationTest {
     private int PORT;
 
     public static enum CacheType {
-        LOCAL
+        MAPPED, LOCAL
     }
 
     private CacheType cacheType;
@@ -44,16 +49,24 @@ public class CacheExpirationTest {
     @Parameterized.Parameters
     public static Collection blockSizeValues() {
         return Arrays.asList(new Object[][] {
-                {CacheType.LOCAL, 1 }});
+                {CacheType.LOCAL, 1 },
+                {CacheType.MAPPED, 4 }});
     }
 
 
-     @Before
+    @Before
     public void setup() throws IOException {
         // create daemon and start it
         daemon = new MemCacheDaemon();
-
-            daemon.setCache(new CacheImpl(MAX_SIZE, MAX_BYTES));
+        ConcurrentSizedMap<String, MCElement> cacheStorage;
+        if (cacheType == CacheType.LOCAL) {
+            cacheStorage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, MAX_SIZE, MAX_BYTES);
+            daemon.setCache(new CacheImpl(cacheStorage));
+        } else {
+            cacheStorage = new ConcurrentSizedBlockStorageMap(
+                    new MemoryMappedBlockStore(MAX_BYTES, "block_store.dat", blockSize), MAX_SIZE, CEILING_SIZE);
+            daemon.setCache(new CacheImpl(cacheStorage));
+        }
         PORT = AvailablePortFinder.getNextAvailable();
         daemon.setAddr(new InetSocketAddress("localhost", PORT));
         daemon.setVerbose(false);

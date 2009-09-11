@@ -18,6 +18,7 @@ package com.thimbleware.jmemcached;
 import com.thimbleware.jmemcached.storage.hash.SizedItem;
 
 import java.io.Serializable;
+import java.util.Arrays;
 
 /**
  * Represents information about a cache entry.
@@ -52,5 +53,37 @@ public final class MCElement implements Serializable, SizedItem {
 
     public int size() {
         return dataLength;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        MCElement mcElement = (MCElement) o;
+
+        if (blocked != mcElement.blocked) return false;
+        if (blocked_until != mcElement.blocked_until) return false;
+        if (cas_unique != mcElement.cas_unique) return false;
+        if (dataLength != mcElement.dataLength) return false;
+        if (expire != mcElement.expire) return false;
+        if (flags != mcElement.flags) return false;
+        if (!Arrays.equals(data, mcElement.data)) return false;
+        if (!keystring.equals(mcElement.keystring)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = expire;
+        result = 31 * result + flags;
+        result = 31 * result + dataLength;
+        result = 31 * result + Arrays.hashCode(data);
+        result = 31 * result + keystring.hashCode();
+        result = 31 * result + (int) (cas_unique ^ (cas_unique >>> 32));
+        result = 31 * result + (blocked ? 1 : 0);
+        result = 31 * result + (int) (blocked_until ^ (blocked_until >>> 32));
+        return result;
     }
 }

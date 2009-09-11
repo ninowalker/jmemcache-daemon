@@ -16,6 +16,7 @@
 package com.thimbleware.jmemcached;
 
 import com.thimbleware.jmemcached.storage.hash.ConcurrentLinkedHashMap;
+import com.thimbleware.jmemcached.storage.ConcurrentSizedMap;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.String.valueOf;
@@ -31,21 +32,20 @@ import java.util.concurrent.locks.ReadWriteLock;
  */
 public final class CacheImpl extends AbstractCache implements Cache {
 
-    final ConcurrentLinkedHashMap<String, MCElement> cache;
+    final ConcurrentSizedMap<String, MCElement> cache;
     final DelayQueue<DelayedMCElement> deleteQueue;
     final ReadWriteLock deleteQueueReadWriteLock;
 
     /**
      * Construct the server session handler
      */
-    public CacheImpl(int maxSize, long maxBytes) {
+    public CacheImpl(ConcurrentSizedMap<String, MCElement> storage) {
         super();
+        this.cache = storage;
         deleteQueue = new DelayQueue<DelayedMCElement>();
         deleteQueueReadWriteLock = new ReentrantReadWriteLock();
 
         initStats();
-
-        cache = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, maxSize, maxBytes);
     }
 
     /**

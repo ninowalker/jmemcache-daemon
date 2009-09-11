@@ -21,6 +21,10 @@ import org.junit.runners.Parameterized;
 
 import com.thimbleware.jmemcached.MemCacheDaemon;
 import com.thimbleware.jmemcached.CacheImpl;
+import com.thimbleware.jmemcached.MCElement;
+import com.thimbleware.jmemcached.util.Bytes;
+import com.thimbleware.jmemcached.storage.hash.ConcurrentLinkedHashMap;
+import com.thimbleware.jmemcached.storage.hash.SizedItem;
 
 /**
  * Integration test using Spymemcached 2.3
@@ -33,6 +37,10 @@ import com.thimbleware.jmemcached.CacheImpl;
 public class SpyMemcached23IntegrationTest {
 
     private int PORT;
+
+    private static final int MAX_BYTES = (int) Bytes.valueOf("32m").bytes();
+    private static final int CEILING_SIZE = (int)Bytes.valueOf("4m").bytes();
+    private static final int MAX_SIZE = 1000;
 
     private MemCacheDaemon _daemon;
     private MemcachedClient _client;
@@ -162,7 +170,7 @@ public class SpyMemcached23IntegrationTest {
     public void testAppendPrepend() throws Exception {
         Future<Boolean> future = _client.set("foo", 0, "foo");
         assertTrue(future.get());
-        
+
         _client.append(0, "foo", "bar");
         assertEquals( "foobar", _client.get( "foo" ));
         _client.prepend(0, "foo", "baz");
@@ -205,7 +213,8 @@ public class SpyMemcached23IntegrationTest {
 
     private MemCacheDaemon createDaemon( final InetSocketAddress address ) throws IOException {
         final MemCacheDaemon daemon = new MemCacheDaemon();
-        daemon.setCache(new CacheImpl(40000, 1024*1024*1024));
+        final ConcurrentLinkedHashMap<String, MCElement> storage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, MAX_SIZE, MAX_BYTES);
+        daemon.setCache(new CacheImpl(storage));
         daemon.setAddr( address );
         daemon.setVerbose(false);
         daemon.setBinary(binary);
