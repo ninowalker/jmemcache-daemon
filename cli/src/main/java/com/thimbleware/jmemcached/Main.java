@@ -171,7 +171,7 @@ public class Main {
         final MemCacheDaemon daemon = new MemCacheDaemon();
 
         ConcurrentSizedMap<String, MCElement> storage;
-        if (memoryMapped)
+        if (!memoryMapped)
             storage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, max_size, maxBytes);
         else  {
             MemoryMappedBlockStore mappedBlockStore = new MemoryMappedBlockStore((int)maxBytes, mmapFile, blockSize);
