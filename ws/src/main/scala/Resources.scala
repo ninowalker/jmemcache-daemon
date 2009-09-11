@@ -7,6 +7,9 @@ import java.nio.ByteBuffer
 import javax.ws.rs._
 import org.jboss.resteasy.spi.NotFoundException
 import com.thimbleware.jmemcached.{MemCacheDaemon, CacheImpl, MCElement}
+import com.thimbleware.jmemcached.storage.hash.ConcurrentLinkedHashMap
+import com.thimbleware.jmemcached.storage.ConcurrentSizedBlockStorageMap
+import com.thimbleware.jmemcached.storage.mmap.MemoryMappedBlockStore
 import com.thimbleware.jmemcached.ws.StorageType
 import scala.collection.JavaConversions._
 import xml.Elem
@@ -100,7 +103,7 @@ case class InstanceResource(id:Int,
     var daemon : MemCacheDaemon = null;
 
     def createDaemon() = {
-        daemon = new MemCacheDaemon(new CacheImpl(maxItemsSize, maxMemorySize));
+        daemon = new MemCacheDaemon(new CacheImpl(ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, maxItemsSize, maxMemorySize)))
         daemon.setBinary(binaryProtocol);
         daemon.setAddr(new InetSocketAddress(listenHost, port));
         daemon
