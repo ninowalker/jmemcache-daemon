@@ -1,8 +1,9 @@
 package com.thimbleware.jmemcached.storage;
 
+import com.thimbleware.jmemcached.CacheElement;
+import com.thimbleware.jmemcached.LocalCacheElement;
 import com.thimbleware.jmemcached.storage.bytebuffer.ByteBufferBlockStore;
 import com.thimbleware.jmemcached.storage.bytebuffer.Region;
-import com.thimbleware.jmemcached.MCElement;
 
 import java.util.Map;
 import java.util.Set;
@@ -13,7 +14,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  */
-public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<String, MCElement> {
+public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<String, LocalCacheElement> {
 
     final ByteBufferBlockStore blockStorage;
     final AtomicInteger ceilingBytes;
@@ -74,7 +75,7 @@ public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<
         return maximumItems.get();
     }
 
-    public MCElement putIfAbsent(String key, MCElement item) {
+    public LocalCacheElement putIfAbsent(String key, LocalCacheElement item) {
         try {
             storageLock.readLock().lock();
 
@@ -83,8 +84,8 @@ public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<
 
             // present, return current value
             if (val != null) {
-                MCElement el = new MCElement(key, val.flags, val.expire, val.region.size);
-                el.data = blockStorage.get(val.region);
+                LocalCacheElement el = new LocalCacheElement(key, val.flags, val.expire, val.region.size);
+                el.setData(blockStorage.get(val.region));
 
                 return el;
             }
@@ -106,10 +107,10 @@ public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<
     public boolean remove(Object key, Object value) {
         try {
             storageLock.readLock().lock();
-            if (!(key instanceof String) || (!(value instanceof MCElement))) return false;
+            if (!(key instanceof String) || (!(value instanceof LocalCacheElement))) return false;
             StoredValue val = index.get((String)key);
-            MCElement el = new MCElement((String) key, val.flags, val.expire, val.region.size);
-            el.data = blockStorage.get(val.region);
+            LocalCacheElement el = new LocalCacheElement((String) key, val.flags, val.expire, val.region.size);
+            el.setData(blockStorage.get(val.region));
 
             if (!el.equals(value)) {
                 return false;
@@ -129,18 +130,18 @@ public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<
 
     }
 
-    public boolean replace(String key, MCElement mcElement, MCElement mcElement1) {
+    public boolean replace(String key, LocalCacheElement LocalCacheElement, LocalCacheElement LocalCacheElement1) {
         try {
             storageLock.readLock().lock();
             StoredValue val = index.get(key);
-            MCElement el = new MCElement((String) key, val.flags, val.expire, val.region.size);
-            el.data = blockStorage.get(val.region);
+            LocalCacheElement el = new LocalCacheElement((String) key, val.flags, val.expire, val.region.size);
+            el.setData(blockStorage.get(val.region));
 
-            if (!el.equals(mcElement)) {
+            if (!el.equals(LocalCacheElement)) {
                 return false;
             } else {
                 storageLock.readLock().unlock();
-                put(key, mcElement1);
+                put(key, LocalCacheElement1);
                 storageLock.readLock().lock();
 
                 return true;
@@ -151,7 +152,7 @@ public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<
 
     }
 
-    public MCElement replace(String key, MCElement mcElement) {
+    public LocalCacheElement replace(String key, LocalCacheElement LocalCacheElement) {
         try {
             storageLock.readLock().lock();
             StoredValue val = index.get(key);
@@ -159,10 +160,10 @@ public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<
                 return null;
             } else {
                 storageLock.readLock().unlock();
-                put(key, mcElement);
+                put(key, LocalCacheElement);
                 storageLock.readLock().lock();
 
-                return mcElement;
+                return LocalCacheElement;
             }
         } finally {
             storageLock.readLock().unlock();
@@ -200,14 +201,14 @@ public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<
         throw new RuntimeException("operation not supporteded");
     }
 
-    public MCElement get(Object key) {
+    public LocalCacheElement get(Object key) {
         try {
             storageLock.readLock().lock();
             if (!(key instanceof String)) return null;
             StoredValue val = index.get(key);
             if (val == null) return null;
-            MCElement el = new MCElement((String) key, val.flags, val.expire, val.region.size);
-            el.data = blockStorage.get(val.region);
+            LocalCacheElement el = new LocalCacheElement((String) key, val.flags, val.expire, val.region.size);
+            el.setData(blockStorage.get(val.region));
 
             return el;
         } finally {
@@ -216,13 +217,13 @@ public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<
 
     }
 
-    public MCElement put(String key, MCElement item) {
+    public LocalCacheElement put(String key, LocalCacheElement item) {
         // absent, lock the store and put the new value in
         try {
             storageLock.writeLock().lock();
-            Region region = blockStorage.alloc(item.dataLength, item.data);
+            Region region = blockStorage.alloc(item.getDataLength(), item.getData());
 
-            index.put(key, new StoredValue(item.flags, item.expire, region));
+            index.put(key, new StoredValue(item.getFlags(), item.getExpire(), region));
 
             return null;
         } finally {
@@ -230,14 +231,14 @@ public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<
         }
     }
 
-    public MCElement remove(Object key) {
+    public LocalCacheElement remove(Object key) {
         try {
             storageLock.readLock().lock();
             if (!(key instanceof String)) return null;
             StoredValue val = index.get((String)key);
             if (val != null) {
-                MCElement el = new MCElement((String) key, val.flags, val.expire, val.region.size);
-                el.data = blockStorage.get(val.region);
+                LocalCacheElement el = new LocalCacheElement((String) key, val.flags, val.expire, val.region.size);
+                el.setData(blockStorage.get(val.region));
 
                 storageLock.readLock().unlock();
                 storageLock.writeLock().lock();
@@ -254,16 +255,16 @@ public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<
         }
     }
 
-    public void putAll(Map<? extends String, ? extends MCElement> map) {
+    public void putAll(Map<? extends String, ? extends LocalCacheElement> map) {
         // absent, lock the store and put the new value in
         try {
             storageLock.writeLock().lock();
-            for (Entry<? extends String, ? extends MCElement> entry : map.entrySet()) {
+            for (Entry<? extends String, ? extends LocalCacheElement> entry : map.entrySet()) {
                 String key = entry.getKey();
-                MCElement item = entry.getValue();
-                Region region = blockStorage.alloc(item.dataLength, item.data);
+                LocalCacheElement item = entry.getValue();
+                Region region = blockStorage.alloc(item.getDataLength(), item.getData());
 
-                index.put(key, new StoredValue(item.flags, item.expire, region));
+                index.put(key, new StoredValue(item.getFlags(), item.getExpire(), region));
 
             }
         } finally {
@@ -290,11 +291,11 @@ public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<
         }
     }
 
-    public Collection<MCElement> values() {
+    public Collection<LocalCacheElement> values() {
         throw new RuntimeException("operation not supporteded");
     }
 
-    public Set<Entry<String, MCElement>> entrySet() {
+    public Set<Entry<String, LocalCacheElement>> entrySet() {
         throw new RuntimeException("operation not supporteded");
     }
 }

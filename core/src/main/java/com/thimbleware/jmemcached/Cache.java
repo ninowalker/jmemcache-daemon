@@ -5,24 +5,24 @@ import java.util.Map;
 
 /**
  */
-public interface Cache {
+public interface Cache<CACHE_ELEMENT extends CacheElement> {
     DeleteResponse delete(String key, int time);
 
-    StoreResponse add(MCElement e);
+    StoreResponse add(CACHE_ELEMENT e);
 
-    StoreResponse replace(MCElement e);
+    StoreResponse replace(CACHE_ELEMENT e);
 
-    StoreResponse append(MCElement element);
+    StoreResponse append(CACHE_ELEMENT element);
 
-    StoreResponse prepend(MCElement element);
+    StoreResponse prepend(CACHE_ELEMENT element);
 
-    StoreResponse set(MCElement e);
+    StoreResponse set(CACHE_ELEMENT e);
 
-    StoreResponse cas(Long cas_key, MCElement e);
+    StoreResponse cas(Long cas_key, CACHE_ELEMENT e);
 
     Integer get_add(String key, int mod);
 
-    MCElement[] get(String ... keys);
+    CACHE_ELEMENT[] get(String ... keys);
 
     boolean flush_all();
 
@@ -47,6 +47,8 @@ public interface Cache {
     int getGetMisses();
 
     Map<String, Set<String>> stat(String arg);
+
+    void processDeleteQueue();
 
     public enum StoreResponse {
         STORED, NOT_STORED, EXISTS, NOT_FOUND

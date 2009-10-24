@@ -1,7 +1,7 @@
 package com.thimbleware.jmemcached.protocol.text;
 
-import com.thimbleware.jmemcached.MCElement;
-import com.thimbleware.jmemcached.CacheImpl;
+import com.thimbleware.jmemcached.Cache;
+import com.thimbleware.jmemcached.CacheElement;
 import com.thimbleware.jmemcached.protocol.Command;
 import com.thimbleware.jmemcached.protocol.ResponseMessage;
 import com.thimbleware.jmemcached.protocol.exceptions.ClientException;
@@ -19,7 +19,7 @@ import java.util.Map;
  * Response encoder for the memcached text protocol. Produces strings destined for the StringEncoder
  */
 @ChannelPipelineCoverage("all")
-public class MemcachedResponseEncoder extends SimpleChannelUpstreamHandler {
+public class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> extends SimpleChannelUpstreamHandler {
 
     final Logger logger = LoggerFactory.getLogger(MemcachedResponseEncoder.class);
 
@@ -48,18 +48,18 @@ public class MemcachedResponseEncoder extends SimpleChannelUpstreamHandler {
 
     @Override
     public void messageReceived(ChannelHandlerContext channelHandlerContext, MessageEvent messageEvent) throws Exception {
-        ResponseMessage command = (ResponseMessage) messageEvent.getMessage();
+        ResponseMessage<CACHE_ELEMENT> command = (ResponseMessage<CACHE_ELEMENT>) messageEvent.getMessage();
 
         Command cmd = command.cmd.cmd;
 
         Channel channel = messageEvent.getChannel();
         if (cmd == Command.GET || cmd == Command.GETS) {
-            MCElement[] results = command.elements;
-            for (MCElement result : results) {
+            CacheElement[] results = command.elements;
+            for (CacheElement result : results) {
                 if (result != null) {
                     writeString(channel, VALUE);
-                    writeString(channel, result.keystring + " " + result.flags + " " + result.dataLength + (cmd == Command.GETS ? " " + result.cas_unique : "") + "\r\n");
-                    ChannelBuffer outputbuffer = ChannelBuffers.wrappedBuffer(result.data);
+                    writeString(channel, result.getKeystring() + " " + result.getFlags() + " " + result.getDataLength() + (cmd == Command.GETS ? " " + result.getCasUnique() : "") + "\r\n");
+                    ChannelBuffer outputbuffer = ChannelBuffers.wrappedBuffer(result.getData());
                     channel.write(outputbuffer);
                     writeString(channel, "\r\n");
 
@@ -102,8 +102,8 @@ public class MemcachedResponseEncoder extends SimpleChannelUpstreamHandler {
         
     }
 
-    private String deleteResponseString(CacheImpl.DeleteResponse deleteResponse) {
-        if (deleteResponse == CacheImpl.DeleteResponse.DELETED) return "DELETED\r\n";
+    private String deleteResponseString(Cache.DeleteResponse deleteResponse) {
+        if (deleteResponse == Cache.DeleteResponse.DELETED) return "DELETED\r\n";
         else return "NOT_FOUND\r\n";
     }
 
@@ -122,7 +122,7 @@ public class MemcachedResponseEncoder extends SimpleChannelUpstreamHandler {
      * @param storeResponse the response code
      * @return the string to output on the network
      */
-    private String storeResponseString(CacheImpl.StoreResponse storeResponse) {
+    private String storeResponseString(Cache.StoreResponse storeResponse) {
         switch (storeResponse) {
             case EXISTS:
                 return "EXISTS\r\n";

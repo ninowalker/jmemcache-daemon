@@ -1,5 +1,6 @@
 package com.thimbleware.jmemcached.protocol.text;
 
+import com.thimbleware.jmemcached.Cache;
 import com.thimbleware.jmemcached.CacheImpl;
 import com.thimbleware.jmemcached.protocol.MemcachedCommandHandler;
 import com.thimbleware.jmemcached.protocol.SessionStatus;
@@ -13,7 +14,7 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
  */
 public class MemcachedPipelineFactory implements ChannelPipelineFactory {
 
-    private CacheImpl cache;
+    private Cache cache;
     private String version;
     private boolean verbose;
     private int idleTime;
@@ -21,7 +22,7 @@ public class MemcachedPipelineFactory implements ChannelPipelineFactory {
     private int frameSize;
     private DefaultChannelGroup channelGroup;
 
-    public MemcachedPipelineFactory(CacheImpl cache, String version, boolean verbose, int idleTime, int frameSize, DefaultChannelGroup channelGroup) {
+    public MemcachedPipelineFactory(Cache cache, String version, boolean verbose, int idleTime, int frameSize, DefaultChannelGroup channelGroup) {
         this.cache = cache;
         this.version = version;
         this.verbose = verbose;
@@ -54,7 +55,7 @@ public class MemcachedPipelineFactory implements ChannelPipelineFactory {
         return new MemcachedCommandDecoder(status);
     }
 
-    protected MemcachedCommandHandler createMemcachedCommandHandler(CacheImpl cache, String version, boolean verbose, int idleTime, DefaultChannelGroup channelGroup) {
+    protected MemcachedCommandHandler createMemcachedCommandHandler(Cache cache, String version, boolean verbose, int idleTime, DefaultChannelGroup channelGroup) {
         return new MemcachedCommandHandler(cache, version, verbose, idleTime, channelGroup);
     }
 }

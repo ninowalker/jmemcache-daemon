@@ -2,9 +2,8 @@ package com.thimbleware.jmemcached.protocol.binary;
 
 import com.thimbleware.jmemcached.protocol.Command;
 import com.thimbleware.jmemcached.protocol.ResponseMessage;
-import com.thimbleware.jmemcached.protocol.exceptions.ClientException;
 import com.thimbleware.jmemcached.protocol.exceptions.UnknownCommandException;
-import com.thimbleware.jmemcached.MCElement;
+import com.thimbleware.jmemcached.CacheElement;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.*;
@@ -20,7 +19,7 @@ import java.util.Map;
  */
 // TODO refactor so this can be unit tested separate from netty? scalacheck?
 @ChannelPipelineCoverage("one")
-public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler {
+public class MemcachedBinaryResponseEncoder<CACHE_ELEMENT extends CacheElement> extends SimpleChannelUpstreamHandler {
 
     private ChannelBuffer corkedResponse = null;
     final Logger logger = LoggerFactory.getLogger(MemcachedBinaryResponseEncoder.class);
@@ -122,7 +121,7 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
 
     @Override
     public void messageReceived(ChannelHandlerContext channelHandlerContext, MessageEvent messageEvent) throws Exception {
-        ResponseMessage command = (ResponseMessage) messageEvent.getMessage();
+        ResponseMessage<CACHE_ELEMENT> command = (ResponseMessage<CACHE_ELEMENT>) messageEvent.getMessage();
         MemcachedBinaryCommandDecoder.BinaryCommand bcmd = MemcachedBinaryCommandDecoder.BinaryCommand.forCommandMessage(command.cmd);
 
         // write extras == flags & expiry
@@ -138,13 +137,13 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
         ChannelBuffer valueBuffer = null;
         if (command.elements != null) {
             extrasBuffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, 4);
-            MCElement element = command.elements[0];
-            extrasBuffer.writeShort((short) (element != null ? element.expire : 0));
-            extrasBuffer.writeShort((short) (element != null ? element.flags : 0));
+            CacheElement element = command.elements[0];
+            extrasBuffer.writeShort((short) (element != null ? element.getExpire() : 0));
+            extrasBuffer.writeShort((short) (element != null ? element.getFlags() : 0));
 
             if ((command.cmd.cmd == Command.GET || command.cmd.cmd == Command.GETS)) {
                 if (element != null) {
-                    valueBuffer = ChannelBuffers.wrappedBuffer(ByteOrder.BIG_ENDIAN, element.data);
+                    valueBuffer = ChannelBuffers.wrappedBuffer(ByteOrder.BIG_ENDIAN, element.getData());
                 } else {
                     valueBuffer = ChannelBuffers.buffer(0);
                 }
@@ -159,7 +158,7 @@ public class MemcachedBinaryResponseEncoder extends SimpleChannelUpstreamHandler
 
         long casUnique = 0;
         if (command.elements != null && command.elements.length != 0 && command.elements[0] != null) {
-            casUnique = command.elements[0].cas_unique;
+            casUnique = command.elements[0].getCasUnique();
         }
 
         // stats is special -- with it, we write N times, one for each stat, then an empty payload

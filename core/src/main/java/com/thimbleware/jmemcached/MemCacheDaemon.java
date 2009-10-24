@@ -46,7 +46,7 @@ public class MemCacheDaemon {
     private boolean verbose;
     private int idleTime;
     private InetSocketAddress addr;
-    private CacheImpl cache;
+    private Cache<? extends CacheElement> cache;
 
     private boolean running = false;
     private NioServerSocketChannelFactory channelFactory;
@@ -93,12 +93,12 @@ public class MemCacheDaemon {
     }
 
     protected ChannelPipelineFactory createMemcachedBinaryPipelineFactory(
-            CacheImpl cache, String memcachedVersion, boolean verbose, int idleTime, DefaultChannelGroup allChannels) {
+            Cache cache, String memcachedVersion, boolean verbose, int idleTime, DefaultChannelGroup allChannels) {
         return new MemcachedBinaryPipelineFactory(cache, memcachedVersion, verbose, idleTime, allChannels);
     }
 
     protected ChannelPipelineFactory createMemcachedPipelineFactory(
-            CacheImpl cache, String memcachedVersion, boolean verbose, int idleTime, int receiveBufferSize, DefaultChannelGroup allChannels) {
+            Cache cache, String memcachedVersion, boolean verbose, int idleTime, int receiveBufferSize, DefaultChannelGroup allChannels) {
         return new MemcachedPipelineFactory(cache, memcachedVersion, verbose, idleTime, receiveBufferSize, allChannels);
     }
 
@@ -141,7 +141,7 @@ public class MemCacheDaemon {
         return cache;
     }
 
-    public void setCache(CacheImpl cache) {
+    public void setCache(Cache cache) {
         this.cache = cache;
     }
 

@@ -1,6 +1,6 @@
 package com.thimbleware.jmemcached.test;
 
-import static com.thimbleware.jmemcached.MCElement.Now;
+import static com.thimbleware.jmemcached.LocalCacheElement.Now;
 import com.thimbleware.jmemcached.*;
 import com.thimbleware.jmemcached.storage.ConcurrentSizedMap;
 import com.thimbleware.jmemcached.storage.ConcurrentSizedBlockStorageMap;
@@ -30,6 +30,7 @@ public class BasicCacheTest {
 
     private MemCacheDaemon daemon;
     private int PORT;
+    private Cache cache;
 
     public static enum CacheType {
         LOCAL, MAPPED
@@ -53,23 +54,25 @@ public class BasicCacheTest {
 
 
     @Before
-       public void setup() throws IOException {
-           // create daemon and start it
-           daemon = new MemCacheDaemon();
-           ConcurrentSizedMap<String, MCElement> cacheStorage;
-           if (cacheType == CacheType.LOCAL) {
-               cacheStorage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, MAX_SIZE, MAX_BYTES);
-               daemon.setCache(new CacheImpl(cacheStorage));
-           } else {
-               cacheStorage = new ConcurrentSizedBlockStorageMap(
-                       new MemoryMappedBlockStore(MAX_BYTES, "block_store.dat", blockSize), MAX_SIZE, CEILING_SIZE);
-               daemon.setCache(new CacheImpl(cacheStorage));
-           }
-           PORT = AvailablePortFinder.getNextAvailable();
-           daemon.setAddr(new InetSocketAddress("localhost", PORT));
-           daemon.setVerbose(false);
-           daemon.start();
-       }
+    public void setup() throws IOException {
+        // create daemon and start it
+        daemon = new MemCacheDaemon();
+        ConcurrentSizedMap<String, LocalCacheElement> cacheStorage;
+        if (cacheType == CacheType.LOCAL) {
+            cacheStorage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, MAX_SIZE, MAX_BYTES);
+            daemon.setCache(new CacheImpl(cacheStorage));
+        } else {
+            cacheStorage = new ConcurrentSizedBlockStorageMap(
+                    new MemoryMappedBlockStore(MAX_BYTES, "block_store.dat", blockSize), MAX_SIZE, CEILING_SIZE);
+            daemon.setCache(new CacheImpl(cacheStorage));
+        }
+        PORT = AvailablePortFinder.getNextAvailable();
+        daemon.setAddr(new InetSocketAddress("localhost", PORT));
+        daemon.setVerbose(false);
+        daemon.start();
+
+        cache = daemon.getCache();
+    }
 
     @After
     public void teardown() {
@@ -78,10 +81,10 @@ public class BasicCacheTest {
 
     @Test
     public void testPresence() {
-        assertNotNull(daemon.getCache());
-        assertEquals("initial cache is empty", 0, daemon.getCache().getCurrentItems());
-        assertEquals("initialize maximum size matches max bytes", MAX_BYTES, daemon.getCache().getLimitMaxBytes());
-        assertEquals("initialize size is empty", 0, daemon.getCache().getCurrentBytes());
+        assertNotNull(cache);
+        assertEquals("initial cache is empty", 0, cache.getCurrentItems());
+        assertEquals("initialize maximum size matches max bytes", MAX_BYTES, cache.getLimitMaxBytes());
+        assertEquals("initialize size is empty", 0, cache.getCurrentBytes());
     }
 
     @Test
@@ -89,26 +92,26 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        MCElement element = new MCElement(testKey, 0, Now(), testvalue.length());
-        element.data = testvalue.getBytes();
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, Now(), testvalue.length());
+        element.setData(testvalue.getBytes());
 
         // put in cache
-        assertEquals(daemon.getCache().add(element), CacheImpl.StoreResponse.STORED);
+        assertEquals(cache.add(element), Cache.StoreResponse.STORED);
 
         // get result
-        MCElement result = daemon.getCache().get(testKey)[0];
+        CacheElement result = cache.get(testKey)[0];
 
         // assert no miss
-        assertEquals("confirmed no misses", 0, daemon.getCache().getGetMisses());
+        assertEquals("confirmed no misses", 0, cache.getGetMisses());
 
         // must be non null and match the original
         assertNotNull("got result", result);
-        assertEquals("data length matches", result.dataLength, element.dataLength);
-        assertEquals("data matches", new String(element.data), new String(result.data));
-        assertEquals("key matches", element.keystring, result.keystring);
+        assertEquals("data length matches", result.getDataLength(), element.getDataLength());
+        assertEquals("data matches", new String(element.getData()), new String(result.getData()));
+        assertEquals("key matches", element.getKeystring(), result.getKeystring());
 
-        assertEquals("size of cache matches element entered", element.dataLength, daemon.getCache().getCurrentBytes());
-        assertEquals("cache has 1 element", 1, daemon.getCache().getCurrentItems());
+        assertEquals("size of cache matches element entered", element.getDataLength(), cache.getCurrentBytes(), 0);
+        assertEquals("cache has 1 element", 1, cache.getCurrentItems());
     }
 
     @Test
@@ -116,46 +119,46 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        MCElement element = new MCElement(testKey, 0, Now(), testvalue.length());
-        element.data = testvalue.getBytes();
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, Now(), testvalue.length());
+        element.setData(testvalue.getBytes());
 
         // put in cache
-        assertEquals(daemon.getCache().add(element), CacheImpl.StoreResponse.STORED);
+        assertEquals(cache.add(element), Cache.StoreResponse.STORED);
 
         // get result
-        MCElement result = daemon.getCache().get(testKey)[0];
+        CacheElement result = cache.get(testKey)[0];
 
         // assert no miss
-        assertEquals("confirmed no misses", 0, daemon.getCache().getGetMisses());
+        assertEquals("confirmed no misses", 0, cache.getGetMisses());
 
         // must be non null and match the original
         assertNotNull("got result", result);
-        assertEquals("data length matches", result.dataLength, element.dataLength);
-        assertEquals("data matches", new String(element.data), new String(result.data));
+        assertEquals("data length matches", result.getDataLength(), element.getDataLength());
+        assertEquals("data matches", new String(element.getData()), new String(result.getData()));
 
-        assertEquals("size of cache matches element entered", element.dataLength, daemon.getCache().getCurrentBytes());
-        assertEquals("cache has 1 element", 1, daemon.getCache().getCurrentItems());
+        assertEquals("size of cache matches element entered", element.getDataLength(), cache.getCurrentBytes(), 0);
+        assertEquals("cache has 1 element", 1, cache.getCurrentItems());
 
         // now replace
         testvalue = "54321";
-        element = new MCElement(testKey, 0, Now(), testvalue.length());
-        element.data = testvalue.getBytes();
+        element = new LocalCacheElement(testKey, 0, Now(), testvalue.length());
+        element.setData(testvalue.getBytes());
 
         // put in cache
-        assertEquals(daemon.getCache().replace(element), CacheImpl.StoreResponse.STORED);
+        assertEquals(cache.replace(element), Cache.StoreResponse.STORED);
 
         // get result
-        result = daemon.getCache().get(testKey)[0];
+        result = cache.get(testKey)[0];
 
         // assert no miss
-        assertEquals("confirmed no misses", 0, daemon.getCache().getGetMisses());
+        assertEquals("confirmed no misses", 0, cache.getGetMisses());
 
         // must be non null and match the original
         assertNotNull("got result", result);
-        assertEquals("data length matches", result.dataLength, element.dataLength);
-        assertEquals("data matches", new String(element.data), new String(result.data));
-        assertEquals("key matches", result.keystring, element.keystring);
-        assertEquals("cache has 1 element", 1, daemon.getCache().getCurrentItems());
+        assertEquals("data length matches", result.getDataLength(), element.getDataLength());
+        assertEquals("data matches", new String(element.getData()), new String(result.getData()));
+        assertEquals("key matches", result.getKeystring(), element.getKeystring());
+        assertEquals("cache has 1 element", 1, cache.getCurrentItems());
 
     }
 
@@ -164,21 +167,21 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        MCElement element = new MCElement(testKey, 0, Now(), testvalue.length());
-        element.data = testvalue.getBytes();
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, Now(), testvalue.length());
+        element.setData(testvalue.getBytes());
 
         // put in cache
-        assertEquals(daemon.getCache().replace(element), CacheImpl.StoreResponse.NOT_STORED);
+        assertEquals(cache.replace(element), Cache.StoreResponse.NOT_STORED);
 
         // get result
-        MCElement result = daemon.getCache().get(testKey)[0];
+        CacheElement result = cache.get(testKey)[0];
 
         // assert miss
-        assertEquals("confirmed no misses", 1, daemon.getCache().getGetMisses());
+        assertEquals("confirmed no misses", 1, cache.getGetMisses());
 
-        assertEquals("cache is empty", 0, daemon.getCache().getCurrentItems());
-        assertEquals("maximum size matches max bytes", MAX_BYTES, daemon.getCache().getLimitMaxBytes());
-        assertEquals("size is empty", 0, daemon.getCache().getCurrentBytes());
+        assertEquals("cache is empty", 0, cache.getCurrentItems());
+        assertEquals("maximum size matches max bytes", MAX_BYTES, cache.getLimitMaxBytes());
+        assertEquals("size is empty", 0, cache.getCurrentBytes());
     }
 
     @Test
@@ -186,26 +189,26 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        MCElement element = new MCElement(testKey, 0, Now(), testvalue.length());
-        element.data = testvalue.getBytes();
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, Now(), testvalue.length());
+        element.setData(testvalue.getBytes());
 
         // put in cache
-        assertEquals(daemon.getCache().set(element), CacheImpl.StoreResponse.STORED);
+        assertEquals(cache.set(element), Cache.StoreResponse.STORED);
 
         // get result
-        MCElement result = daemon.getCache().get(testKey)[0];
+        CacheElement result = cache.get(testKey)[0];
 
         // assert no miss
-        assertEquals("confirmed no misses", 0, daemon.getCache().getGetMisses());
+        assertEquals("confirmed no misses", 0, cache.getGetMisses());
 
         // must be non null and match the original
         assertNotNull("got result", result);
-        assertEquals("data length matches", result.dataLength, element.dataLength);
-        assertEquals("data matches", new String(element.data), new String(result.data));
-        assertEquals("key matches", result.keystring, element.keystring);
+        assertEquals("data length matches", result.getDataLength(), element.getDataLength());
+        assertEquals("data matches", new String(element.getData()), new String(result.getData()));
+        assertEquals("key matches", result.getKeystring(), element.getKeystring());
 
-        assertEquals("size of cache matches element entered", element.dataLength, daemon.getCache().getCurrentBytes());
-        assertEquals("cache has 1 element", 1, daemon.getCache().getCurrentItems());
+        assertEquals("size of cache matches element entered", element.getDataLength(), cache.getCurrentBytes(), 0);
+        assertEquals("cache has 1 element", 1, cache.getCurrentItems());
     }
 
     @Test
@@ -213,17 +216,17 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        MCElement element = new MCElement(testKey, 0, Now(), testvalue.length());
-        element.data = testvalue.getBytes();
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, Now(), testvalue.length());
+        element.setData(testvalue.getBytes());
 
         // put in cache
-        assertEquals(daemon.getCache().add(element), CacheImpl.StoreResponse.STORED);
+        assertEquals(cache.add(element), Cache.StoreResponse.STORED);
 
         // put in cache again and fail
-        assertEquals(daemon.getCache().add(element), CacheImpl.StoreResponse.NOT_STORED);
+        assertEquals(cache.add(element), Cache.StoreResponse.NOT_STORED);
 
-        assertEquals("size of cache matches single element entered", element.dataLength, daemon.getCache().getCurrentBytes());
-        assertEquals("cache has only 1 element", 1, daemon.getCache().getCurrentItems());
+        assertEquals("size of cache matches single element entered", element.getDataLength(), cache.getCurrentBytes(), 0);
+        assertEquals("cache has only 1 element", 1, cache.getCurrentItems());
     }
 
     @Test
@@ -231,16 +234,16 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        MCElement element = new MCElement(testKey, 0, Now(), testvalue.length());
-        element.data = testvalue.getBytes();
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, Now(), testvalue.length());
+        element.setData(testvalue.getBytes());
 
         // put in cache, then flush
-        daemon.getCache().add(element);
+        cache.add(element);
 
-        daemon.getCache().flush_all();
+        cache.flush_all();
 
-        assertEquals("size of cache matches is empty after flush", 0, daemon.getCache().getCurrentBytes());
-        assertEquals("cache has no elements after flush", 0, daemon.getCache().getCurrentItems());
+        assertEquals("size of cache matches is empty after flush", 0, cache.getCurrentBytes());
+        assertEquals("cache has no elements after flush", 0, cache.getCurrentItems());
     }
 
     @Test
@@ -248,20 +251,20 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "1";
 
-        MCElement element = new MCElement(testKey, 0, Now(), testvalue.length());
-        element.data = testvalue.getBytes();
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, Now(), testvalue.length());
+        element.setData(testvalue.getBytes());
 
         // put in cache
-        assertEquals(daemon.getCache().set(element), CacheImpl.StoreResponse.STORED);
+        assertEquals(cache.set(element), Cache.StoreResponse.STORED);
 
         // increment
-        assertEquals("value correctly incremented", daemon.getCache().get_add(testKey, 1), (Integer)2);
+        assertEquals("value correctly incremented", (Integer)2, cache.get_add(testKey, 1));
 
         // increment by more
-        assertEquals("value correctly incremented", daemon.getCache().get_add(testKey, 5), (Integer)7);
+        assertEquals("value correctly incremented", (Integer)7, cache.get_add(testKey, 5));
 
         // decrement
-        assertEquals("value correctly decremented", daemon.getCache().get_add(testKey, -5), (Integer)2);
+        assertEquals("value correctly decremented", (Integer)2, cache.get_add(testKey, -5));
     }
 
 

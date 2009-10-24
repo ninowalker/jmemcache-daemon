@@ -1,5 +1,6 @@
 package com.thimbleware.jmemcached.test;
 
+import com.thimbleware.jmemcached.*;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
@@ -11,15 +12,12 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Arrays;
 
-import com.thimbleware.jmemcached.MemCacheDaemon;
-import com.thimbleware.jmemcached.MCElement;
-import com.thimbleware.jmemcached.CacheImpl;
 import com.thimbleware.jmemcached.storage.hash.ConcurrentLinkedHashMap;
 import com.thimbleware.jmemcached.storage.mmap.MemoryMappedBlockStore;
 import com.thimbleware.jmemcached.storage.ConcurrentSizedBlockStorageMap;
 import com.thimbleware.jmemcached.storage.ConcurrentSizedMap;
 import com.thimbleware.jmemcached.util.Bytes;
-import static com.thimbleware.jmemcached.MCElement.Now;
+import static com.thimbleware.jmemcached.LocalCacheElement.Now;
 import static junit.framework.Assert.*;
 
 /**
@@ -57,7 +55,7 @@ public class CacheExpirationTest {
     public void setup() throws IOException {
         // create daemon and start it
         daemon = new MemCacheDaemon();
-        ConcurrentSizedMap<String, MCElement> cacheStorage;
+        ConcurrentSizedMap<String, LocalCacheElement> cacheStorage;
         if (cacheType == CacheType.LOCAL) {
             cacheStorage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, MAX_SIZE, MAX_BYTES);
             daemon.setCache(new CacheImpl(cacheStorage));
@@ -87,9 +85,9 @@ public class CacheExpirationTest {
 
         for (int i = 0; i < fillSize; i++) {
             String testvalue = i + "x";
-            MCElement el = createElement("" + i , testvalue);
+            LocalCacheElement el = createElement("" + i , testvalue);
 
-            assertEquals(daemon.getCache().add(el), CacheImpl.StoreResponse.STORED);
+            assertEquals(daemon.getCache().add(el), Cache.StoreResponse.STORED);
 
             // verify that the size of the cache is correct
             int maximum = i < MAX_SIZE ? i + 1 : MAX_SIZE;
@@ -102,23 +100,23 @@ public class CacheExpirationTest {
 
         // verify that only the last 1000 items are actually physically in there
         for (int i = 0; i < fillSize; i++) {
-            MCElement result = daemon.getCache().get("" + i)[0];
+            CacheElement result = daemon.getCache().get("" + i)[0];
             if (i < MAX_SIZE) {
                 assertTrue(i + "th result absence", result == null);
             } else {
                 assertNotNull(i + "th result presence", result);
-                assertNotNull(i + "th result's presence", result.keystring);
-                assertEquals("key matches" , "" + i, result.keystring);
-                assertEquals(new String(result.data), i + "x");
+                assertNotNull(i + "th result's presence", result.getKeystring());
+                assertEquals("key matches" , "" + i, result.getKeystring());
+                assertEquals(new String(result.getData()), i + "x");
             }
         }
         assertEquals("correct number of cache misses", fillSize - MAX_SIZE, daemon.getCache().getGetMisses());
         assertEquals("correct number of cache hits", MAX_SIZE, daemon.getCache().getGetHits());
     }
 
-    private MCElement createElement(String testKey, String testvalue) {
-        MCElement element = new MCElement(testKey, 0, Now(), testvalue.length());
-        element.data = testvalue.getBytes();
+    private LocalCacheElement createElement(String testKey, String testvalue) {
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, Now(), testvalue.length());
+        element.setData(testvalue.getBytes());
 
         return element;
     }

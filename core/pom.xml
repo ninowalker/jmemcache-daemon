@@ -45,12 +45,4 @@
     </reporting>
 
 
-    <repositories>
-        <repository>
-            <id>jboss-repository</id>
-            <name>JBoss Repository</name>
-            <releases><enabled>true</enabled></releases>
-            <url>http://repository.jboss.com/maven2/</url>
-        </repository>
-    </repositories>
 </project>

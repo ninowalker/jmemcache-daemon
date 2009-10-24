@@ -1,5 +1,6 @@
 package com.thimbleware.jmemcached.test;
 
+import com.thimbleware.jmemcached.LocalCacheElement;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.*;
@@ -21,10 +22,9 @@ import org.junit.runners.Parameterized;
 
 import com.thimbleware.jmemcached.MemCacheDaemon;
 import com.thimbleware.jmemcached.CacheImpl;
-import com.thimbleware.jmemcached.MCElement;
+import com.thimbleware.jmemcached.CacheElement;
 import com.thimbleware.jmemcached.util.Bytes;
 import com.thimbleware.jmemcached.storage.hash.ConcurrentLinkedHashMap;
-import com.thimbleware.jmemcached.storage.hash.SizedItem;
 
 /**
  * Integration test using Spymemcached 2.3
@@ -34,7 +34,7 @@ import com.thimbleware.jmemcached.storage.hash.SizedItem;
  * TODO more tests
  */
 @RunWith(Parameterized.class)
-public class SpyMemcached23IntegrationTest {
+public class SpyMemcachedIntegrationTest {
 
     private int PORT;
 
@@ -57,7 +57,7 @@ public class SpyMemcached23IntegrationTest {
         return Arrays.asList(new Object[][]{{false}, {true}});
     }
 
-    public SpyMemcached23IntegrationTest(boolean binary) {
+    public SpyMemcachedIntegrationTest(boolean binary) {
         this.binary = binary;
     }
 
@@ -213,7 +213,7 @@ public class SpyMemcached23IntegrationTest {
 
     private MemCacheDaemon createDaemon( final InetSocketAddress address ) throws IOException {
         final MemCacheDaemon daemon = new MemCacheDaemon();
-        final ConcurrentLinkedHashMap<String, MCElement> storage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, MAX_SIZE, MAX_BYTES);
+        final ConcurrentLinkedHashMap<String, LocalCacheElement> storage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, MAX_SIZE, MAX_BYTES);
         daemon.setCache(new CacheImpl(storage));
         daemon.setAddr( address );
         daemon.setVerbose(false);

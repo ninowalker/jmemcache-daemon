@@ -21,7 +21,6 @@ import java.net.InetSocketAddress;
 
 import com.thimbleware.jmemcached.util.Bytes;
 import com.thimbleware.jmemcached.storage.hash.ConcurrentLinkedHashMap;
-import com.thimbleware.jmemcached.storage.hash.SizedItem;
 import com.thimbleware.jmemcached.storage.ConcurrentSizedMap;
 import com.thimbleware.jmemcached.storage.ConcurrentSizedBlockStorageMap;
 import com.thimbleware.jmemcached.storage.mmap.MemoryMappedBlockStore;
@@ -170,7 +169,7 @@ public class Main {
         // create daemon and start it
         final MemCacheDaemon daemon = new MemCacheDaemon();
 
-        ConcurrentSizedMap<String, MCElement> storage;
+        ConcurrentSizedMap<String, LocalCacheElement> storage;
         if (!memoryMapped)
             storage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, max_size, maxBytes);
         else  {

@@ -1,6 +1,7 @@
 package com.thimbleware.jmemcached.protocol.text;
 
-import com.thimbleware.jmemcached.MCElement;
+import com.thimbleware.jmemcached.LocalCacheElement;
+import com.thimbleware.jmemcached.CacheElement;
 import com.thimbleware.jmemcached.protocol.Command;
 import com.thimbleware.jmemcached.protocol.CommandMessage;
 import com.thimbleware.jmemcached.protocol.SessionStatus;
@@ -112,7 +113,7 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
             int size = Integer.parseInt(parts[4]);
             int expire = Integer.parseInt(parts[3]);
             int flags = Integer.parseInt(parts[2]);
-            cmd.element = new MCElement(parts[1], flags, expire != 0 && expire < MCElement.THIRTY_DAYS ? MCElement.Now() + expire : expire, size);
+            cmd.element = new LocalCacheElement(parts[1], flags, expire != 0 && expire < CacheElement.THIRTY_DAYS ? LocalCacheElement.Now() + expire : expire, size);
 
             // look for cas and "noreply" elements
             if (numParts > 5) {
@@ -191,7 +192,7 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
      * @return the new status to set the session to
      */
     private void continueSet(Channel channel, SessionStatus state, byte[] remainder, ChannelHandlerContext channelHandlerContext) {
-        state.cmd.element.data = remainder;
+        state.cmd.element.setData(remainder);
         Channels.fireMessageReceived(channelHandlerContext, state.cmd, channelHandlerContext.getChannel().getRemoteAddress());
     }
 }

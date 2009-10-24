@@ -14,9 +14,8 @@ import java.util.HashSet;
 
 /**
  */
-public abstract class AbstractCache {
-    public final AtomicInteger curr_conns = new AtomicInteger();
-    public final AtomicInteger total_conns = new AtomicInteger();
+public abstract class AbstractCache<CACHE_ELEMENT extends CacheElement> implements Cache<CACHE_ELEMENT> {
+
     public final AtomicInteger started = new AtomicInteger();          /* when the process was started */
     public final AtomicLong bytes_read = new AtomicLong();
     public final AtomicLong bytes_written = new AtomicLong();
@@ -32,8 +31,6 @@ public abstract class AbstractCache {
      */
     {
         curr_bytes.set(0);
-        curr_conns.set(0);
-        total_conns.set(0);
         bytes_read.set(0);
         bytes_written.set(0);
         started.set(Now());
@@ -46,7 +43,7 @@ public abstract class AbstractCache {
     /**
      * @return the current time in seconds (from epoch), used for expiries, etc.
      */
-    protected final int Now() {
+    public static final int Now() {
         return (int) (System.currentTimeMillis() / 1000);
     }
 
@@ -98,8 +95,6 @@ public abstract class AbstractCache {
         multiSet(result, "cmd_sets", java.lang.String.valueOf(getSetCmds()));
         multiSet(result, "get_hits", java.lang.String.valueOf(getGetHits()));
         multiSet(result, "get_misses", java.lang.String.valueOf(getGetMisses()));
-        multiSet(result, "curr_connections", java.lang.String.valueOf(curr_conns));
-        multiSet(result, "total_connections", java.lang.String.valueOf(total_conns));
         multiSet(result, "time", java.lang.String.valueOf(java.lang.String.valueOf(Now())));
         multiSet(result, "uptime", java.lang.String.valueOf(Now() - this.started.intValue()));
         multiSet(result, "cur_items", java.lang.String.valueOf(this.getCurrentItems()));
@@ -141,4 +136,5 @@ public abstract class AbstractCache {
         getMisses.set(0);
     }
 
+    public abstract void processDeleteQueue();
 }

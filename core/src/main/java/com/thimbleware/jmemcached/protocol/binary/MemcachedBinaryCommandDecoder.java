@@ -1,6 +1,7 @@
 package com.thimbleware.jmemcached.protocol.binary;
 
-import com.thimbleware.jmemcached.MCElement;
+import com.thimbleware.jmemcached.LocalCacheElement;
+import com.thimbleware.jmemcached.CacheElement;
 import com.thimbleware.jmemcached.protocol.Command;
 import com.thimbleware.jmemcached.protocol.CommandMessage;
 import com.thimbleware.jmemcached.protocol.exceptions.MalformedCommandException;
@@ -9,7 +10,6 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.handler.codec.replay.VoidEnum;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 
 import java.util.ArrayList;
@@ -154,9 +154,9 @@ public class MemcachedBinaryCommandDecoder extends FrameDecoder {
                 // the remainder of the message -- that is, totalLength - (keyLength + extraLength) should be the payload
                 int size = totalBodyLength - keyLength - extraLength;
 
-                cmdMessage.element = new MCElement(key, flags, expire != 0 && expire < MCElement.THIRTY_DAYS ? MCElement.Now() + expire : expire, size);
-                cmdMessage.element.data = new byte[size];
-                channelBuffer.readBytes(cmdMessage.element.data, 0, size);
+                cmdMessage.element = new LocalCacheElement(key, flags, expire != 0 && expire < CacheElement.THIRTY_DAYS ? LocalCacheElement.Now() + expire : expire, size);
+                cmdMessage.element.setData(new byte[size]);
+                channelBuffer.readBytes(cmdMessage.element.getData(), 0, size);
             } else if (cmdType == Command.INCR || cmdType == Command.DECR) {
                 long initialValue = extrasBuffer.readUnsignedInt();
                 long amount = extrasBuffer.readUnsignedInt();
