@@ -31,18 +31,20 @@ public class BasicCacheTest {
     private MemCacheDaemon daemon;
     private int PORT;
     private Cache cache;
+    public static final int NO_EXPIRE = 0;
 
     public static enum CacheType {
         LOCAL, MAPPED
     }
 
-    private CacheType cacheType;
-    private int blockSize;
+    private final CacheType cacheType;
+    private final int blockSize;
 
     public BasicCacheTest(CacheType cacheType, int blockSize) {
         this.cacheType = cacheType;
         this.blockSize = blockSize;
     }
+
 
 
     @Parameterized.Parameters
@@ -92,7 +94,7 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, Now(), testvalue.length());
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, testvalue.length());
         element.setData(testvalue.getBytes());
 
         // put in cache
@@ -119,7 +121,7 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, Now(), testvalue.length());
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, testvalue.length());
         element.setData(testvalue.getBytes());
 
         // put in cache
@@ -167,7 +169,7 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, Now(), testvalue.length());
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, testvalue.length());
         element.setData(testvalue.getBytes());
 
         // put in cache
@@ -189,7 +191,7 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, Now(), testvalue.length());
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, testvalue.length());
         element.setData(testvalue.getBytes());
 
         // put in cache
@@ -216,7 +218,7 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, Now(), testvalue.length());
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, testvalue.length());
         element.setData(testvalue.getBytes());
 
         // put in cache
@@ -234,7 +236,7 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, Now(), testvalue.length());
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, testvalue.length());
         element.setData(testvalue.getBytes());
 
         // put in cache, then flush
@@ -251,7 +253,7 @@ public class BasicCacheTest {
         String testKey = "12345678";
         String testvalue = "1";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, Now(), testvalue.length());
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, testvalue.length());
         element.setData(testvalue.getBytes());
 
         // put in cache
