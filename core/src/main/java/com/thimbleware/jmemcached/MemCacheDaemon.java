@@ -56,7 +56,7 @@ public class MemCacheDaemon {
     public MemCacheDaemon() {
     }
 
-    public MemCacheDaemon(CacheImpl cache) {
+    public MemCacheDaemon(Cache<? extends CacheElement> cache) {
         this.cache = cache;
     }
 
