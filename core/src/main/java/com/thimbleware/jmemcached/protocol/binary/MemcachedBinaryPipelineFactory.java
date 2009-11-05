@@ -1,7 +1,6 @@
 package com.thimbleware.jmemcached.protocol.binary;
 
 import com.thimbleware.jmemcached.Cache;
-import com.thimbleware.jmemcached.CacheImpl;
 import com.thimbleware.jmemcached.protocol.MemcachedCommandHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;

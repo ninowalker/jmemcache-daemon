@@ -1,10 +1,5 @@
 package com.thimbleware.jmemcached;
 
-import java.util.concurrent.Delayed;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.DelayQueue;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.Set;
