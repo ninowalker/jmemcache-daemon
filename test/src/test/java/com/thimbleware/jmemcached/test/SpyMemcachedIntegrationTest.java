@@ -11,6 +11,8 @@ import java.net.SocketAddress;
 import java.util.*;
 import java.util.concurrent.Future;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import net.spy.memcached.*;
 
@@ -178,10 +180,10 @@ public class SpyMemcachedIntegrationTest {
     }
 
     @Test
-    public void testBulkGet() throws IOException, InterruptedException, ExecutionException {
+    public void testBulkGet() throws IOException, InterruptedException, ExecutionException, TimeoutException {
         ArrayList<String> allStrings = new ArrayList<String>();
         ArrayList<Future<Boolean>> futures = new ArrayList<Future<Boolean>>();
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 500; i++) {
             futures.add(_client.set("foo" + i, 360000, "bar" + i));
             allStrings.add("foo" + i);
         }
@@ -195,7 +197,7 @@ public class SpyMemcachedIntegrationTest {
         Future<Map<String, Object>> future = _client.asyncGetBulk(allStrings);
         Map<String, Object> results = future.get();
 
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 500; i++) {
             assertEquals("bar" + i, results.get("foo" + i));
         }
 

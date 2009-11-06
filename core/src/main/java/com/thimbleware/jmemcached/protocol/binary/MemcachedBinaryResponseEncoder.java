@@ -120,6 +120,7 @@ public class MemcachedBinaryResponseEncoder<CACHE_ELEMENT extends CacheElement> 
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void messageReceived(ChannelHandlerContext channelHandlerContext, MessageEvent messageEvent) throws Exception {
         ResponseMessage<CACHE_ELEMENT> command = (ResponseMessage<CACHE_ELEMENT>) messageEvent.getMessage();
         MemcachedBinaryCommandDecoder.BinaryCommand bcmd = MemcachedBinaryCommandDecoder.BinaryCommand.forCommandMessage(command.cmd);
@@ -198,7 +199,7 @@ public class MemcachedBinaryResponseEncoder<CACHE_ELEMENT extends CacheElement> 
                         + (keyBuffer != null ? keyBuffer.capacity() : 0) + (valueBuffer != null ? valueBuffer.capacity() : 0);
                 if (corkedResponse != null) {
                     ChannelBuffer oldBuffer = corkedResponse;
-                    corkedResponse = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, totalCapacity);
+                    corkedResponse = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, totalCapacity + corkedResponse.capacity());
                     corkedResponse.writeBytes(oldBuffer);
                     oldBuffer.clear();
                 } else {
@@ -216,6 +217,9 @@ public class MemcachedBinaryResponseEncoder<CACHE_ELEMENT extends CacheElement> 
                 // first write out any corked responses
                 if (corkedResponse != null) {
                     messageEvent.getChannel().write(corkedResponse);
+
+                    // let it get garbage collected
+                    corkedResponse.clear();
                     corkedResponse = null;
                 }
 
