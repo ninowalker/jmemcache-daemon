@@ -33,7 +33,7 @@ import java.util.concurrent.Executors;
 /**
  * The actual daemon - responsible for the binding and configuration of the network configuration.
  */
-public class MemCacheDaemon {
+public class MemCacheDaemon<CACHE_ELEMENT extends CacheElement> {
 
     final Logger logger = LoggerFactory.getLogger(MemCacheDaemon.class);
 
@@ -46,7 +46,7 @@ public class MemCacheDaemon {
     private boolean verbose;
     private int idleTime;
     private InetSocketAddress addr;
-    private Cache<? extends CacheElement> cache;
+    private Cache<CACHE_ELEMENT> cache;
 
     private boolean running = false;
     private NioServerSocketChannelFactory channelFactory;
@@ -56,7 +56,7 @@ public class MemCacheDaemon {
     public MemCacheDaemon() {
     }
 
-    public MemCacheDaemon(CacheImpl cache) {
+    public MemCacheDaemon(Cache<CACHE_ELEMENT> cache) {
         this.cache = cache;
     }
 
