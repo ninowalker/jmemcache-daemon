@@ -1,7 +1,6 @@
 package com.thimbleware.jmemcached.protocol.text;
 
 import com.thimbleware.jmemcached.Cache;
-import com.thimbleware.jmemcached.CacheImpl;
 import com.thimbleware.jmemcached.protocol.MemcachedCommandHandler;
 import com.thimbleware.jmemcached.protocol.SessionStatus;
 import org.jboss.netty.channel.ChannelPipeline;

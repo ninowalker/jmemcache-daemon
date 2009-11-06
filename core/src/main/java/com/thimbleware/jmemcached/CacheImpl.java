@@ -332,7 +332,7 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
     /**
      * Delayed key blocks get processed occasionally.
      */
-    protected class DelayedMCElement implements Delayed {
+    protected static class DelayedMCElement implements Delayed {
         private CacheElement element;
 
         public DelayedMCElement(CacheElement element) {

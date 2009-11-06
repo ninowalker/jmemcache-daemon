@@ -24,8 +24,6 @@ import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static java.lang.Integer.parseInt;
-import static java.lang.String.valueOf;
 import java.util.concurrent.atomic.AtomicInteger;
 
 // TODO implement flush_all delay

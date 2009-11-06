@@ -16,7 +16,6 @@
 package com.thimbleware.jmemcached.protocol;
 
 import com.thimbleware.jmemcached.CacheElement;
-import com.thimbleware.jmemcached.LocalCacheElement;
 
 import java.io.Serializable;
 import java.util.ArrayList;

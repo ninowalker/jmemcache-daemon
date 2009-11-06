@@ -1,6 +1,5 @@
 package com.thimbleware.jmemcached.storage;
 
-import com.thimbleware.jmemcached.CacheElement;
 import com.thimbleware.jmemcached.LocalCacheElement;
 import com.thimbleware.jmemcached.storage.bytebuffer.ByteBufferBlockStore;
 import com.thimbleware.jmemcached.storage.bytebuffer.Region;
