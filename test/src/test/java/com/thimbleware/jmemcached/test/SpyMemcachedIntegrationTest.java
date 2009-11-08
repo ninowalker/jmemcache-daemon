@@ -36,40 +36,26 @@ import com.thimbleware.jmemcached.storage.hash.ConcurrentLinkedHashMap;
  * TODO more tests
  */
 @RunWith(Parameterized.class)
-public class SpyMemcachedIntegrationTest {
+public class SpyMemcachedIntegrationTest extends AbstractCacheTest {
 
-    private int PORT;
 
-    private static final int MAX_BYTES = (int) Bytes.valueOf("32m").bytes();
-    private static final int CEILING_SIZE = (int)Bytes.valueOf("4m").bytes();
-    private static final int MAX_SIZE = 50000;
-
-    private MemCacheDaemon _daemon;
     private MemcachedClient _client;
-
-    private boolean binary;
     private InetSocketAddress address;
 
     protected static final String KEY = "MyKey";
 
     protected static final int TWO_WEEKS = 1209600; // 60*60*24*14 = 1209600 seconds in 2 weeks.
 
-    @Parameterized.Parameters
-    public static Collection clientParams() {
-        return Arrays.asList(new Object[][]{{false}, {true}});
-    }
-
-    public SpyMemcachedIntegrationTest(boolean binary) {
-        this.binary = binary;
+    public SpyMemcachedIntegrationTest(CacheType cacheType, int blockSize, ProtocolMode protocolMode) {
+        super(cacheType, blockSize, protocolMode);
     }
 
     @Before
     public void setUp() throws Exception {
-        PORT = AvailablePortFinder.getNextAvailable();
-        address = new InetSocketAddress( "localhost", PORT);
-        _daemon = createDaemon( address );
-        _daemon.start(); // hello side effects
-        if (binary)
+        super.setup();
+
+        this.address = new InetSocketAddress("localhost", getPort());
+        if (getProtocolMode() == ProtocolMode.BINARY)
             _client = new MemcachedClient( new BinaryConnectionFactory(), Arrays.asList( address ) );
         else
             _client = new MemcachedClient( Arrays.asList( address ) );
@@ -78,7 +64,6 @@ public class SpyMemcachedIntegrationTest {
     @After
     public void tearDown() throws Exception {
         _client.shutdown();
-        _daemon.stop();
     }
 
 
@@ -102,9 +87,8 @@ public class SpyMemcachedIntegrationTest {
 
     @Test
     public void testPresence() {
-        assertNotNull(_daemon.getCache());
-        assertEquals("initial cache is empty", 0, _daemon.getCache().getCurrentItems());
-        assertEquals("initialize size is empty", 0, _daemon.getCache().getCurrentBytes());
+        assertEquals("initial cache is empty", 0, getDaemon().getCache().getCurrentItems());
+        assertEquals("initialize size is empty", 0, getDaemon().getCache().getCurrentBytes());
     }
 
     @Test
@@ -213,14 +197,5 @@ public class SpyMemcachedIntegrationTest {
         return map;
     }
 
-    private MemCacheDaemon createDaemon( final InetSocketAddress address ) throws IOException {
-        final MemCacheDaemon daemon = new MemCacheDaemon();
-        final ConcurrentLinkedHashMap<String, LocalCacheElement> storage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, MAX_SIZE, MAX_BYTES);
-        daemon.setCache(new CacheImpl(storage));
-        daemon.setAddr( address );
-        daemon.setVerbose(false);
-        daemon.setBinary(binary);
-        return daemon;
-    }
 
 }

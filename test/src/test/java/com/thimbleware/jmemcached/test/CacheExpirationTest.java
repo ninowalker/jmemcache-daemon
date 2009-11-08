@@ -23,59 +23,10 @@ import static junit.framework.Assert.*;
 /**
  */
 @RunWith(Parameterized.class)
-public class CacheExpirationTest {
-    private static final int MAX_BYTES = (int) Bytes.valueOf("32m").bytes();
-    private static final int CEILING_SIZE = (int)Bytes.valueOf("4m").bytes();
-    private static final int MAX_SIZE = 1000;
+public class CacheExpirationTest extends AbstractCacheTest {
 
-    private MemCacheDaemon daemon;
-    private int PORT;
-
-    public static enum CacheType {
-        MAPPED, LOCAL
-    }
-
-    private CacheType cacheType;
-    private int blockSize;
-
-    public CacheExpirationTest(CacheType cacheType, int blockSize) {
-        this.cacheType = cacheType;
-        this.blockSize = blockSize;
-    }
-
-    @Parameterized.Parameters
-    public static Collection blockSizeValues() {
-        return Arrays.asList(new Object[][] {
-                {CacheType.LOCAL, 1 },
-                {CacheType.MAPPED, 4 }});
-    }
-
-
-    @Before
-    public void setup() throws IOException {
-        // create daemon and start it
-        daemon = new MemCacheDaemon();
-        ConcurrentSizedMap<String, LocalCacheElement> cacheStorage;
-        if (cacheType == CacheType.LOCAL) {
-            cacheStorage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, MAX_SIZE, MAX_BYTES);
-            daemon.setCache(new CacheImpl(cacheStorage));
-        } else {
-            cacheStorage = new ConcurrentSizedBlockStorageMap(
-                    new MemoryMappedBlockStore(MAX_BYTES, "block_store.dat", blockSize), CEILING_SIZE, MAX_SIZE);
-            daemon.setCache(new CacheImpl(cacheStorage));
-        }
-        PORT = AvailablePortFinder.getNextAvailable();
-        daemon.setAddr(new InetSocketAddress("localhost", PORT));
-        daemon.setVerbose(false);
-        daemon.start();
-    }
-
-    
-
-
-    @After
-    public void teardown() {
-        daemon.stop();
+    public CacheExpirationTest(CacheType cacheType, int blockSize, ProtocolMode protocolMode) {
+        super(cacheType, blockSize, protocolMode);
     }
 
     @Test

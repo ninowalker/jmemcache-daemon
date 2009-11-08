@@ -4,6 +4,7 @@ import static com.thimbleware.jmemcached.LocalCacheElement.Now;
 import com.thimbleware.jmemcached.*;
 import com.thimbleware.jmemcached.storage.ConcurrentSizedMap;
 import com.thimbleware.jmemcached.storage.ConcurrentSizedBlockStorageMap;
+import com.thimbleware.jmemcached.storage.bytebuffer.ByteBufferBlockStore;
 import com.thimbleware.jmemcached.storage.mmap.MemoryMappedBlockStore;
 import com.thimbleware.jmemcached.storage.hash.ConcurrentLinkedHashMap;
 import com.thimbleware.jmemcached.util.Bytes;
@@ -17,68 +18,19 @@ import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 
 /**
  */
 @RunWith(Parameterized.class)
-public class BasicCacheTest {
-    private static final int MAX_BYTES = (int)Bytes.valueOf("32m").bytes();
-    private static final int CEILING_SIZE = (int)Bytes.valueOf("4m").bytes();
-    private static final int MAX_SIZE = 1000;
+public class BasicCacheTest extends AbstractCacheTest {
 
-    private MemCacheDaemon daemon;
-    private int PORT;
-    private Cache cache;
     public static final int NO_EXPIRE = 0;
 
-    public static enum CacheType {
-        LOCAL, MAPPED
-    }
-
-    private final CacheType cacheType;
-    private final int blockSize;
-
-    public BasicCacheTest(CacheType cacheType, int blockSize) {
-        this.cacheType = cacheType;
-        this.blockSize = blockSize;
-    }
-
-
-
-    @Parameterized.Parameters
-    public static Collection blockSizeValues() {
-        return Arrays.asList(new Object[][] {
-                {CacheType.LOCAL, 1 },
-                {CacheType.MAPPED, 4 }});
-    }
-
-
-    @Before
-    public void setup() throws IOException {
-        // create daemon and start it
-        daemon = new MemCacheDaemon();
-        ConcurrentSizedMap<String, LocalCacheElement> cacheStorage;
-        if (cacheType == CacheType.LOCAL) {
-            cacheStorage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, MAX_SIZE, MAX_BYTES);
-            daemon.setCache(new CacheImpl(cacheStorage));
-        } else {
-            cacheStorage = new ConcurrentSizedBlockStorageMap(
-                    new MemoryMappedBlockStore(MAX_BYTES, "block_store.dat", blockSize), MAX_SIZE, CEILING_SIZE);
-            daemon.setCache(new CacheImpl(cacheStorage));
-        }
-        PORT = AvailablePortFinder.getNextAvailable();
-        daemon.setAddr(new InetSocketAddress("localhost", PORT));
-        daemon.setVerbose(false);
-        daemon.start();
-
-        cache = daemon.getCache();
-    }
-
-    @After
-    public void teardown() {
-        daemon.stop();
+    public BasicCacheTest(CacheType cacheType, int blockSize, ProtocolMode protocolMode) {
+        super(cacheType, blockSize, protocolMode);
     }
 
     @Test
