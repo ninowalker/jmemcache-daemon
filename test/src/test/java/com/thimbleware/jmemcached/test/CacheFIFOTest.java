@@ -23,16 +23,16 @@ import static junit.framework.Assert.*;
 /**
  */
 @RunWith(Parameterized.class)
-public class CacheExpirationTest extends AbstractCacheTest {
+public class CacheFIFOTest extends AbstractCacheTest {
 
-    public CacheExpirationTest(CacheType cacheType, int blockSize, ProtocolMode protocolMode) {
+    public CacheFIFOTest(CacheType cacheType, int blockSize, ProtocolMode protocolMode) {
         super(cacheType, blockSize, protocolMode);
     }
 
     @Test
     public void testExpire() {
         // max MAX_SIZE items in cache, so create fillSize items and then verify that only a MAX_SIZE are ever in the cache
-        int fillSize = 2000;
+        int fillSize = MAX_SIZE * 2;
 
         for (int i = 0; i < fillSize; i++) {
             String testvalue = i + "x";
@@ -49,15 +49,15 @@ public class CacheExpirationTest extends AbstractCacheTest {
         // verify that the size of the cache is correct
         assertEquals("maximum items stored", MAX_SIZE, daemon.getCache().getCurrentItems());
 
-        // verify that only the last 1000 items are actually physically in there
+        // verify that only the last MAX_SIZE items are actually physically in there
         for (int i = 0; i < fillSize; i++) {
             CacheElement result = daemon.getCache().get("" + i)[0];
             if (i < MAX_SIZE) {
                 assertTrue(i + "th result absence", result == null);
             } else {
-                assertNotNull(i + "th result presence", result);
-                assertNotNull(i + "th result's presence", result.getKeystring());
-                assertEquals("key matches" , "" + i, result.getKeystring());
+                assertNotNull(i + "th result should be present", result);
+                assertNotNull(i + "th result's should be present", result.getKeystring());
+                assertEquals("key of present item should match" , "" + i, result.getKeystring());
                 assertEquals(new String(result.getData()), i + "x");
             }
         }
@@ -66,7 +66,7 @@ public class CacheExpirationTest extends AbstractCacheTest {
     }
 
     private LocalCacheElement createElement(String testKey, String testvalue) {
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, Now(), testvalue.length());
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, Now() + (1000*60*5), testvalue.length());
         element.setData(testvalue.getBytes());
 
         return element;
