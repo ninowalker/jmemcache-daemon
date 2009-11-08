@@ -8,37 +8,27 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 /**
+ * Abstract implementation of a cache handler for the memcache daemon; provides some convenience methods and
+ * a general framework for implementation
  */
 public abstract class AbstractCache<CACHE_ELEMENT extends CacheElement> implements Cache<CACHE_ELEMENT> {
 
-    public final AtomicInteger started = new AtomicInteger();          /* when the process was started */
-    public final AtomicLong bytes_read = new AtomicLong();
-    public final AtomicLong bytes_written = new AtomicLong();
-    public final AtomicLong curr_bytes = new AtomicLong();
+    protected final AtomicLong started = new AtomicLong();
+
     protected AtomicInteger getCmds = new AtomicInteger();
     protected AtomicInteger setCmds = new AtomicInteger();
     protected AtomicInteger getHits = new AtomicInteger();
     protected AtomicInteger getMisses = new AtomicInteger();
     protected AtomicLong casCounter = new AtomicLong(1);
 
-    /**
-     * Initialize base values for status.
-     */
-    {
-        curr_bytes.set(0);
-        bytes_read.set(0);
-        bytes_written.set(0);
-        started.set(Now());
-    }
-
     public AbstractCache() {
-
+        initStats();
     }
 
     /**
      * @return the current time in seconds (from epoch), used for expiries, etc.
      */
-    public static final int Now() {
+    public static int Now() {
         return (int) (System.currentTimeMillis() / 1000);
     }
 
@@ -91,7 +81,7 @@ public abstract class AbstractCache<CACHE_ELEMENT extends CacheElement> implemen
         multiSet(result, "get_hits", java.lang.String.valueOf(getGetHits()));
         multiSet(result, "get_misses", java.lang.String.valueOf(getGetMisses()));
         multiSet(result, "time", java.lang.String.valueOf(java.lang.String.valueOf(Now())));
-        multiSet(result, "uptime", java.lang.String.valueOf(Now() - this.started.intValue()));
+        multiSet(result, "uptime", java.lang.String.valueOf(Now() - this.started.longValue()));
         multiSet(result, "cur_items", java.lang.String.valueOf(this.getCurrentItems()));
         multiSet(result, "limit_maxbytes", java.lang.String.valueOf(this.getLimitMaxBytes()));
         multiSet(result, "current_bytes", java.lang.String.valueOf(this.getCurrentBytes()));
@@ -125,11 +115,14 @@ public abstract class AbstractCache<CACHE_ELEMENT extends CacheElement> implemen
      * Initialize all statistic counters
      */
     protected void initStats() {
+        started.set(System.currentTimeMillis());
         getCmds.set(0);
         setCmds.set(0);
         getHits.set(0);
         getMisses.set(0);
+
+
     }
 
-    public abstract void processDeleteQueue();
+    public abstract void asyncEventPing();
 }
