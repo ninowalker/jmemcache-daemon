@@ -12,6 +12,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
+ * Implementation of the concurrent (linked) sized map using the block buffer storage back end.
+ *
+ * TODO Rather sub-optimal global locking strategy could be improved with a more intricate striped locking implementation.
  */
 public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<String, LocalCacheElement> {
 
@@ -22,6 +25,10 @@ public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<
 
     final ReentrantReadWriteLock storageLock;
 
+    /**
+     * Representation of the stored value, encoding its expiration, block region, and attached flags.
+     * TODO investigate whether this can be collapsed into a subclass of LocalCacheElement instead?
+     */
     class StoredValue {
         int flags;
         int expire;
