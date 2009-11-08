@@ -27,6 +27,7 @@ public interface CacheStorage<K, V extends SizedItem> extends ConcurrentMap<K, V
 
     /**
      * Close the storage unit, deallocating any resources it might be currently holding.
+     * @throws java.io.IOException thrown if IO faults occur anywhere during close.
      */
     void close() throws IOException;
 }
