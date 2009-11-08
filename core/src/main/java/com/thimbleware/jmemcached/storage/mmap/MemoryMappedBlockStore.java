@@ -31,8 +31,8 @@ public final class MemoryMappedBlockStore extends ByteBufferBlockStore {
      */
     public MemoryMappedBlockStore(long maxBytes, String fileName, int blockSizeBytes) throws IOException {
         super();
-        storage = getMemoryMappedFileStorage(maxBytes, fileName);
-        initialize(storage.capacity(), blockSizeBytes);
+        storageBuffer = getMemoryMappedFileStorage(maxBytes, fileName);
+        initialize(storageBuffer.capacity(), blockSizeBytes);
     }
 
     private MappedByteBuffer getMemoryMappedFileStorage(long maxBytes, String fileName) throws IOException {

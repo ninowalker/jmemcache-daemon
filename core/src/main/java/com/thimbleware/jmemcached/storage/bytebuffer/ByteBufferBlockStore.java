@@ -14,7 +14,7 @@ import java.util.*;
  */
 public class ByteBufferBlockStore {
 
-    protected ByteBuffer storage;
+    protected ByteBuffer storageBuffer;
 
     private long freeBytes;
 
@@ -36,16 +36,20 @@ public class ByteBufferBlockStore {
     /**
      * Construct a new memory mapped block storage against a filename, with a certain size
      * and block size.
-     * @param storage
+     * @param storageBuffer
      * @param blockSizeBytes the size of a block in the store
      * @throws java.io.IOException thrown on failure to open the store or map the file
      */
-    public ByteBufferBlockStore(ByteBuffer storage, int blockSizeBytes) throws IOException {
-        initialize(storage.capacity(), blockSizeBytes);
+    public ByteBufferBlockStore(ByteBuffer storageBuffer, int blockSizeBytes) throws IOException {
+        this.storageBuffer = storageBuffer;
+        this.blockSizeBytes = blockSizeBytes;
+        initialize(storageBuffer.capacity(), blockSizeBytes);
     }
 
-
-    public ByteBufferBlockStore() {
+    /**
+     * Constructor used only be subclasses, allowing them to provide their own buffer.
+     */
+    protected ByteBufferBlockStore() {
     }
 
     protected void initialize(int storeSizeBytes, int blockSizeBytes) {
@@ -53,15 +57,13 @@ public class ByteBufferBlockStore {
         this.blockSizeBytes = blockSizeBytes;
 
         // set the size of the store in bytes
-        this.storeSizeBytes = storage.capacity();
-
-        this.storage = storage;
+        this.storeSizeBytes = storageBuffer.capacity();
 
         // the number of free bytes starts out as the entire store
         freeBytes = storeSizeBytes;
 
         // clear the buffer
-        storage.clear();
+        storageBuffer.clear();
 
         // the free list starts with one giant free region; we create a tree map as index, then set initial values
         // with one empty region.
@@ -146,9 +148,9 @@ public class ByteBufferBlockStore {
             freeBytes -= desiredBlockSize;
 
             // get the buffer to it
-            storage.rewind();
-            storage.position((int)position);
-            storage.put(data, 0, desiredSize);
+            storageBuffer.rewind();
+            storageBuffer.position((int)position);
+            storageBuffer.put(data, 0, desiredSize);
 
             Region region = new Region(desiredSize, desiredBlockSize, position);
 
@@ -160,8 +162,8 @@ public class ByteBufferBlockStore {
 
     public byte[] get(Region region) {
         byte[] result = new byte[region.size];
-        storage.position((int)region.offset);
-        storage.get(result, 0, region.size);
+        storageBuffer.position((int)region.offset);
+        storageBuffer.get(result, 0, region.size);
         return result;
     }
 
