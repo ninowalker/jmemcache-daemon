@@ -15,14 +15,14 @@
  */
 package com.thimbleware.jmemcached;
 
+import com.thimbleware.jmemcached.storage.bytebuffer.BlockStorageCacheStorage;
+import com.thimbleware.jmemcached.storage.CacheStorage;
 import org.apache.commons.cli.*;
 
 import java.net.InetSocketAddress;
 
 import com.thimbleware.jmemcached.util.Bytes;
 import com.thimbleware.jmemcached.storage.hash.ConcurrentLinkedHashMap;
-import com.thimbleware.jmemcached.storage.ConcurrentSizedMap;
-import com.thimbleware.jmemcached.storage.ConcurrentSizedBlockStorageMap;
 import com.thimbleware.jmemcached.storage.mmap.MemoryMappedBlockStore;
 
 
@@ -169,13 +169,13 @@ public class Main {
         // create daemon and start it
         final MemCacheDaemon daemon = new MemCacheDaemon();
 
-        ConcurrentSizedMap<String, LocalCacheElement> storage;
+        CacheStorage<String, LocalCacheElement> storage;
         if (!memoryMapped)
             storage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, max_size, maxBytes);
         else  {
             MemoryMappedBlockStore mappedBlockStore = new MemoryMappedBlockStore((int)maxBytes, mmapFile, blockSize);
 
-            storage = new ConcurrentSizedBlockStorageMap(mappedBlockStore, (int)ceiling, max_size);
+            storage = new BlockStorageCacheStorage(mappedBlockStore, (int)ceiling, max_size);
         }
 
         daemon.setCache(new CacheImpl(storage));

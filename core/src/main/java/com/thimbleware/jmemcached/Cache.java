@@ -1,5 +1,6 @@
 package com.thimbleware.jmemcached;
 
+import java.io.IOException;
 import java.util.Set;
 import java.util.Map;
 
@@ -28,7 +29,7 @@ public interface Cache<CACHE_ELEMENT extends CacheElement> {
 
     boolean flush_all(int expire);
 
-    void close();
+    void close() throws IOException;
 
     Set<String> keys();
 

@@ -89,14 +89,25 @@ public class ByteBufferBlockStore {
      * @throws java.io.IOException thrown on failure to close file
      */
     public void close() throws IOException {
-        clearRegions();
+        // clear the region list
+        clear();
+
+        //
+        freeResources();
+
+        // null out the storage to allow the GC to get rid of it
+        storageBuffer = null;
+    }
+
+    protected void freeResources() throws IOException {
+        // NOOP in this implementation
     }
 
     /**
-     * Allocate a region in the
-     * @param desiredSize
-     * @param data
-     * @return
+     * Allocate a region in the block storage
+     * @param desiredSize size (in bytes) desired for the region
+     * @param data initial data to place in it
+     * @return the region descriptor
      */
     public Region alloc(int desiredSize, byte[] data) {
         final long desiredBlockSize = roundUp(desiredSize, blockSizeBytes);

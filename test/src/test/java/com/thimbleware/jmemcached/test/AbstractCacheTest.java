@@ -4,8 +4,8 @@ import com.thimbleware.jmemcached.Cache;
 import com.thimbleware.jmemcached.CacheImpl;
 import com.thimbleware.jmemcached.LocalCacheElement;
 import com.thimbleware.jmemcached.MemCacheDaemon;
-import com.thimbleware.jmemcached.storage.ConcurrentSizedBlockStorageMap;
-import com.thimbleware.jmemcached.storage.ConcurrentSizedMap;
+import com.thimbleware.jmemcached.storage.bytebuffer.BlockStorageCacheStorage;
+import com.thimbleware.jmemcached.storage.CacheStorage;
 import com.thimbleware.jmemcached.storage.bytebuffer.ByteBufferBlockStore;
 import com.thimbleware.jmemcached.storage.hash.ConcurrentLinkedHashMap;
 import com.thimbleware.jmemcached.storage.mmap.MemoryMappedBlockStore;
@@ -63,7 +63,7 @@ public abstract class AbstractCacheTest {
     public void setup() throws IOException {
         // create daemon and start it
         daemon = new MemCacheDaemon();
-        ConcurrentSizedMap<String, LocalCacheElement> cacheStorage = getCacheStorage();
+        CacheStorage<String, LocalCacheElement> cacheStorage = getCacheStorage();
 
         daemon.setCache(new CacheImpl(cacheStorage));
         daemon.setBinary(protocolMode == ProtocolMode.BINARY);
@@ -82,17 +82,17 @@ public abstract class AbstractCacheTest {
         daemon.stop();
     }
 
-    private ConcurrentSizedMap<String, LocalCacheElement> getCacheStorage() throws IOException {
-        ConcurrentSizedMap<String, LocalCacheElement> cacheStorage = null;
+    private CacheStorage<String, LocalCacheElement> getCacheStorage() throws IOException {
+        CacheStorage<String, LocalCacheElement> cacheStorage = null;
         switch (cacheType) {
             case LOCAL_HASH:
                 cacheStorage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, MAX_SIZE, MAX_BYTES);
                 break;
             case BLOCK:
-                cacheStorage = new ConcurrentSizedBlockStorageMap(new ByteBufferBlockStore(ByteBuffer.allocate(MAX_BYTES), blockSize), CEILING_SIZE, MAX_SIZE);
+                cacheStorage = new BlockStorageCacheStorage(new ByteBufferBlockStore(ByteBuffer.allocate(MAX_BYTES), blockSize), CEILING_SIZE, MAX_SIZE);
                 break;
             case MAPPED:
-                cacheStorage = new ConcurrentSizedBlockStorageMap(
+                cacheStorage = new BlockStorageCacheStorage(
                         new MemoryMappedBlockStore(MAX_BYTES, "block_store.dat", blockSize), CEILING_SIZE, MAX_SIZE);
 
                 break;

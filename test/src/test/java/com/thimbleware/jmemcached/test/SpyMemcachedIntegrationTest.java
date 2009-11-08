@@ -124,6 +124,7 @@ public class SpyMemcachedIntegrationTest extends AbstractCacheTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     public void testBigBinaryObject() throws ExecutionException, InterruptedException {
         Object bigObject = getBigObject();
         Future<Boolean> future = _client.set(KEY, TWO_WEEKS, bigObject);
@@ -190,7 +191,7 @@ public class SpyMemcachedIntegrationTest extends AbstractCacheTest {
     protected static Object getBigObject() {
         final Map<String, Double> map = new HashMap<String, Double>();
 
-        for (int i=0;i<130000;i++) {
+        for (int i=0;i<13000;i++) {
             map.put(Integer.toString(i), i/42.0);
         }
 

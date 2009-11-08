@@ -2,25 +2,11 @@ package com.thimbleware.jmemcached.test;
 
 import static com.thimbleware.jmemcached.LocalCacheElement.Now;
 import com.thimbleware.jmemcached.*;
-import com.thimbleware.jmemcached.storage.ConcurrentSizedMap;
-import com.thimbleware.jmemcached.storage.ConcurrentSizedBlockStorageMap;
-import com.thimbleware.jmemcached.storage.bytebuffer.ByteBufferBlockStore;
-import com.thimbleware.jmemcached.storage.mmap.MemoryMappedBlockStore;
-import com.thimbleware.jmemcached.storage.hash.ConcurrentLinkedHashMap;
-import com.thimbleware.jmemcached.util.Bytes;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Collection;
 
 /**
  */

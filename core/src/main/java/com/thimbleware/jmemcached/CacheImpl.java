@@ -15,8 +15,9 @@
  */
 package com.thimbleware.jmemcached;
 
-import com.thimbleware.jmemcached.storage.ConcurrentSizedMap;
+import com.thimbleware.jmemcached.storage.CacheStorage;
 
+import java.io.IOException;
 import static java.lang.Integer.parseInt;
 import static java.lang.String.valueOf;
 import java.nio.ByteBuffer;
@@ -31,14 +32,15 @@ import java.util.concurrent.locks.ReadWriteLock;
  */
 public final class CacheImpl extends AbstractCache<LocalCacheElement> implements Cache<LocalCacheElement> {
 
-    final ConcurrentSizedMap<String, LocalCacheElement> cache;
+    final CacheStorage<String, LocalCacheElement> cache;
     final DelayQueue<DelayedMCElement> deleteQueue;
     final ReadWriteLock deleteQueueReadWriteLock;
 
     /**
      * Construct the server session handler
+     * @param storage
      */
-    public CacheImpl(ConcurrentSizedMap<String, LocalCacheElement> storage) {
+    public CacheImpl(CacheStorage<String, LocalCacheElement> storage) {
         super();
         this.cache = storage;
         deleteQueue = new DelayQueue<DelayedMCElement>();
@@ -286,8 +288,8 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
         return true;
     }
 
-    public void close() {
-        cache.clear();
+    public void close() throws IOException {
+        cache.close();
     }
 
     @Override

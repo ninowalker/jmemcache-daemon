@@ -16,7 +16,7 @@ package com.thimbleware.jmemcached.storage.hash;
  * limitations under the License.
  */
 
-import com.thimbleware.jmemcached.storage.ConcurrentSizedMap;
+import com.thimbleware.jmemcached.storage.CacheStorage;
 
 import java.io.Serializable;
 import java.util.AbstractCollection;
@@ -62,7 +62,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author <a href="mailto:ben.manes@reardencommerce.com">Ben Manes</a>
  * @see http://code.google.com/p/concurrentlinkedhashmap/
  */
-public final class ConcurrentLinkedHashMap<K, V extends SizedItem> extends AbstractMap<K, V> implements Serializable, ConcurrentSizedMap<K, V> {
+public final class ConcurrentLinkedHashMap<K, V extends SizedItem> extends AbstractMap<K, V> implements Serializable, CacheStorage<K, V> {
     private static final EvictionListener<?, ?> nullListener = new EvictionListener<Object, Object>() {
         public void onEviction(Object key, Object value) {
         }
@@ -207,6 +207,10 @@ public final class ConcurrentLinkedHashMap<K, V extends SizedItem> extends Abstr
      */
     public int capacity() {
         return capacity.get();
+    }
+
+    public void close() {
+        clear();
     }
 
     /**

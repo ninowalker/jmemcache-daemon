@@ -1,9 +1,11 @@
-package com.thimbleware.jmemcached.storage;
+package com.thimbleware.jmemcached.storage.bytebuffer;
 
 import com.thimbleware.jmemcached.LocalCacheElement;
+import com.thimbleware.jmemcached.storage.CacheStorage;
 import com.thimbleware.jmemcached.storage.bytebuffer.ByteBufferBlockStore;
 import com.thimbleware.jmemcached.storage.bytebuffer.Region;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 import java.util.Collection;
@@ -16,7 +18,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  *
  * TODO Rather sub-optimal global locking strategy could be improved with a more intricate striped locking implementation.
  */
-public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<String, LocalCacheElement> {
+public final class BlockStorageCacheStorage implements CacheStorage<String, LocalCacheElement> {
 
     final ByteBufferBlockStore blockStorage;
     final AtomicInteger ceilingBytes;
@@ -41,7 +43,7 @@ public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<
         }
     }
 
-    public ConcurrentSizedBlockStorageMap(ByteBufferBlockStore blockStorageParam, int ceilingBytesParam, int maximumItemsVal) {
+    public BlockStorageCacheStorage(ByteBufferBlockStore blockStorageParam, int ceilingBytesParam, int maximumItemsVal) {
         this.blockStorage = blockStorageParam;
         this.ceilingBytes = new AtomicInteger(ceilingBytesParam);
         this.maximumItems = new AtomicInteger(maximumItemsVal);
@@ -79,6 +81,14 @@ public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<
 
     public int capacity() {
         return maximumItems.get();
+    }
+
+    public void close() throws IOException {
+        // first clear all items
+        clear();
+
+        // then ask the block store to close
+        blockStorage.close();
     }
 
     public LocalCacheElement putIfAbsent(String key, LocalCacheElement item) {
@@ -277,6 +287,7 @@ public final class ConcurrentSizedBlockStorageMap implements ConcurrentSizedMap<
             storageLock.writeLock().unlock();
         }
     }
+
 
     public void clear() {
         try {

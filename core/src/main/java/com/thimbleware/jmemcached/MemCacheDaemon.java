@@ -35,7 +35,7 @@ import java.util.concurrent.Executors;
  */
 public class MemCacheDaemon<CACHE_ELEMENT extends CacheElement> {
 
-    final Logger logger = LoggerFactory.getLogger(MemCacheDaemon.class);
+    final Logger log = LoggerFactory.getLogger(MemCacheDaemon.class);
 
     public static String memcachedVersion = "0.9";
 
@@ -62,10 +62,9 @@ public class MemCacheDaemon<CACHE_ELEMENT extends CacheElement> {
 
     /**
      * Bind the network connection and start the network processing threads.
-     *
-     * @throws IOException
      */
-    public void start() throws IOException {
+    public void start() {
+        // TODO provide tweakable options here for passing in custom executors.
         channelFactory =
                 new NioServerSocketChannelFactory(
                         Executors.newCachedThreadPool(),
@@ -88,7 +87,8 @@ public class MemCacheDaemon<CACHE_ELEMENT extends CacheElement> {
         Channel serverChannel = bootstrap.bind(addr);
         allChannels.add(serverChannel);
 
-        logger.info("Listening on " + String.valueOf(addr.getHostName()) + ":" + addr.getPort());
+        log.info("Listening on " + String.valueOf(addr.getHostName()) + ":" + addr.getPort());
+
         running = true;
     }
 
@@ -103,13 +103,22 @@ public class MemCacheDaemon<CACHE_ELEMENT extends CacheElement> {
     }
 
     public void stop() {
+        log.info("terminating daemon; closing all channels");
         ChannelGroupFuture future = allChannels.close();
         future.awaitUninterruptibly();
         if (!future.isCompleteSuccess()) {
-            System.err.println("shit");
+            throw new RuntimeException("failure to complete closing all network channels");
+        }
+        log.info("channels closed, freeing cache storage");
+        try {
+            cache.close();
+        } catch (IOException e) {
+            throw new RuntimeException("exception while closing storage", e);
         }
         channelFactory.releaseExternalResources();
+
         running = false;
+        log.info("successfully shut down");
     }
 
     public static void setMemcachedVersion(String memcachedVersion) {

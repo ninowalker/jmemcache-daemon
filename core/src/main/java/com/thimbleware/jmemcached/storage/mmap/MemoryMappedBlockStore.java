@@ -45,17 +45,18 @@ public final class MemoryMappedBlockStore extends ByteBufferBlockStore {
         return fileStorage.getChannel().map(PRIVATE, 0, maxBytes);
     }
 
-    /**
-     * Close the store, destroying all data and closing the backing file
-     * @throws IOException thrown on failure to close file
-     */
-    public void close() throws IOException {
-        super.close();
+    @Override
+    protected void freeResources() throws IOException {
+        super.freeResources();
+
         // close the actual file
         fileStorage.close();
 
         // delete the file; it is no longer of any use
         new File(fileName).delete();
+
+        fileStorage = null;
     }
+
 
 }
