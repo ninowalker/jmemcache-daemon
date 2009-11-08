@@ -12,7 +12,6 @@
         <module>core</module>
         <module>cli</module>
         <module>test</module>
-        <module>ws</module>
     </modules>
 
 
