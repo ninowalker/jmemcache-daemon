@@ -58,7 +58,7 @@ public class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> extend
             for (CacheElement result : results) {
                 if (result != null) {
                     writeString(channel, VALUE);
-                    writeString(channel, result.getKeystring() + " " + result.getFlags() + " " + result.getDataLength() + (cmd == Command.GETS ? " " + result.getCasUnique() : "") + "\r\n");
+                    writeString(channel, result.getKeystring() + " " + result.getFlags() + " " + result.getData().length + (cmd == Command.GETS ? " " + result.getCasUnique() : "") + "\r\n");
                     ChannelBuffer outputbuffer = ChannelBuffers.wrappedBuffer(result.getData());
                     channel.write(outputbuffer);
                     writeString(channel, "\r\n");

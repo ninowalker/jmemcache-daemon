@@ -56,7 +56,7 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
         // delayed remove
         if (time != 0) {
             // block the element and schedule a delete; replace its entry with a blocked element
-            LocalCacheElement placeHolder = new LocalCacheElement(key, 0, 0, 0);
+            LocalCacheElement placeHolder = new LocalCacheElement(key, 0, 0);
             placeHolder.setData(new byte[]{});
             placeHolder.setBlocked(true);
             placeHolder.setBlockedUntil(Now() + (long)time);
@@ -102,11 +102,12 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
             return StoreResponse.NOT_FOUND;
         }
         else {
-            LocalCacheElement replace = new LocalCacheElement(old.getKeystring(), old.getFlags(), old.getExpire(), old.getDataLength() + element.getDataLength());
-            ByteBuffer b = ByteBuffer.allocate(replace.getDataLength());
+            int newLength = old.getData().length + element.getData().length;
+            LocalCacheElement replace = new LocalCacheElement(old.getKeystring(), old.getFlags(), old.getExpire());
+            ByteBuffer b = ByteBuffer.allocate(newLength);
             b.put(old.getData());
             b.put(element.getData());
-            replace.setData(new byte[replace.getDataLength()]);
+            replace.setData(new byte[newLength]);
             b.flip();
             b.get(replace.getData());
             replace.setCasUnique(replace.getCasUnique() + 1);
@@ -124,11 +125,13 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
             return StoreResponse.NOT_FOUND;
         }
         else {
-            LocalCacheElement replace = new LocalCacheElement(old.getKeystring(), old.getFlags(), old.getExpire(), old.getDataLength() + element.getDataLength());
-            ByteBuffer b = ByteBuffer.allocate(replace.getDataLength());
+            int newLength = old.getData().length + element.getData().length;
+
+            LocalCacheElement replace = new LocalCacheElement(old.getKeystring(), old.getFlags(), old.getExpire());
+            ByteBuffer b = ByteBuffer.allocate(newLength);
             b.put(element.getData());
             b.put(old.getData());
-            replace.setData(new byte[replace.getDataLength()]);
+            replace.setData(new byte[newLength]);
             b.flip();
             b.get(replace.getData());
             replace.setCasUnique(replace.getCasUnique() + 1);
@@ -160,7 +163,7 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
             return StoreResponse.NOT_FOUND;
         }
 
-        if (element.getCasUnique().equals(cas_key)) {
+        if (element.getCasUnique() == cas_key) {
             // casUnique matches, now set the element
             if (storage.replace(e.getKeystring(), element, e)) return StoreResponse.STORED;
             else {
@@ -190,9 +193,8 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
             } // check for underflow
 
             byte[] newData = valueOf(old_val).getBytes();
-            int newDataLength = newData.length;
 
-            LocalCacheElement replace = new LocalCacheElement(old.getKeystring(), old.getFlags(), old.getExpire(), newDataLength);
+            LocalCacheElement replace = new LocalCacheElement(old.getKeystring(), old.getFlags(), old.getExpire());
             replace.setData(newData);
             replace.setCasUnique(replace.getCasUnique() + 1);
             return storage.replace(old.getKeystring(), old, replace) ? old_val : null;

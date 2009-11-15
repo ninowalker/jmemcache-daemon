@@ -54,7 +54,7 @@ public class CacheFIFOTest extends AbstractCacheTest {
     }
 
     private LocalCacheElement createElement(String testKey, String testvalue) {
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, Now() + (1000*60*5), testvalue.length());
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, Now() + (1000*60*5));
         element.setData(testvalue.getBytes());
 
         return element;

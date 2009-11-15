@@ -32,7 +32,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, testvalue.length());
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE);
         element.setData(testvalue.getBytes());
 
         // put in cache
@@ -46,11 +46,11 @@ public class BasicCacheTest extends AbstractCacheTest {
 
         // must be non null and match the original
         assertNotNull("got result", result);
-        assertEquals("data length matches", result.getDataLength(), element.getDataLength());
+        assertEquals("data length matches", result.getData().length, element.getData().length);
         assertEquals("data matches", new String(element.getData()), new String(result.getData()));
         assertEquals("key matches", element.getKeystring(), result.getKeystring());
 
-        assertEquals("size of cache matches element entered", element.getDataLength(), cache.getCurrentBytes(), 0);
+        assertEquals("size of cache matches element entered", element.getData().length, cache.getCurrentBytes(), 0);
         assertEquals("cache has 1 element", 1, cache.getCurrentItems());
     }
 
@@ -59,7 +59,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, testvalue.length());
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE);
         element.setData(testvalue.getBytes());
 
         // put in cache
@@ -73,15 +73,15 @@ public class BasicCacheTest extends AbstractCacheTest {
 
         // must be non null and match the original
         assertNotNull("got result", result);
-        assertEquals("data length matches", result.getDataLength(), element.getDataLength());
+        assertEquals("data length matches", result.getData().length, element.getData().length);
         assertEquals("data matches", new String(element.getData()), new String(result.getData()));
 
-        assertEquals("size of cache matches element entered", element.getDataLength(), cache.getCurrentBytes(), 0);
+        assertEquals("size of cache matches element entered", element.getData().length, cache.getCurrentBytes(), 0);
         assertEquals("cache has 1 element", 1, cache.getCurrentItems());
 
         // now replace
         testvalue = "54321";
-        element = new LocalCacheElement(testKey, 0, Now(), testvalue.length());
+        element = new LocalCacheElement(testKey, 0, Now());
         element.setData(testvalue.getBytes());
 
         // put in cache
@@ -95,7 +95,7 @@ public class BasicCacheTest extends AbstractCacheTest {
 
         // must be non null and match the original
         assertNotNull("got result", result);
-        assertEquals("data length matches", result.getDataLength(), element.getDataLength());
+        assertEquals("data length matches", result.getData().length, element.getData().length);
         assertEquals("data matches", new String(element.getData()), new String(result.getData()));
         assertEquals("key matches", result.getKeystring(), element.getKeystring());
         assertEquals("cache has 1 element", 1, cache.getCurrentItems());
@@ -107,7 +107,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, testvalue.length());
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE);
         element.setData(testvalue.getBytes());
 
         // put in cache
@@ -129,7 +129,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, testvalue.length());
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE);
         element.setData(testvalue.getBytes());
 
         // put in cache
@@ -143,11 +143,11 @@ public class BasicCacheTest extends AbstractCacheTest {
 
         // must be non null and match the original
         assertNotNull("got result", result);
-        assertEquals("data length matches", result.getDataLength(), element.getDataLength());
+        assertEquals("data length matches", result.getData().length, element.getData().length);
         assertEquals("data matches", new String(element.getData()), new String(result.getData()));
         assertEquals("key matches", result.getKeystring(), element.getKeystring());
 
-        assertEquals("size of cache matches element entered", element.getDataLength(), cache.getCurrentBytes(), 0);
+        assertEquals("size of cache matches element entered", element.getData().length, cache.getCurrentBytes(), 0);
         assertEquals("cache has 1 element", 1, cache.getCurrentItems());
     }
 
@@ -156,7 +156,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, testvalue.length());
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE);
         element.setData(testvalue.getBytes());
 
         // put in cache
@@ -165,7 +165,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         // put in cache again and fail
         assertEquals(cache.add(element), Cache.StoreResponse.NOT_STORED);
 
-        assertEquals("size of cache matches single element entered", element.getDataLength(), cache.getCurrentBytes(), 0);
+        assertEquals("size of cache matches single element entered", element.getData().length, cache.getCurrentBytes(), 0);
         assertEquals("cache has only 1 element", 1, cache.getCurrentItems());
     }
 
@@ -174,7 +174,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, testvalue.length());
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE);
         element.setData(testvalue.getBytes());
 
         // put in cache, then flush
@@ -191,7 +191,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testKey = "12345678";
         String testvalue = "1";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, testvalue.length());
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE);
         element.setData(testvalue.getBytes());
 
         // put in cache

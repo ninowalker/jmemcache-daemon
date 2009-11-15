@@ -100,7 +100,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
 
             // present, return current value
             if (val != null) {
-                LocalCacheElement el = new LocalCacheElement(key, val.flags, val.expire, val.region.size);
+                LocalCacheElement el = new LocalCacheElement(key, val.flags, val.expire);
                 el.setData(blockStorage.get(val.region));
 
                 return el;
@@ -125,7 +125,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
             storageLock.readLock().lock();
             if (!(key instanceof String) || (!(value instanceof LocalCacheElement))) return false;
             StoredValue val = index.get((String)key);
-            LocalCacheElement el = new LocalCacheElement((String) key, val.flags, val.expire, val.region.size);
+            LocalCacheElement el = new LocalCacheElement((String) key, val.flags, val.expire);
             el.setData(blockStorage.get(val.region));
 
             if (!el.equals(value)) {
@@ -150,7 +150,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
         try {
             storageLock.readLock().lock();
             StoredValue val = index.get(key);
-            LocalCacheElement el = new LocalCacheElement((String) key, val.flags, val.expire, val.region.size);
+            LocalCacheElement el = new LocalCacheElement((String) key, val.flags, val.expire);
             el.setData(blockStorage.get(val.region));
 
             if (!el.equals(LocalCacheElement)) {
@@ -223,7 +223,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
             if (!(key instanceof String)) return null;
             StoredValue val = index.get(key);
             if (val == null) return null;
-            LocalCacheElement el = new LocalCacheElement((String) key, val.flags, val.expire, val.region.size);
+            LocalCacheElement el = new LocalCacheElement((String) key, val.flags, val.expire);
             el.setData(blockStorage.get(val.region));
 
             return el;
@@ -237,7 +237,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
         // absent, lock the store and put the new value in
         try {
             storageLock.writeLock().lock();
-            Region region = blockStorage.alloc(item.getDataLength(), item.getData());
+            Region region = blockStorage.alloc(item.getData().length, item.getData());
 
             index.put(key, new StoredValue(item.getFlags(), item.getExpire(), region));
 
@@ -253,7 +253,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
             if (!(key instanceof String)) return null;
             StoredValue val = index.get((String)key);
             if (val != null) {
-                LocalCacheElement el = new LocalCacheElement((String) key, val.flags, val.expire, val.region.size);
+                LocalCacheElement el = new LocalCacheElement((String) key, val.flags, val.expire);
                 el.setData(blockStorage.get(val.region));
 
                 storageLock.readLock().unlock();
@@ -278,7 +278,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
             for (Entry<? extends String, ? extends LocalCacheElement> entry : map.entrySet()) {
                 String key = entry.getKey();
                 LocalCacheElement item = entry.getValue();
-                Region region = blockStorage.alloc(item.getDataLength(), item.getData());
+                Region region = blockStorage.alloc(item.getData().length, item.getData());
 
                 index.put(key, new StoredValue(item.getFlags(), item.getExpire(), region));
 

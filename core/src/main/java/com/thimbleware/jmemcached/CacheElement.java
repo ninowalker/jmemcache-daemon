@@ -5,34 +5,17 @@ import com.thimbleware.jmemcached.storage.hash.SizedItem;
 import java.io.Serializable;
 
 /**
- * Created by IntelliJ IDEA.
- * User: ryan
- * Date: Oct 3, 2009
- * Time: 10:55:54 PM
- * To change this template use File | Settings | File Templates.
  */
 public interface CacheElement extends Serializable, SizedItem {
     int THIRTY_DAYS = 60 * 60 * 24 * 30;
 
     int size();
 
-    @Override
-    boolean equals(Object o);
-
-    @Override
     int hashCode();
 
-    Integer getExpire();
+    int getExpire();
 
-    void setExpire(Integer expire);
-
-    Integer getFlags();
-
-    void setFlags(Integer flags);
-
-    Integer getDataLength();
-
-    void setDataLength(Integer dataLength);
+    int getFlags();
 
     byte[] getData();
 
@@ -40,17 +23,15 @@ public interface CacheElement extends Serializable, SizedItem {
 
     String getKeystring();
 
-    void setKeystring(String keystring);
+    long getCasUnique();
 
-    Long getCasUnique();
+    void setCasUnique(long casUnique);
 
-    void setCasUnique(Long casUnique);
+    boolean isBlocked();
 
-    Boolean isBlocked();
+    void setBlocked(boolean blocked);
 
-    void setBlocked(Boolean blocked);
+    long getBlockedUntil();
 
-    Long getBlockedUntil();
-
-    void setBlockedUntil(Long blockedUntil);
+    void setBlockedUntil(long blockedUntil);
 }

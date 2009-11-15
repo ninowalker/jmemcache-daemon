@@ -21,27 +21,25 @@ import java.util.Arrays;
  * Represents information about a cache entry.
  */
 public final class LocalCacheElement implements CacheElement {
-    private Integer expire ;
-    private Integer flags;
-    private Integer dataLength;
+    private int expire ;
+    private int flags;
     private byte[] data;
     private String keystring;
-    private Long casUnique = 0L;
-    private Boolean blocked = false;
-    private Long blockedUntil;
+    private long casUnique = 0L;
+    private boolean blocked = false;
+    private long blockedUntil;
 
     public LocalCacheElement() {
     }
 
-    private LocalCacheElement(String keystring) {
-        this.setKeystring(keystring);
+    public LocalCacheElement(String keystring) {
+        this.keystring = keystring;
     }
 
-    public LocalCacheElement(String keystring, int flags, int expire, int dataLength) {
-        this.setKeystring(keystring);
-        this.setFlags(flags);
-        this.setExpire(expire);
-        this.setDataLength(dataLength);
+    public LocalCacheElement(String keystring, int flags, int expire) {
+        this.keystring = keystring;
+        this.flags = flags;
+        this.expire = expire;
     }
 
     /**
@@ -52,38 +50,37 @@ public final class LocalCacheElement implements CacheElement {
     }
 
     public int size() {
-        return getDataLength();
+        return getData().length;
     }
+
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        CacheElement cacheElement = (CacheElement) o;
+        LocalCacheElement that = (LocalCacheElement) o;
 
-        if (isBlocked() != cacheElement.isBlocked()) return false;
-        if (getBlockedUntil() != cacheElement.getBlockedUntil()) return false;
-        if (getCasUnique() != cacheElement.getCasUnique()) return false;
-        if (getDataLength() != cacheElement.getDataLength()) return false;
-        if (getExpire() != cacheElement.getExpire()) return false;
-        if (getFlags() != cacheElement.getFlags()) return false;
-        if (!Arrays.equals(getData(), cacheElement.getData())) return false;
-        if (!getKeystring().equals(cacheElement.getKeystring())) return false;
+        if (blocked != that.blocked) return false;
+        if (blockedUntil != that.blockedUntil) return false;
+        if (casUnique != that.casUnique) return false;
+        if (expire != that.expire) return false;
+        if (flags != that.flags) return false;
+        if (!Arrays.equals(data, that.data)) return false;
+        if (!keystring.equals(that.keystring)) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        int result = getExpire();
-        result = 31 * result + getFlags();
-        result = 31 * result + getDataLength();
-        result = 31 * result + Arrays.hashCode(getData());
-        result = 31 * result + getKeystring().hashCode();
-        result = 31 * result + (int) (getCasUnique() ^ (getCasUnique() >>> 32));
-        result = 31 * result + (isBlocked() ? 1 : 0);
-        result = 31 * result + (int) (getBlockedUntil() ^ (getBlockedUntil() >>> 32));
+        int result = expire;
+        result = 31 * result + flags;
+        result = 31 * result + (data != null ? Arrays.hashCode(data) : 0);
+        result = 31 * result + keystring.hashCode();
+        result = 31 * result + (int) (casUnique ^ (casUnique >>> 32));
+        result = 31 * result + (blocked ? 1 : 0);
+        result = 31 * result + (int) (blockedUntil ^ (blockedUntil >>> 32));
         return result;
     }
 
@@ -91,67 +88,47 @@ public final class LocalCacheElement implements CacheElement {
         return new LocalCacheElement(key);
     }
 
-    public Integer getExpire() {
+    public int getExpire() {
         return expire;
     }
 
-    public void setExpire(Integer expire) {
-        this.expire = expire;
-    }
-
-    public Integer getFlags() {
+    public int getFlags() {
         return flags;
-    }
-
-    public void setFlags(Integer flags) {
-        this.flags = flags;
-    }
-
-    public Integer getDataLength() {
-        return dataLength;
-    }
-
-    public void setDataLength(Integer dataLength) {
-        this.dataLength = dataLength;
     }
 
     public byte[] getData() {
         return data;
     }
 
-    public void setData(byte[] data) {
-        this.data = data;
-    }
-
     public String getKeystring() {
         return keystring;
     }
 
-    public void setKeystring(String keystring) {
-        this.keystring = keystring;
-    }
-
-    public Long getCasUnique() {
+    public long getCasUnique() {
         return casUnique;
     }
 
-    public void setCasUnique(Long casUnique) {
-        this.casUnique = casUnique;
-    }
-
-    public Boolean isBlocked() {
+    public boolean isBlocked() {
         return blocked;
     }
 
-    public void setBlocked(Boolean blocked) {
-        this.blocked = blocked;
-    }
-
-    public Long getBlockedUntil() {
+    public long getBlockedUntil() {
         return blockedUntil;
     }
 
-    public void setBlockedUntil(Long blockedUntil) {
+    public void setCasUnique(long casUnique) {
+        this.casUnique = casUnique;
+    }
+
+    public void setBlockedUntil(long blockedUntil) {
         this.blockedUntil = blockedUntil;
+    }
+
+    public void setBlocked(boolean blocked) {
+        this.blocked = blocked;
+    }
+
+    public void setData(byte[] data) {
+        this.data = data;
     }
 }
