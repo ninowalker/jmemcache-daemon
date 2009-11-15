@@ -1,6 +1,5 @@
 package com.thimbleware.jmemcached.test;
 
-import com.thimbleware.jmemcached.LocalCacheElement;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.*;
@@ -11,7 +10,6 @@ import java.net.SocketAddress;
 import java.util.*;
 import java.util.concurrent.Future;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import net.spy.memcached.*;
@@ -21,12 +19,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-
-import com.thimbleware.jmemcached.MemCacheDaemon;
-import com.thimbleware.jmemcached.CacheImpl;
-import com.thimbleware.jmemcached.CacheElement;
-import com.thimbleware.jmemcached.util.Bytes;
-import com.thimbleware.jmemcached.storage.hash.ConcurrentLinkedHashMap;
 
 /**
  * Integration test using Spymemcached 2.3
