@@ -135,31 +135,31 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
     public void setData(byte[] data) {
         this.data = data;
     }
-    
+
     public void readExternal(ObjectInput in) throws IOException{
-		  expire = in.readInt() ;
-		  flags = in.readInt();
+        expire = in.readInt() ;
+        flags = in.readInt();
 
-		  final int length = in.readInt();
-		  int readSize = 0; 
-		  data = new byte[length];
-		  while( readSize < length)
-			  readSize += in.read(data, readSize, length - readSize);
-		  
-		  keystring = in.readUTF();
-		  casUnique = in.readLong();
-		  blocked = in.readBoolean();
-		  blockedUntil = in.readLong();
-	}
+        final int length = in.readInt();
+        int readSize = 0;
+        data = new byte[length];
+        while( readSize < length)
+            readSize += in.read(data, readSize, length - readSize);
 
-	public void writeExternal(ObjectOutput out) throws IOException {
-		  out.writeInt(expire) ;
-		  out.writeInt(flags);
-		  out.writeInt(data.length);
-		  out.write(data);		  
-		  out.writeUTF(keystring);
-		  out.writeLong(casUnique);
-		  out.writeBoolean(blocked);
-		  out.writeLong(blockedUntil);
-	}
+        keystring = in.readUTF();
+        casUnique = in.readLong();
+        blocked = in.readBoolean();
+        blockedUntil = in.readLong();
+    }
+
+    public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeInt(expire) ;
+        out.writeInt(flags);
+        out.writeInt(data.length);
+        out.write(data);
+        out.writeUTF(keystring);
+        out.writeLong(casUnique);
+        out.writeBoolean(blocked);
+        out.writeLong(blockedUntil);
+    }
 }
