@@ -78,7 +78,6 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
      * @param parts                 the (originally space separated) parts of the command
      * @param channel
      * @param channelHandlerContext
-     * @return the session status we want to set the session to
      */
     private void processLine(String[] parts, Channel channel, ChannelHandlerContext channelHandlerContext) throws UnknownCommandException, MalformedCommandException {
         final int numParts = parts.length;

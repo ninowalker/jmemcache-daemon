@@ -29,9 +29,7 @@ public interface CacheElement extends Serializable, SizedItem {
 
     boolean isBlocked();
 
-    void setBlocked(boolean blocked);
+    void block(long blockedUntil);
 
     long getBlockedUntil();
-
-    void setBlockedUntil(long blockedUntil);
 }

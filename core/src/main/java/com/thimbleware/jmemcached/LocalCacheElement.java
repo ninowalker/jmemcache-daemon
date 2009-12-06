@@ -124,13 +124,11 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         this.casUnique = casUnique;
     }
 
-    public void setBlockedUntil(long blockedUntil) {
+    public void block(long blockedUntil) {
+        this.blocked = true;
         this.blockedUntil = blockedUntil;
     }
 
-    public void setBlocked(boolean blocked) {
-        this.blocked = blocked;
-    }
 
     public void setData(byte[] data) {
         this.data = data;

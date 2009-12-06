@@ -58,8 +58,7 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
             // block the element and schedule a delete; replace its entry with a blocked element
             LocalCacheElement placeHolder = new LocalCacheElement(key, 0, 0);
             placeHolder.setData(new byte[]{});
-            placeHolder.setBlocked(true);
-            placeHolder.setBlockedUntil(Now() + (long)time);
+            placeHolder.block(Now() + (long)time);
 
             storage.replace(key, placeHolder);
 

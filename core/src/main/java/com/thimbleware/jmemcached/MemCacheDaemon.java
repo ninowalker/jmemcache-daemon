@@ -39,8 +39,7 @@ public class MemCacheDaemon<CACHE_ELEMENT extends CacheElement> {
 
     public static String memcachedVersion = "0.9";
 
-    private int receiveBufferSize = 32768 * 1024;
-    private int sendBufferSize = 32768;
+    private int frameSize = 32768 * 1024;
 
     private boolean binary = false;
     private boolean verbose;
@@ -78,7 +77,7 @@ public class MemCacheDaemon<CACHE_ELEMENT extends CacheElement> {
         if (binary)
             pipelineFactory = createMemcachedBinaryPipelineFactory(cache, memcachedVersion, verbose, idleTime, allChannels);
         else
-            pipelineFactory = createMemcachedPipelineFactory(cache, memcachedVersion, verbose, idleTime, receiveBufferSize, allChannels);
+            pipelineFactory = createMemcachedPipelineFactory(cache, memcachedVersion, verbose, idleTime, frameSize, allChannels);
 
         bootstrap.setOption("child.tcpNoDelay", true);
         bootstrap.setOption("child.keepAlive", true);
@@ -121,18 +120,6 @@ public class MemCacheDaemon<CACHE_ELEMENT extends CacheElement> {
         log.info("successfully shut down");
     }
 
-    public static void setMemcachedVersion(String memcachedVersion) {
-        MemCacheDaemon.memcachedVersion = memcachedVersion;
-    }
-
-    public void setReceiveBufferSize(int receiveBufferSize) {
-        this.receiveBufferSize = receiveBufferSize;
-    }
-
-    public void setSendBufferSize(int sendBufferSize) {
-        this.sendBufferSize = sendBufferSize;
-    }
-
     public void setVerbose(boolean verbose) {
         this.verbose = verbose;
     }
@@ -145,12 +132,11 @@ public class MemCacheDaemon<CACHE_ELEMENT extends CacheElement> {
         this.addr = addr;
     }
 
-
     public Cache getCache() {
         return cache;
     }
 
-    public void setCache(Cache cache) {
+    public void setCache(Cache<CACHE_ELEMENT> cache) {
         this.cache = cache;
     }
 
