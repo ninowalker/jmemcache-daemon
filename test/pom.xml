@@ -14,14 +14,12 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.4</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-jdk14</artifactId>
-            <version>1.5.5</version>
             <scope>test</scope>
         </dependency>
         
@@ -47,17 +45,4 @@
         </dependency>
     </dependencies>
 
-    <repositories>
-        <repository>
-            <id>third-party</id>
-            <name>Thirty Party Repository</name>
-            <url>http://thimbleware.com/maven-3rd-party</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots> 
-        </repository>
-    </repositories>
 </project>

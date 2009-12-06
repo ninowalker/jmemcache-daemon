@@ -17,20 +17,18 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.1</version>
-            <scope>test</scope>
         </dependency>
 
         <dependency>
             <artifactId>slf4j-api</artifactId>
             <groupId>org.slf4j</groupId>
-            <version>1.5.5</version>
         </dependency>
 
+      
+        
         <dependency>
             <groupId>org.jboss.netty</groupId>
             <artifactId>netty</artifactId>
-            <version>3.1.5.GA</version>
         </dependency>
 
     </dependencies>
