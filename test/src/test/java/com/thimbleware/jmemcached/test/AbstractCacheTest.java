@@ -26,9 +26,9 @@ public abstract class AbstractCacheTest {
     protected static final int MAX_BYTES = (int) Bytes.valueOf("32m").bytes();
     public static final int CEILING_SIZE = (int)Bytes.valueOf("4m").bytes();
     public static final int MAX_SIZE = 1000;
-    protected MemCacheDaemon daemon;
+    protected MemCacheDaemon<LocalCacheElement> daemon;
     private int port;
-    protected Cache cache;
+    protected Cache<LocalCacheElement> cache;
     protected final CacheType cacheType;
     protected final int blockSize;
     private final ProtocolMode protocolMode;
@@ -63,7 +63,7 @@ public abstract class AbstractCacheTest {
     @Before
     public void setup() throws IOException {
         // create daemon and start it
-        daemon = new MemCacheDaemon();
+        daemon = new MemCacheDaemon<LocalCacheElement>();
         CacheStorage<String, LocalCacheElement> cacheStorage = getCacheStorage();
 
         daemon.setCache(new CacheImpl(cacheStorage));

@@ -132,7 +132,7 @@ public class MemCacheDaemon<CACHE_ELEMENT extends CacheElement> {
         this.addr = addr;
     }
 
-    public Cache getCache() {
+    public Cache<CACHE_ELEMENT> getCache() {
         return cache;
     }
 
