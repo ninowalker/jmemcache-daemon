@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p/>
  * The command handler produces ResponseMessages which are destined for the response encoder.
  */
-@ChannelPipelineCoverage("all")
+@ChannelHandler.Sharable
 public final class MemcachedCommandHandler<CACHE_ELEMENT extends CacheElement> extends SimpleChannelUpstreamHandler {
 
     final Logger logger = LoggerFactory.getLogger(MemcachedCommandHandler.class);

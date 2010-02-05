@@ -18,7 +18,6 @@ import org.slf4j.LoggerFactory;
  * The code here is heavily based on Netty's DelimiterBasedFrameDecoder, but has been modified because the
  * memcached protocol has two states: 1) processing CRLF delimited lines and 2) spooling results for SET/ADD
  */
-@ChannelPipelineCoverage("one")
 public class MemcachedFrameDecoder extends FrameDecoder {
 
     final Logger logger = LoggerFactory.getLogger(MemcachedFrameDecoder.class);

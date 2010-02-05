@@ -17,20 +17,24 @@ public class MemcachedBinaryPipelineFactory implements ChannelPipelineFactory {
 
     private DefaultChannelGroup channelGroup;
 
+    private final MemcachedBinaryCommandDecoder decoder =  new MemcachedBinaryCommandDecoder();
+    private final MemcachedCommandHandler memcachedCommandHandler;
+    private final MemcachedBinaryResponseEncoder memcachedBinaryResponseEncoder = new MemcachedBinaryResponseEncoder();
+
     public MemcachedBinaryPipelineFactory(Cache cache, String version, boolean verbose, int idleTime, DefaultChannelGroup channelGroup) {
         this.cache = cache;
         this.version = version;
         this.verbose = verbose;
         this.idleTime = idleTime;
         this.channelGroup = channelGroup;
+        memcachedCommandHandler = new MemcachedCommandHandler(this.cache, this.version, this.verbose, this.idleTime, this.channelGroup);
     }
 
     public ChannelPipeline getPipeline() throws Exception {
-        ChannelPipeline pipeline = Channels.pipeline();
-        pipeline.addLast("commandDecoder", new MemcachedBinaryCommandDecoder());
-        pipeline.addAfter("commandDecoder", "commandHandler", new MemcachedCommandHandler(cache, version, verbose, idleTime, channelGroup));
-        pipeline.addAfter("commandHandler", "responseEncoder", new MemcachedBinaryResponseEncoder());
-
-        return pipeline;
+        return Channels.pipeline(
+                decoder,
+                memcachedCommandHandler,
+                memcachedBinaryResponseEncoder
+        );
     }
 }

@@ -10,6 +10,7 @@ import java.net.SocketAddress;
 import java.util.*;
 import java.util.concurrent.Future;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import net.spy.memcached.*;
@@ -167,7 +168,7 @@ public class SpyMemcachedIntegrationTest extends AbstractCacheTest {
 
         // wait for all the sets to complete
         for (Future<Boolean> future : futures) {
-            assertTrue(future.get());
+            assertTrue(future.get(5, TimeUnit.SECONDS));
         }
 
         // doing a regular get, we are just too slow for spymemcached's tolerances... for now

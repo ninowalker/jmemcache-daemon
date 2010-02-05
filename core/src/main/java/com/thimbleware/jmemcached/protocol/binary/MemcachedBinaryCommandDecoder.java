@@ -8,6 +8,7 @@ import com.thimbleware.jmemcached.protocol.exceptions.MalformedCommandException;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
@@ -17,10 +18,8 @@ import java.nio.ByteOrder;
 
 /**
  */
-@ChannelPipelineCoverage("all")
+@ChannelHandler.Sharable
 public class MemcachedBinaryCommandDecoder extends FrameDecoder {
-
-
 
     public static enum BinaryCommand {
         Get(0x00, Command.GET, false),
@@ -150,7 +149,7 @@ public class MemcachedBinaryCommandDecoder extends FrameDecoder {
                 // TODO these are backwards from the spec, but seem to be what spymemcached demands -- which has the mistake?!
                 short expire = (short) (extrasBuffer.capacity() != 0 ? extrasBuffer.readUnsignedShort() : 0);
                 short flags = (short) (extrasBuffer.capacity() != 0 ? extrasBuffer.readUnsignedShort() : 0);
-                
+
                 // the remainder of the message -- that is, totalLength - (keyLength + extraLength) should be the payload
                 int size = totalBodyLength - keyLength - extraLength;
 

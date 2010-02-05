@@ -18,7 +18,7 @@ import java.util.Map;
 /**
  * Response encoder for the memcached text protocol. Produces strings destined for the StringEncoder
  */
-@ChannelPipelineCoverage("all")
+@ChannelHandler.Sharable
 public class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> extends SimpleChannelUpstreamHandler {
 
     final Logger logger = LoggerFactory.getLogger(MemcachedResponseEncoder.class);
