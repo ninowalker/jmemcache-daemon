@@ -99,9 +99,9 @@
 
     <distributionManagement>
         <repository>
-            <id>google-code-releases</id>
-            <name>Google Code Releases</name>
-            <url>http://oss.sonatype.org/content/repositories/googlecode-releases</url>
+            <id>sonatype-nexus-staging</id>
+            <name>Nexus Release Repository</name>
+            <url>http://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
         <snapshotRepository>
             <id>google-code-snapshots</id>
@@ -179,7 +179,7 @@
                 <groupId>org.slf4j</groupId>
                 <version>1.5.8</version>
             </dependency>
-            
+
             <dependency>
                 <groupId>org.jboss.netty</groupId>
                 <artifactId>netty</artifactId>
