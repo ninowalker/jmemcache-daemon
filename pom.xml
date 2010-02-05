@@ -7,14 +7,13 @@
     <version>0.9-SNAPSHOT</version>
     <name>jmemcached Parent Project</name>
     <url>http://www.thimbleware.com/projects/jmemcached</url>
+    <description>Caching server speaking the memcached protocol, written in Java.</description>
 
     <modules>
         <module>core</module>
         <module>cli</module>
         <module>test</module>
     </modules>
-
-
 
     <build>
         <pluginManagement>
@@ -112,6 +111,7 @@
 
     <!-- note developer connection is the local repository, not remote. won't work for hudson, etc. -->
     <scm>
+        <url>http://code.google.com/p/jmemcache-daemon/source/checkout</url>
         <connection>
             scm:hg:https://jmemcache-daemon.googlecode.com/hg/
         </connection>
