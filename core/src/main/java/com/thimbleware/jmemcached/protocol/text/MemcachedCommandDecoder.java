@@ -111,7 +111,7 @@ public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
             int size = Integer.parseInt(parts[4]);
             int expire = Integer.parseInt(parts[3]);
             int flags = Integer.parseInt(parts[2]);
-            cmd.element = new LocalCacheElement(parts[1], flags, expire != 0 && expire < CacheElement.THIRTY_DAYS ? LocalCacheElement.Now() + expire : expire);
+            cmd.element = new LocalCacheElement(parts[1], flags, expire != 0 && expire < CacheElement.THIRTY_DAYS ? LocalCacheElement.Now() + expire : expire, 0L);
 
             // look for cas and "noreply" elements
             if (numParts > 5) {

@@ -153,7 +153,7 @@ public class MemcachedBinaryCommandDecoder extends FrameDecoder {
                 // the remainder of the message -- that is, totalLength - (keyLength + extraLength) should be the payload
                 int size = totalBodyLength - keyLength - extraLength;
 
-                cmdMessage.element = new LocalCacheElement(key, flags, expire != 0 && expire < CacheElement.THIRTY_DAYS ? LocalCacheElement.Now() + expire : expire);
+                cmdMessage.element = new LocalCacheElement(key, flags, expire != 0 && expire < CacheElement.THIRTY_DAYS ? LocalCacheElement.Now() + expire : expire, 0L);
                 cmdMessage.element.setData(new byte[size]);
                 channelBuffer.readBytes(cmdMessage.element.getData(), 0, size);
             } else if (cmdType == Command.INCR || cmdType == Command.DECR) {

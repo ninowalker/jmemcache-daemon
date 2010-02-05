@@ -32,7 +32,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE);
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, 0L);
         element.setData(testvalue.getBytes());
 
         // put in cache
@@ -59,7 +59,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE);
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, 0L);
         element.setData(testvalue.getBytes());
 
         // put in cache
@@ -81,7 +81,7 @@ public class BasicCacheTest extends AbstractCacheTest {
 
         // now replace
         testvalue = "54321";
-        element = new LocalCacheElement(testKey, 0, Now());
+        element = new LocalCacheElement(testKey, 0, Now(), 0L);
         element.setData(testvalue.getBytes());
 
         // put in cache
@@ -107,7 +107,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE);
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, 0L);
         element.setData(testvalue.getBytes());
 
         // put in cache
@@ -129,7 +129,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE);
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, 0L);
         element.setData(testvalue.getBytes());
 
         // put in cache
@@ -156,7 +156,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE);
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, 0L);
         element.setData(testvalue.getBytes());
 
         // put in cache
@@ -174,7 +174,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testKey = "12345678";
         String testvalue = "87654321";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE);
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, 0L);
         element.setData(testvalue.getBytes());
 
         // put in cache, then flush
@@ -191,7 +191,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testKey = "12345678";
         String testvalue = "1";
 
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE);
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, 0L);
         element.setData(testvalue.getBytes());
 
         // put in cache

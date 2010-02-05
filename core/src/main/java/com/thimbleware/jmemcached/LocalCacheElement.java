@@ -40,10 +40,11 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         this.keystring = keystring;
     }
 
-    public LocalCacheElement(String keystring, int flags, int expire) {
+    public LocalCacheElement(String keystring, int flags, int expire, long casUnique) {
         this.keystring = keystring;
         this.flags = flags;
         this.expire = expire;
+        this.casUnique = casUnique;
     }
 
     /**

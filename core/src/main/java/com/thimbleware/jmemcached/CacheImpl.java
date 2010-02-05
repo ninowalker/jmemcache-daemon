@@ -56,7 +56,7 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
         // delayed remove
         if (time != 0) {
             // block the element and schedule a delete; replace its entry with a blocked element
-            LocalCacheElement placeHolder = new LocalCacheElement(key, 0, 0);
+            LocalCacheElement placeHolder = new LocalCacheElement(key, 0, 0, 0L);
             placeHolder.setData(new byte[]{});
             placeHolder.block(Now() + (long)time);
 
@@ -102,7 +102,7 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
         }
         else {
             int newLength = old.getData().length + element.getData().length;
-            LocalCacheElement replace = new LocalCacheElement(old.getKeystring(), old.getFlags(), old.getExpire());
+            LocalCacheElement replace = new LocalCacheElement(old.getKeystring(), old.getFlags(), old.getExpire(), 0L);
             ByteBuffer b = ByteBuffer.allocate(newLength);
             b.put(old.getData());
             b.put(element.getData());
@@ -126,7 +126,7 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
         else {
             int newLength = old.getData().length + element.getData().length;
 
-            LocalCacheElement replace = new LocalCacheElement(old.getKeystring(), old.getFlags(), old.getExpire());
+            LocalCacheElement replace = new LocalCacheElement(old.getKeystring(), old.getFlags(), old.getExpire(), 0L);
             ByteBuffer b = ByteBuffer.allocate(newLength);
             b.put(element.getData());
             b.put(old.getData());
@@ -193,7 +193,7 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
 
             byte[] newData = valueOf(old_val).getBytes();
 
-            LocalCacheElement replace = new LocalCacheElement(old.getKeystring(), old.getFlags(), old.getExpire());
+            LocalCacheElement replace = new LocalCacheElement(old.getKeystring(), old.getFlags(), old.getExpire(), 0L);
             replace.setData(newData);
             replace.setCasUnique(replace.getCasUnique() + 1);
             return storage.replace(old.getKeystring(), old, replace) ? old_val : null;

@@ -103,6 +103,7 @@ public class MemCacheDaemon<CACHE_ELEMENT extends CacheElement> {
 
     public void stop() {
         log.info("terminating daemon; closing all channels");
+        assert allChannels != null;
         ChannelGroupFuture future = allChannels.close();
         future.awaitUninterruptibly();
         if (!future.isCompleteSuccess()) {

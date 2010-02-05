@@ -32,14 +32,16 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
      * TODO investigate whether this can be collapsed into a subclass of LocalCacheElement instead?
      */
     class StoredValue {
-        int flags;
-        int expire;
-        Region region;
+        final int flags;
+        final int expire;
+        final long casUnique;
+        final Region region;
 
-        StoredValue(int flags, int expire, Region region) {
+        StoredValue(int flags, int expire, Region region, long casUnique) {
             this.flags = flags;
             this.expire = expire;
             this.region = region;
+            this.casUnique = casUnique;
         }
     }
 
@@ -100,7 +102,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
 
             // present, return current value
             if (val != null) {
-                LocalCacheElement el = new LocalCacheElement(key, val.flags, val.expire);
+                LocalCacheElement el = new LocalCacheElement(key, val.flags, val.expire, val.casUnique);
                 el.setData(blockStorage.get(val.region));
 
                 return el;
@@ -125,7 +127,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
             storageLock.readLock().lock();
             if (!(key instanceof String) || (!(value instanceof LocalCacheElement))) return false;
             StoredValue val = index.get((String)key);
-            LocalCacheElement el = new LocalCacheElement((String) key, val.flags, val.expire);
+            LocalCacheElement el = new LocalCacheElement((String) key, val.flags, val.expire, val.casUnique);
             el.setData(blockStorage.get(val.region));
 
             if (!el.equals(value)) {
@@ -150,7 +152,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
         try {
             storageLock.readLock().lock();
             StoredValue val = index.get(key);
-            LocalCacheElement el = new LocalCacheElement((String) key, val.flags, val.expire);
+            LocalCacheElement el = new LocalCacheElement((String) key, val.flags, val.expire, val.casUnique);
             el.setData(blockStorage.get(val.region));
 
             if (!el.equals(LocalCacheElement)) {
@@ -223,7 +225,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
             if (!(key instanceof String)) return null;
             StoredValue val = index.get(key);
             if (val == null) return null;
-            LocalCacheElement el = new LocalCacheElement((String) key, val.flags, val.expire);
+            LocalCacheElement el = new LocalCacheElement((String) key, val.flags, val.expire, val.casUnique);
             el.setData(blockStorage.get(val.region));
 
             return el;
@@ -239,7 +241,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
             storageLock.writeLock().lock();
             Region region = blockStorage.alloc(item.getData().length, item.getData());
 
-            index.put(key, new StoredValue(item.getFlags(), item.getExpire(), region));
+            index.put(key, new StoredValue(item.getFlags(), item.getExpire(), region, item.getCasUnique()));
 
             return null;
         } finally {
@@ -253,7 +255,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
             if (!(key instanceof String)) return null;
             StoredValue val = index.get((String)key);
             if (val != null) {
-                LocalCacheElement el = new LocalCacheElement((String) key, val.flags, val.expire);
+                LocalCacheElement el = new LocalCacheElement((String) key, val.flags, val.expire, val.casUnique);
                 el.setData(blockStorage.get(val.region));
 
                 storageLock.readLock().unlock();
@@ -280,7 +282,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
                 LocalCacheElement item = entry.getValue();
                 Region region = blockStorage.alloc(item.getData().length, item.getData());
 
-                index.put(key, new StoredValue(item.getFlags(), item.getExpire(), region));
+                index.put(key, new StoredValue(item.getFlags(), item.getExpire(), region, item.getCasUnique()));
 
             }
         } finally {
