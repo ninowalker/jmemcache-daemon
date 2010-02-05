@@ -23,7 +23,7 @@ import java.util.Collection;
 /**
  */
 public abstract class AbstractCacheTest {
-    protected static final int MAX_BYTES = (int) Bytes.valueOf("32m").bytes();
+    protected static final int MAX_BYTES = (int) Bytes.valueOf("8m").bytes();
     public static final int CEILING_SIZE = (int)Bytes.valueOf("4m").bytes();
     public static final int MAX_SIZE = 1000;
     protected MemCacheDaemon<LocalCacheElement> daemon;
@@ -80,7 +80,8 @@ public abstract class AbstractCacheTest {
 
     @After
     public void teardown() {
-        daemon.stop();
+        if (daemon.isRunning())
+            daemon.stop();
     }
 
     private CacheStorage<String, LocalCacheElement> getCacheStorage() throws IOException {
@@ -90,11 +91,10 @@ public abstract class AbstractCacheTest {
                 cacheStorage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, MAX_SIZE, MAX_BYTES);
                 break;
             case BLOCK:
-                cacheStorage = new BlockStorageCacheStorage(new ByteBufferBlockStore(ByteBuffer.allocate(MAX_BYTES), blockSize), CEILING_SIZE, MAX_SIZE);
+                cacheStorage = new BlockStorageCacheStorage(new ByteBufferBlockStore(ByteBuffer.allocateDirect(MAX_BYTES), blockSize), CEILING_SIZE, MAX_SIZE);
                 break;
             case MAPPED:
-                cacheStorage = new BlockStorageCacheStorage(
-                        new MemoryMappedBlockStore(MAX_BYTES, "block_store.dat", blockSize), CEILING_SIZE, MAX_SIZE);
+                cacheStorage = new BlockStorageCacheStorage(new MemoryMappedBlockStore(MAX_BYTES, "block_store.dat", blockSize), CEILING_SIZE, MAX_SIZE);
 
                 break;
         }

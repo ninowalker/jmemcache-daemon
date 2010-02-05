@@ -100,7 +100,7 @@ public class ByteBufferBlockStore {
     }
 
     protected void freeResources() throws IOException {
-        // NOOP in this implementation
+        // noop
     }
 
     /**

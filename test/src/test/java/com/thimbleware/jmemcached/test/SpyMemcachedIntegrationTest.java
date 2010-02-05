@@ -56,7 +56,8 @@ public class SpyMemcachedIntegrationTest extends AbstractCacheTest {
 
     @After
     public void tearDown() throws Exception {
-        _client.shutdown();
+        if (_client != null)
+            _client.shutdown();
     }
 
 
