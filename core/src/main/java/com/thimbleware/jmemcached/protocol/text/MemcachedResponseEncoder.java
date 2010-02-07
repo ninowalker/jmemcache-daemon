@@ -24,7 +24,8 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
     final Logger logger = LoggerFactory.getLogger(MemcachedResponseEncoder.class);
 
     public static final String VALUE = "VALUE ";
-
+    public static final ChannelBuffer CRLF = ChannelBuffers.wrappedBuffer(new String("\r\n").getBytes());
+    
     /**
      * Handle exceptions in protocol processing. Exceptions are either client or internal errors.  Report accordingly.
      *
@@ -61,7 +62,7 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
                     writeString(channel, result.getKeystring() + " " + result.getFlags() + " " + result.getData().length + (cmd == Command.GETS ? " " + result.getCasUnique() : "") + "\r\n");
                     ChannelBuffer outputbuffer = ChannelBuffers.wrappedBuffer(result.getData());
                     channel.write(outputbuffer);
-                    writeString(channel, "\r\n");
+                    writeCRLF(channel);
 
                     // send response immediately
                     channelHandlerContext.sendUpstream(messageEvent);
@@ -139,5 +140,10 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
     private void writeString(Channel out, String str) {
         ChannelBuffer outbuf = ChannelBuffers.wrappedBuffer(str.getBytes());
         out.write(outbuf);
+    }
+
+
+    private void writeCRLF(Channel out) {
+        out.write(CRLF);
     }
 }

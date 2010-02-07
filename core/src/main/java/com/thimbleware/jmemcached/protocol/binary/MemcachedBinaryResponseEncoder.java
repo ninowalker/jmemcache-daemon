@@ -175,8 +175,8 @@ public class MemcachedBinaryResponseEncoder<CACHE_ELEMENT extends CacheElement> 
             for (Map.Entry<String, Set<String>> statsEntries : command.stats.entrySet()) {
                 for (String stat : statsEntries.getValue()) {
 
-                    keyBuffer = ChannelBuffers.wrappedBuffer(ByteOrder.BIG_ENDIAN, statsEntries.getKey().getBytes("US-ASCII"));
-                    valueBuffer = ChannelBuffers.wrappedBuffer(ByteOrder.BIG_ENDIAN, stat.getBytes("US-ASCII"));
+                    keyBuffer = ChannelBuffers.wrappedBuffer(ByteOrder.BIG_ENDIAN, statsEntries.getKey().getBytes(MemcachedBinaryCommandDecoder.USASCII));
+                    valueBuffer = ChannelBuffers.wrappedBuffer(ByteOrder.BIG_ENDIAN, stat.getBytes(MemcachedBinaryCommandDecoder.USASCII));
 
                     ChannelBuffer headerBuffer = constructHeader(bcmd, extrasBuffer, keyBuffer, valueBuffer, getStatusCode(command).code, command.cmd.opaque, casUnique);
 

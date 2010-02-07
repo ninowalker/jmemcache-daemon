@@ -13,6 +13,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.nio.ByteOrder;
 
@@ -20,6 +21,8 @@ import java.nio.ByteOrder;
  */
 @ChannelHandler.Sharable
 public class MemcachedBinaryCommandDecoder extends FrameDecoder {
+
+    public static final Charset USASCII = Charset.forName("US-ASCII");
 
     public static enum BinaryCommand {
         Get(0x00, Command.GET, false),
@@ -134,7 +137,7 @@ public class MemcachedBinaryCommandDecoder extends FrameDecoder {
             channelBuffer.readBytes(keyBuffer);
 
             ArrayList<String> keys = new ArrayList<String>();
-            String key = keyBuffer.toString("US-ASCII");
+            String key = keyBuffer.toString(USASCII);
             keys.add(key); // TODO this or UTF-8? ISO-8859-1?
 
             cmdMessage.keys = keys;

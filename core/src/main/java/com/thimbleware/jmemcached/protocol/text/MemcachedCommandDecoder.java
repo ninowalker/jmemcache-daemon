@@ -13,6 +13,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.charset.Charset;
 import java.util.Arrays;
 
 /**
@@ -26,6 +27,8 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
     private SessionStatus status;
 
     private static final String NOREPLY = "noreply";
+    
+    public static final Charset USASCII = Charset.forName("US-ASCII");
 
     public MemcachedCommandDecoder(SessionStatus status) {
         this.status = status;
@@ -48,7 +51,7 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
             // Verify that we are in 'processing()' mode
             if (status.state == SessionStatus.State.PROCESSING) {
                 // split into pieces
-                String[] commandPieces = in.toString("US-ASCII").split(" ");
+                String[] commandPieces = in.toString(USASCII).split(" ");
 
                 processLine(commandPieces, messageEvent.getChannel(), channelHandlerContext);
             } else if (status.state == SessionStatus.State.PROCESSING_MULTILINE) {
