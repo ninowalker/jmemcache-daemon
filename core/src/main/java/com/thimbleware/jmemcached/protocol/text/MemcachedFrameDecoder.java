@@ -18,16 +18,15 @@ import org.slf4j.LoggerFactory;
  * The code here is heavily based on Netty's DelimiterBasedFrameDecoder, but has been modified because the
  * memcached protocol has two states: 1) processing CRLF delimited lines and 2) spooling results for SET/ADD
  */
-public class MemcachedFrameDecoder extends FrameDecoder {
+public final class MemcachedFrameDecoder extends FrameDecoder {
 
-    final Logger logger = LoggerFactory.getLogger(MemcachedFrameDecoder.class);
-
-    private SessionStatus status;
+    private final SessionStatus status;
 
     private final ChannelBuffer delimiter;
     private final int maxFrameLength;
-    private volatile boolean discardingTooLongFrame;
-    private volatile long tooLongFrameLength;
+
+    private boolean discardingTooLongFrame;
+    private long tooLongFrameLength;
 
     /**
      * Creates a new instance.

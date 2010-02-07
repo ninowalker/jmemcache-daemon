@@ -21,9 +21,7 @@ import java.util.Arrays;
  * <p/>
  * Protocol status is held in the SessionStatus instance which is shared between each of the decoders in the pipeline.
  */
-public class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
-
-    final Logger logger = LoggerFactory.getLogger(MemcachedCommandDecoder.class);
+public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler {
 
     private SessionStatus status;
 

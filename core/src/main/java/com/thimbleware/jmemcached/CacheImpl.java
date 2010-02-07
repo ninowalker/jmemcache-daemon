@@ -35,7 +35,6 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
 
     final CacheStorage<String, LocalCacheElement> storage;
     final DelayQueue<DelayedMCElement> deleteQueue;
-    final ReadWriteLock deleteQueueReadWriteLock;
 
     /**
      * @inheritDoc
@@ -44,9 +43,8 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
         super();
         this.storage = storage;
         deleteQueue = new DelayQueue<DelayedMCElement>();
-        deleteQueueReadWriteLock = new ReentrantReadWriteLock();
     }
-    
+
     /**
      * @inheritDoc
      */
@@ -63,12 +61,7 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
             storage.replace(key, placeHolder);
 
             // this must go on a queue for processing later...
-            try {
-                deleteQueueReadWriteLock.writeLock().lock();
-                deleteQueue.add(new DelayedMCElement(placeHolder));
-            } finally {
-                deleteQueueReadWriteLock.writeLock().unlock();
-            }
+            deleteQueue.add(new DelayedMCElement(placeHolder));
         } else
             removed = storage.remove(key) != null;
 
@@ -103,7 +96,7 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
         else {
             int newLength = old.getData().length + element.getData().length;
             LocalCacheElement replace = new LocalCacheElement(old.getKeystring(), old.getFlags(), old.getExpire(), 0L);
-            ByteBuffer b = ByteBuffer.allocate(newLength);
+            ByteBuffer b = ByteBuffer.allocateDirect(newLength);
             b.put(old.getData());
             b.put(element.getData());
             replace.setData(new byte[newLength]);
@@ -127,7 +120,7 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
             int newLength = old.getData().length + element.getData().length;
 
             LocalCacheElement replace = new LocalCacheElement(old.getKeystring(), old.getFlags(), old.getExpire(), 0L);
-            ByteBuffer b = ByteBuffer.allocate(newLength);
+            ByteBuffer b = ByteBuffer.allocateDirect(newLength);
             b.put(element.getData());
             b.put(old.getData());
             replace.setData(new byte[newLength]);
@@ -300,15 +293,9 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
      */
     @Override
     public void asyncEventPing() {
-        try {
-            deleteQueueReadWriteLock.writeLock().lock();
-            DelayedMCElement toDelete = deleteQueue.poll();
-            if (toDelete != null) {
-                storage.remove(toDelete.element.getKeystring());
-            }
-
-        } finally {
-            deleteQueueReadWriteLock.writeLock().unlock();
+        DelayedMCElement toDelete = deleteQueue.poll();
+        if (toDelete != null) {
+            storage.remove(toDelete.element.getKeystring());
         }
     }
 

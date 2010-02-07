@@ -15,13 +15,14 @@
  */
 package com.thimbleware.jmemcached;
 
-import com.thimbleware.jmemcached.protocol.text.MemcachedPipelineFactory;
 import com.thimbleware.jmemcached.protocol.binary.MemcachedBinaryPipelineFactory;
+import com.thimbleware.jmemcached.protocol.text.MemcachedPipelineFactory;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.group.ChannelGroupFuture;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
+import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +49,7 @@ public class MemCacheDaemon<CACHE_ELEMENT extends CacheElement> {
     private Cache<CACHE_ELEMENT> cache;
 
     private boolean running = false;
-    private NioServerSocketChannelFactory channelFactory;
+    private ServerSocketChannelFactory channelFactory;
     private DefaultChannelGroup allChannels;
 
 

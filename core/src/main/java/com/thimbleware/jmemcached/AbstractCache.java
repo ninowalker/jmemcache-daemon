@@ -15,11 +15,11 @@ public abstract class AbstractCache<CACHE_ELEMENT extends CacheElement> implemen
 
     protected final AtomicLong started = new AtomicLong();
 
-    protected AtomicInteger getCmds = new AtomicInteger();
-    protected AtomicInteger setCmds = new AtomicInteger();
-    protected AtomicInteger getHits = new AtomicInteger();
-    protected AtomicInteger getMisses = new AtomicInteger();
-    protected AtomicLong casCounter = new AtomicLong(1);
+    protected final AtomicInteger getCmds = new AtomicInteger();
+    protected final AtomicInteger setCmds = new AtomicInteger();
+    protected final AtomicInteger getHits = new AtomicInteger();
+    protected final AtomicInteger getMisses = new AtomicInteger();
+    protected final AtomicLong casCounter = new AtomicLong(1);
 
     public AbstractCache() {
         initStats();
@@ -41,19 +41,19 @@ public abstract class AbstractCache<CACHE_ELEMENT extends CacheElement> implemen
     public abstract long getCurrentBytes();
 
 
-    public int getGetCmds() {
+    public final int getGetCmds() {
         return getCmds.get();
     }
 
-    public int getSetCmds() {
+    public final int getSetCmds() {
         return setCmds.get();
     }
 
-    public int getGetHits() {
+    public final int getGetHits() {
         return getHits.get();
     }
 
-    public int getGetMisses() {
+    public final int getGetMisses() {
         return getMisses.get();
     }
 
@@ -63,7 +63,7 @@ public abstract class AbstractCache<CACHE_ELEMENT extends CacheElement> implemen
      * @param arg additional arguments to the stats command
      * @return the full command response
      */
-    public Map<String, Set<String>> stat(String arg) {
+    public final Map<String, Set<String>> stat(String arg) {
         Map<String, Set<String>> result = new HashMap<String, Set<String>>();
 
         if ("keys".equals(arg)) {

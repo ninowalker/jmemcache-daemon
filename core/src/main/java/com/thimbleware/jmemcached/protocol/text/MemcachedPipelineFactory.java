@@ -11,7 +11,7 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
 
 /**
  */
-public class MemcachedPipelineFactory implements ChannelPipelineFactory {
+public final class MemcachedPipelineFactory implements ChannelPipelineFactory {
 
     private Cache cache;
     private String version;
@@ -35,7 +35,7 @@ public class MemcachedPipelineFactory implements ChannelPipelineFactory {
         memcachedCommandHandler = new MemcachedCommandHandler(this.cache, this.version, this.verbose, this.idleTime, this.channelGroup);
     }
 
-    public ChannelPipeline getPipeline() throws Exception {
+    public final ChannelPipeline getPipeline() throws Exception {
         SessionStatus status = new SessionStatus().ready();
 
         return Channels.pipeline(

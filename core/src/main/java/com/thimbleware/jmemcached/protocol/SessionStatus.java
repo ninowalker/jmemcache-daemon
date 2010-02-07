@@ -5,7 +5,7 @@ import java.io.Serializable;
 /**
  * Class for holding the current session status.
  */
-final public class SessionStatus implements Serializable {
+public final class SessionStatus implements Serializable {
 
     /**
      * Possible states that the current session is in.
@@ -18,13 +18,13 @@ final public class SessionStatus implements Serializable {
     }
 
     // the state the session is in
-    public State state;
+    public volatile State state;
 
     // if we are waiting for more data, how much?
-    public int bytesNeeded;
+    public volatile int bytesNeeded;
 
     // the current working command
-    public CommandMessage cmd;
+    public volatile CommandMessage cmd;
 
 
     public SessionStatus() {

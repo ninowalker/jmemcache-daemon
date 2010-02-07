@@ -60,12 +60,12 @@ public final class MemcachedCommandHandler<CACHE_ELEMENT extends CacheElement> e
     /**
      * The actual physical data storage.
      */
-    private Cache<CACHE_ELEMENT> cache;
+    private final Cache<CACHE_ELEMENT> cache;
 
     /**
      * The channel group for the entire daemon, used for handling global cleanup on shutdown.
      */
-    private DefaultChannelGroup channelGroup;
+    private final DefaultChannelGroup channelGroup;
 
     /**
      * Construct the server session handler
@@ -152,7 +152,6 @@ public final class MemcachedCommandHandler<CACHE_ELEMENT extends CacheElement> e
         }
 
         Channel channel = messageEvent.getChannel();
-        Cache.StoreResponse ret;
         if (cmd == Command.GET || cmd == Command.GETS) {
             handleGets(channelHandlerContext, command, channel);
         } else if (cmd == Command.SET) {

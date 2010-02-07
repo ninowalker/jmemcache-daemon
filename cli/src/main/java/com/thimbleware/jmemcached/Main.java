@@ -154,7 +154,7 @@ public class Main {
             maxBytes = Runtime.getRuntime().maxMemory();
             System.out.println("Setting max memory size to JVM limit of " + Bytes.bytes(maxBytes).gigabytes() + "GB");
         } else {
-            System.out.println("ERROR : max memory size mandatory when external memory mapped file is specified");
+            System.out.println("ERROR : max memory size and ceiling size are mandatory when external memory mapped file is specified");
             return;
         }
 
@@ -167,7 +167,7 @@ public class Main {
         }
 
         // create daemon and start it
-        final MemCacheDaemon daemon = new MemCacheDaemon();
+        final MemCacheDaemon<LocalCacheElement> daemon = new MemCacheDaemon();
 
         CacheStorage<String, LocalCacheElement> storage;
         if (!memoryMapped)
@@ -187,7 +187,7 @@ public class Main {
         
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             public void run() {
-                if (daemon != null && daemon.isRunning()) daemon.stop();
+                if (daemon.isRunning()) daemon.stop();
             }
         }));
     }
