@@ -94,16 +94,7 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
             return StoreResponse.NOT_FOUND;
         }
         else {
-            int newLength = old.getData().length + element.getData().length;
-            LocalCacheElement replace = new LocalCacheElement(old.getKeystring(), old.getFlags(), old.getExpire(), 0L);
-            ByteBuffer b = ByteBuffer.allocateDirect(newLength);
-            b.put(old.getData());
-            b.put(element.getData());
-            replace.setData(new byte[newLength]);
-            b.flip();
-            b.get(replace.getData());
-            replace.setCasUnique(replace.getCasUnique() + 1);
-            return storage.replace(old.getKeystring(), old, replace) ? StoreResponse.STORED : StoreResponse.NOT_STORED;
+            return storage.replace(old.getKeystring(), old, old.append(element)) ? StoreResponse.STORED : StoreResponse.NOT_STORED;
         }
     }
 
@@ -117,17 +108,7 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
             return StoreResponse.NOT_FOUND;
         }
         else {
-            int newLength = old.getData().length + element.getData().length;
-
-            LocalCacheElement replace = new LocalCacheElement(old.getKeystring(), old.getFlags(), old.getExpire(), 0L);
-            ByteBuffer b = ByteBuffer.allocateDirect(newLength);
-            b.put(element.getData());
-            b.put(old.getData());
-            replace.setData(new byte[newLength]);
-            b.flip();
-            b.get(replace.getData());
-            replace.setCasUnique(replace.getCasUnique() + 1);
-            return storage.replace(old.getKeystring(), old, replace) ? StoreResponse.STORED : StoreResponse.NOT_STORED;
+            return storage.replace(old.getKeystring(), old, old.prepend(element)) ? StoreResponse.STORED : StoreResponse.NOT_STORED;
         }
     }
 
@@ -177,19 +158,8 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
             getMisses.incrementAndGet();
             return null;
         } else {
-            // TODO handle parse failure!
-            int old_val = parseInt(new String(old.getData())) + mod; // change value
-            if (old_val < 0) {
-                old_val = 0;
-
-            } // check for underflow
-
-            byte[] newData = valueOf(old_val).getBytes();
-
-            LocalCacheElement replace = new LocalCacheElement(old.getKeystring(), old.getFlags(), old.getExpire(), 0L);
-            replace.setData(newData);
-            replace.setCasUnique(replace.getCasUnique() + 1);
-            return storage.replace(old.getKeystring(), old, replace) ? old_val : null;
+            LocalCacheElement.IncrDecrResult result = old.add(mod);
+            return storage.replace(old.getKeystring(), old, result.replace) ? result.oldValue : null;
         }
     }
 

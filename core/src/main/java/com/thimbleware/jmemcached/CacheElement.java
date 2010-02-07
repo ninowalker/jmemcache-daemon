@@ -32,4 +32,10 @@ public interface CacheElement extends Serializable, SizedItem {
     void block(long blockedUntil);
 
     long getBlockedUntil();
+
+    LocalCacheElement append(LocalCacheElement element);
+
+    LocalCacheElement prepend(LocalCacheElement element);
+
+    LocalCacheElement.IncrDecrResult add(int mod);
 }
