@@ -26,9 +26,10 @@ public final class MemcachedPipelineFactory implements ChannelPipelineFactory {
 
     private int frameSize;
     private DefaultChannelGroup channelGroup;
+    private final MemcachedResponseEncoder memcachedResponseEncoder = new MemcachedResponseEncoder();
 
-    private final StringEncoder stringEncoder = new StringEncoder(USASCII);
     private final MemcachedCommandHandler memcachedCommandHandler;
+
 
     public MemcachedPipelineFactory(Cache cache, String version, boolean verbose, int idleTime, int frameSize, DefaultChannelGroup channelGroup) {
         this.cache = cache;
@@ -43,13 +44,11 @@ public final class MemcachedPipelineFactory implements ChannelPipelineFactory {
     public final ChannelPipeline getPipeline() throws Exception {
         SessionStatus status = new SessionStatus().ready();
 
-        BufferedWriteHandler bufferedWriteHandler = new BufferedWriteHandler();
         return Channels.pipeline(
                 new MemcachedFrameDecoder(status, frameSize),
                 new MemcachedCommandDecoder(status),
                 memcachedCommandHandler,
-                new MemcachedResponseEncoder(bufferedWriteHandler),
-                stringEncoder);
+                memcachedResponseEncoder);
     }
 
 

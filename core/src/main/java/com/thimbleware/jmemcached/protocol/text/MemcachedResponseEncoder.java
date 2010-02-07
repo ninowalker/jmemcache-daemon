@@ -8,10 +8,10 @@ import com.thimbleware.jmemcached.protocol.exceptions.ClientException;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.queue.BufferedWriteHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.thimbleware.jmemcached.protocol.text.MemcachedPipelineFactory.*;
 import static java.lang.String.valueOf;
 import java.util.Set;
 import java.util.Map;
@@ -25,11 +25,15 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
 
     public static final String VALUE = "VALUE ";
     public static final ChannelBuffer CRLF = ChannelBuffers.wrappedBuffer(new String("\r\n").getBytes());
-    private final BufferedWriteHandler bufferedWriterHandler;
 
-    public MemcachedResponseEncoder(BufferedWriteHandler bufferedWriteHandler) {
-        this.bufferedWriterHandler = bufferedWriteHandler;
-    }
+    private final static ChannelBuffer EXISTS = ChannelBuffers.copiedBuffer("EXISTS\r\n", USASCII);
+    private final static ChannelBuffer NOT_FOUND = ChannelBuffers.copiedBuffer("NOT_FOUND\r\n", USASCII);
+    private static final ChannelBuffer NOT_STORED = ChannelBuffers.copiedBuffer("NOT_STORED\r\n", USASCII);
+    private static final ChannelBuffer STORED = ChannelBuffers.copiedBuffer("STORED\r\n", USASCII);
+    private static final ChannelBuffer DELETED = ChannelBuffers.copiedBuffer("DELETED\r\n", USASCII);
+    private static final ChannelBuffer END = ChannelBuffers.copiedBuffer("END\r\n", USASCII);
+    private static final ChannelBuffer OK = ChannelBuffers.copiedBuffer("OK\r\n", USASCII);
+    private static final ChannelBuffer ERROR = ChannelBuffers.copiedBuffer("ERROR\r\n", USASCII);
 
     /**
      * Handle exceptions in protocol processing. Exceptions are either client or internal errors.  Report accordingly.
@@ -59,6 +63,8 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
         Command cmd = command.cmd.cmd;
 
         Channel channel = messageEvent.getChannel();
+        ChannelFuture future =  Channels.future(channel, false);
+
         if (cmd == Command.GET || cmd == Command.GETS) {
             CacheElement[] results = command.elements;
             int totalBytes = 0;
@@ -81,7 +87,7 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
                     builder.append(result.getData().length);
                     builder.append(cmd == Command.GETS ? " " + result.getCasUnique() : "");
 
-                    writeBuffer.writeBytes(builder.toString().getBytes(MemcachedPipelineFactory.USASCII));
+                    writeBuffer.writeBytes(builder.toString().getBytes(USASCII));
                     writeBuffer.writeByte( (byte) '\r');
                     writeBuffer.writeByte( (byte)  '\n');
                     writeBuffer.writeBytes(result.getData());
@@ -95,53 +101,66 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
 
             writeBuffer.writeByte( (byte) '\r');
             writeBuffer.writeByte( (byte)  '\n');
-            Channels.write(channel, writeBuffer);
+
+            channel.getPipeline().sendDownstream(
+                    new DownstreamMessageEvent(channel, future, writeBuffer, null));
         } else if (cmd == Command.SET || cmd == Command.CAS || cmd == Command.ADD || cmd == Command.REPLACE || cmd == Command.APPEND  || cmd == Command.PREPEND) {
-            String ret = storeResponseString(command.response);
+
             if (!command.cmd.noreply)
-                Channels.write(channel, ret);
+                channel.getPipeline().sendDownstream(
+                        new DownstreamMessageEvent(channel, future, storeResponse(command.response), null));
         } else if (cmd == Command.INCR || cmd == Command.DECR) {
-            String ret = incrDecrResponseString(command.incrDecrResponse);
-            if (!command.cmd.noreply) Channels.write(channel, ret);
+            if (!command.cmd.noreply)
+                channel.getPipeline().sendDownstream(
+                        new DownstreamMessageEvent(channel, future, incrDecrResponseString(command.incrDecrResponse), null));
+
         } else if (cmd == Command.DELETE) {
-            String ret = deleteResponseString(command.deleteResponse);
-            if (!command.cmd.noreply) Channels.write(channel, ret);
+            if (!command.cmd.noreply)
+                channel.getPipeline().sendDownstream(
+                        new DownstreamMessageEvent(channel, future, deleteResponseString(command.deleteResponse), null));
+
         } else if (cmd == Command.STATS) {
+            ChannelBuffer statBuffers = ChannelBuffers.dynamicBuffer(1024);
             for (Map.Entry<String, Set<String>> stat : command.stats.entrySet()) {
                 for (String statVal : stat.getValue()) {
-                    Channels.write(channel, "STAT " + stat.getKey() + " " + statVal + "\r\n");
+                    statBuffers.writeBytes(ChannelBuffers.copiedBuffer("STAT " + stat.getKey() + " " + statVal + "\r\n", USASCII));
                 }
             }
-            Channels.write(channel, "END\r\n");
+            statBuffers.writeBytes(END);
+            channel.getPipeline().sendDownstream(
+                    new DownstreamMessageEvent(channel, future, statBuffers, null));
+
         } else if (cmd == Command.VERSION) {
-            Channels.write(channel, "VERSION " + command.version + "\r\n");
+            channel.getPipeline().sendDownstream(
+                    new DownstreamMessageEvent(channel, future, ChannelBuffers.copiedBuffer("VERSION " + command.version + "\r\n", USASCII), null));
         } else if (cmd == Command.QUIT) {
             Channels.disconnect(channel);
         } else if (cmd == Command.FLUSH_ALL) {
             if (!command.cmd.noreply) {
-                String ret = command.flushSuccess ? "OK\r\n" : "ERROR\r\n";
+                ChannelBuffer ret = command.flushSuccess ? OK : ERROR;
 
-                Channels.write(channel, ret);
+                channel.getPipeline().sendDownstream(
+                        new DownstreamMessageEvent(channel, future, ret, null));
             }
         } else {
-            Channels.write(channel, "ERROR\r\n");
+             channel.getPipeline().sendDownstream(
+                        new DownstreamMessageEvent(channel, future, ERROR, null));
             logger.error("error; unrecognized command: " + cmd);
         }
-        bufferedWriterHandler.flush();
 
     }
 
-    private String deleteResponseString(Cache.DeleteResponse deleteResponse) {
-        if (deleteResponse == Cache.DeleteResponse.DELETED) return "DELETED\r\n";
-        else return "NOT_FOUND\r\n";
+    private ChannelBuffer deleteResponseString(Cache.DeleteResponse deleteResponse) {
+        if (deleteResponse == Cache.DeleteResponse.DELETED) return DELETED;
+        else return NOT_FOUND;
     }
 
 
-    private String incrDecrResponseString(Integer ret) {
+    private ChannelBuffer incrDecrResponseString(Integer ret) {
         if (ret == null)
-            return "NOT_FOUND\r\n";
+            return NOT_FOUND;
         else
-            return valueOf(ret) + "\r\n";
+            return ChannelBuffers.copiedBuffer(valueOf(ret) + "\r\n", USASCII);
     }
 
     /**
@@ -151,16 +170,16 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
      * @param storeResponse the response code
      * @return the string to output on the network
      */
-    private String storeResponseString(Cache.StoreResponse storeResponse) {
+    private ChannelBuffer storeResponse(Cache.StoreResponse storeResponse) {
         switch (storeResponse) {
             case EXISTS:
-                return "EXISTS\r\n";
+                return EXISTS;
             case NOT_FOUND:
-                return "NOT_FOUND\r\n";
+                return NOT_FOUND;
             case NOT_STORED:
-                return "NOT_STORED\r\n";
+                return NOT_STORED;
             case STORED:
-                return "STORED\r\n";
+                return STORED;
         }
         throw new RuntimeException("unknown store response from cache: " + storeResponse);
     }
