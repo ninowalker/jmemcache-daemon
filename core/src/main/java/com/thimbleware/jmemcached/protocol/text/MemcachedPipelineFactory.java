@@ -8,10 +8,16 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.handler.codec.string.StringEncoder;
+import org.jboss.netty.handler.execution.ExecutionHandler;
+import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
+import org.jboss.netty.handler.queue.BufferedWriteHandler;
+
+import java.nio.charset.Charset;
 
 /**
  */
 public final class MemcachedPipelineFactory implements ChannelPipelineFactory {
+    public static final Charset USASCII = Charset.forName("US-ASCII");
 
     private Cache cache;
     private String version;
@@ -20,9 +26,8 @@ public final class MemcachedPipelineFactory implements ChannelPipelineFactory {
 
     private int frameSize;
     private DefaultChannelGroup channelGroup;
-    private final MemcachedResponseEncoder memcachedResponseEncoder = new MemcachedResponseEncoder();
 
-    private final StringEncoder stringEncoder = new StringEncoder();
+    private final StringEncoder stringEncoder = new StringEncoder(USASCII);
     private final MemcachedCommandHandler memcachedCommandHandler;
 
     public MemcachedPipelineFactory(Cache cache, String version, boolean verbose, int idleTime, int frameSize, DefaultChannelGroup channelGroup) {
@@ -38,11 +43,12 @@ public final class MemcachedPipelineFactory implements ChannelPipelineFactory {
     public final ChannelPipeline getPipeline() throws Exception {
         SessionStatus status = new SessionStatus().ready();
 
+        BufferedWriteHandler bufferedWriteHandler = new BufferedWriteHandler();
         return Channels.pipeline(
                 new MemcachedFrameDecoder(status, frameSize),
                 new MemcachedCommandDecoder(status),
                 memcachedCommandHandler,
-                memcachedResponseEncoder,
+                new MemcachedResponseEncoder(bufferedWriteHandler),
                 stringEncoder);
     }
 

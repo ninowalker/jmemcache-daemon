@@ -50,8 +50,7 @@ public final class MemcachedFrameDecoder extends FrameDecoder {
             if (buffer.readableBytes() < status.bytesNeeded + MemcachedResponseEncoder.CRLF.capacity()) return null;
 
             // verify delimiter matches at the right location
-            ChannelBuffer dest = ChannelBuffers.buffer(MemcachedResponseEncoder.CRLF.capacity());
-            buffer.getBytes(status.bytesNeeded + buffer.readerIndex(), dest);
+            ChannelBuffer dest = buffer.slice(status.bytesNeeded + buffer.readerIndex(), 2);
 
             if (!dest.equals(MemcachedResponseEncoder.CRLF)) {
                 // before we throw error... we're ready for the next command
@@ -60,7 +59,6 @@ public final class MemcachedFrameDecoder extends FrameDecoder {
                 // error, no delimiter at end of payload
                 throw new IncorrectlyTerminatedPayloadException("payload not terminated correctly");
             } else {
-
                 status.processingMultiline();
 
                 // There's enough bytes in the buffer and the delimiter is at the end. Read it.

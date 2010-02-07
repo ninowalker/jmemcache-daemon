@@ -8,6 +8,7 @@ import com.thimbleware.jmemcached.protocol.exceptions.ClientException;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.handler.queue.BufferedWriteHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,14 +19,18 @@ import java.util.Map;
 /**
  * Response encoder for the memcached text protocol. Produces strings destined for the StringEncoder
  */
-@ChannelHandler.Sharable
 public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> extends SimpleChannelUpstreamHandler {
 
     final Logger logger = LoggerFactory.getLogger(MemcachedResponseEncoder.class);
 
     public static final String VALUE = "VALUE ";
     public static final ChannelBuffer CRLF = ChannelBuffers.wrappedBuffer(new String("\r\n").getBytes());
-    
+    private final BufferedWriteHandler bufferedWriterHandler;
+
+    public MemcachedResponseEncoder(BufferedWriteHandler bufferedWriteHandler) {
+        this.bufferedWriterHandler = bufferedWriteHandler;
+    }
+
     /**
      * Handle exceptions in protocol processing. Exceptions are either client or internal errors.  Report accordingly.
      *
@@ -56,51 +61,74 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
         Channel channel = messageEvent.getChannel();
         if (cmd == Command.GET || cmd == Command.GETS) {
             CacheElement[] results = command.elements;
+            int totalBytes = 0;
             for (CacheElement result : results) {
                 if (result != null) {
-                    writeString(channel, VALUE);
-                    writeString(channel, result.getKeystring() + " " + result.getFlags() + " " + result.getData().length + (cmd == Command.GETS ? " " + result.getCasUnique() : "") + "\r\n");
-                    ChannelBuffer outputbuffer = ChannelBuffers.wrappedBuffer(result.getData());
-                    channel.write(outputbuffer);
-                    writeCRLF(channel);
-
-                    // send response immediately
-                    channelHandlerContext.sendUpstream(messageEvent);
+                    totalBytes += result.size() + 256;
                 }
             }
-            writeString(channel, "END\r\n");
+            ChannelBuffer writeBuffer = ChannelBuffers.dynamicBuffer(totalBytes);
+
+            for (CacheElement result : results) {
+                if (result != null) {
+
+                    StringBuilder builder = new StringBuilder();
+                    builder.append(VALUE);
+                    builder.append(result.getKeystring());
+                    builder.append(" ");
+                    builder.append(result.getFlags());
+                    builder.append(" ");
+                    builder.append(result.getData().length);
+                    builder.append(cmd == Command.GETS ? " " + result.getCasUnique() : "");
+
+                    writeBuffer.writeBytes(builder.toString().getBytes(MemcachedPipelineFactory.USASCII));
+                    writeBuffer.writeByte( (byte) '\r');
+                    writeBuffer.writeByte( (byte)  '\n');
+                    writeBuffer.writeBytes(result.getData());
+                    writeBuffer.writeByte( (byte) '\r');
+                    writeBuffer.writeByte( (byte)  '\n');
+                }
+            }
+            writeBuffer.writeByte( (byte) 'E');
+            writeBuffer.writeByte( (byte) 'N');
+            writeBuffer.writeByte( (byte) 'D');
+
+            writeBuffer.writeByte( (byte) '\r');
+            writeBuffer.writeByte( (byte)  '\n');
+            Channels.write(channel, writeBuffer);
         } else if (cmd == Command.SET || cmd == Command.CAS || cmd == Command.ADD || cmd == Command.REPLACE || cmd == Command.APPEND  || cmd == Command.PREPEND) {
             String ret = storeResponseString(command.response);
             if (!command.cmd.noreply)
-                writeString(channel, ret);
+                Channels.write(channel, ret);
         } else if (cmd == Command.INCR || cmd == Command.DECR) {
             String ret = incrDecrResponseString(command.incrDecrResponse);
-            if (!command.cmd.noreply) writeString(channel, ret);
+            if (!command.cmd.noreply) Channels.write(channel, ret);
         } else if (cmd == Command.DELETE) {
             String ret = deleteResponseString(command.deleteResponse);
-            if (!command.cmd.noreply) writeString(channel, ret);
+            if (!command.cmd.noreply) Channels.write(channel, ret);
         } else if (cmd == Command.STATS) {
             for (Map.Entry<String, Set<String>> stat : command.stats.entrySet()) {
                 for (String statVal : stat.getValue()) {
-                    writeString(channel, "STAT " + stat.getKey() + " " + statVal + "\r\n");
+                    Channels.write(channel, "STAT " + stat.getKey() + " " + statVal + "\r\n");
                 }
             }
-            writeString(channel, "END\r\n");
+            Channels.write(channel, "END\r\n");
         } else if (cmd == Command.VERSION) {
-            writeString(channel, "VERSION " + command.version + "\r\n");
+            Channels.write(channel, "VERSION " + command.version + "\r\n");
         } else if (cmd == Command.QUIT) {
-            channel.disconnect();
+            Channels.disconnect(channel);
         } else if (cmd == Command.FLUSH_ALL) {
             if (!command.cmd.noreply) {
                 String ret = command.flushSuccess ? "OK\r\n" : "ERROR\r\n";
 
-                writeString(channel, ret);
+                Channels.write(channel, ret);
             }
         } else {
-            writeString(channel, "ERROR\r\n");
+            Channels.write(channel, "ERROR\r\n");
             logger.error("error; unrecognized command: " + cmd);
         }
-        
+        bufferedWriterHandler.flush();
+
     }
 
     private String deleteResponseString(Cache.DeleteResponse deleteResponse) {
@@ -135,15 +163,5 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
                 return "STORED\r\n";
         }
         throw new RuntimeException("unknown store response from cache: " + storeResponse);
-    }
-
-    private void writeString(Channel out, String str) {
-        ChannelBuffer outbuf = ChannelBuffers.wrappedBuffer(str.getBytes());
-        out.write(outbuf);
-    }
-
-
-    private void writeCRLF(Channel out) {
-        out.write(CRLF);
     }
 }

@@ -28,7 +28,6 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
 
     private static final String NOREPLY = "noreply";
     
-    public static final Charset USASCII = Charset.forName("US-ASCII");
 
     public MemcachedCommandDecoder(SessionStatus status) {
         this.status = status;
@@ -51,7 +50,7 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
             // Verify that we are in 'processing()' mode
             if (status.state == SessionStatus.State.PROCESSING) {
                 // split into pieces
-                String[] commandPieces = in.toString(USASCII).split(" ");
+                String[] commandPieces = in.toString(MemcachedPipelineFactory.USASCII).split(" ");
 
                 processLine(commandPieces, messageEvent.getChannel(), channelHandlerContext);
             } else if (status.state == SessionStatus.State.PROCESSING_MULTILINE) {
