@@ -24,16 +24,17 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
     final Logger logger = LoggerFactory.getLogger(MemcachedResponseEncoder.class);
 
     public static final String VALUE = "VALUE ";
-    public static final ChannelBuffer CRLF = ChannelBuffers.wrappedBuffer(new String("\r\n").getBytes());
 
-    private final static ChannelBuffer EXISTS = ChannelBuffers.copiedBuffer("EXISTS\r\n", USASCII);
-    private final static ChannelBuffer NOT_FOUND = ChannelBuffers.copiedBuffer("NOT_FOUND\r\n", USASCII);
+    public static final ChannelBuffer CRLF = ChannelBuffers.copiedBuffer("\r\n", USASCII);
+    private static final ChannelBuffer EXISTS = ChannelBuffers.copiedBuffer("EXISTS\r\n", USASCII);
+    private static final ChannelBuffer NOT_FOUND = ChannelBuffers.copiedBuffer("NOT_FOUND\r\n", USASCII);
     private static final ChannelBuffer NOT_STORED = ChannelBuffers.copiedBuffer("NOT_STORED\r\n", USASCII);
     private static final ChannelBuffer STORED = ChannelBuffers.copiedBuffer("STORED\r\n", USASCII);
     private static final ChannelBuffer DELETED = ChannelBuffers.copiedBuffer("DELETED\r\n", USASCII);
     private static final ChannelBuffer END = ChannelBuffers.copiedBuffer("END\r\n", USASCII);
     private static final ChannelBuffer OK = ChannelBuffers.copiedBuffer("OK\r\n", USASCII);
     private static final ChannelBuffer ERROR = ChannelBuffers.copiedBuffer("ERROR\r\n", USASCII);
+    private static final ChannelBuffer CLIENT_ERROR = ChannelBuffers.copiedBuffer("CLIENT_ERROR\r\n", USASCII);
 
     /**
      * Handle exceptions in protocol processing. Exceptions are either client or internal errors.  Report accordingly.
@@ -48,11 +49,11 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
             throw e.getCause();
         } catch (ClientException ce) {
             if (ctx.getChannel().isOpen())
-                ctx.getChannel().write("CLIENT_ERROR\r\n");
+                ctx.getChannel().write(CLIENT_ERROR);
         } catch (Throwable tr) {
             logger.error("error", tr);
             if (ctx.getChannel().isOpen())
-                ctx.getChannel().write("ERROR\r\n");
+                ctx.getChannel().write(ERROR);
         }
     }
 
@@ -63,7 +64,6 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
         Command cmd = command.cmd.cmd;
 
         Channel channel = messageEvent.getChannel();
-        ChannelFuture future =  Channels.future(channel, false);
 
         if (cmd == Command.GET || cmd == Command.GETS) {
             CacheElement[] results = command.elements;
@@ -102,49 +102,45 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
             writeBuffer.writeByte( (byte) '\r');
             writeBuffer.writeByte( (byte)  '\n');
 
-            channel.getPipeline().sendDownstream(
-                    new DownstreamMessageEvent(channel, future, writeBuffer, null));
+            Channels.write(channel, writeBuffer);
         } else if (cmd == Command.SET || cmd == Command.CAS || cmd == Command.ADD || cmd == Command.REPLACE || cmd == Command.APPEND  || cmd == Command.PREPEND) {
 
             if (!command.cmd.noreply)
-                channel.getPipeline().sendDownstream(
-                        new DownstreamMessageEvent(channel, future, storeResponse(command.response), null));
+                Channels.write(channel, storeResponse(command.response));
         } else if (cmd == Command.INCR || cmd == Command.DECR) {
             if (!command.cmd.noreply)
-                channel.getPipeline().sendDownstream(
-                        new DownstreamMessageEvent(channel, future, incrDecrResponseString(command.incrDecrResponse), null));
+                Channels.write(channel, incrDecrResponseString(command.incrDecrResponse));
 
         } else if (cmd == Command.DELETE) {
             if (!command.cmd.noreply)
-                channel.getPipeline().sendDownstream(
-                        new DownstreamMessageEvent(channel, future, deleteResponseString(command.deleteResponse), null));
+                Channels.write(channel, deleteResponseString(command.deleteResponse));
 
         } else if (cmd == Command.STATS) {
-            ChannelBuffer statBuffers = ChannelBuffers.dynamicBuffer(1024);
             for (Map.Entry<String, Set<String>> stat : command.stats.entrySet()) {
                 for (String statVal : stat.getValue()) {
-                    statBuffers.writeBytes(ChannelBuffers.copiedBuffer("STAT " + stat.getKey() + " " + statVal + "\r\n", USASCII));
+                    StringBuilder builder = new StringBuilder();
+                    builder.append("STAT ");
+                    builder.append(stat.getKey());
+                    builder.append(" ");
+                    builder.append(String.valueOf(statVal));
+                    builder.append("\r\n");
+                   Channels.write(channel, ChannelBuffers.copiedBuffer(builder.toString(), USASCII));
                 }
             }
-            statBuffers.writeBytes(END);
-            channel.getPipeline().sendDownstream(
-                    new DownstreamMessageEvent(channel, future, statBuffers, null));
+            Channels.write(channel,END);
 
         } else if (cmd == Command.VERSION) {
-            channel.getPipeline().sendDownstream(
-                    new DownstreamMessageEvent(channel, future, ChannelBuffers.copiedBuffer("VERSION " + command.version + "\r\n", USASCII), null));
+            Channels.write(channel, ChannelBuffers.copiedBuffer("VERSION " + command.version + "\r\n", USASCII));
         } else if (cmd == Command.QUIT) {
             Channels.disconnect(channel);
         } else if (cmd == Command.FLUSH_ALL) {
             if (!command.cmd.noreply) {
                 ChannelBuffer ret = command.flushSuccess ? OK : ERROR;
 
-                channel.getPipeline().sendDownstream(
-                        new DownstreamMessageEvent(channel, future, ret, null));
+                Channels.write(channel, ret);
             }
         } else {
-             channel.getPipeline().sendDownstream(
-                        new DownstreamMessageEvent(channel, future, ERROR, null));
+            Channels.write(channel, ERROR);
             logger.error("error; unrecognized command: " + cmd);
         }
 
