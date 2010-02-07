@@ -31,7 +31,8 @@ import com.thimbleware.jmemcached.storage.mmap.MemoryMappedBlockStore;
  *
  * Arguments in general parallel those of the C implementation.
  */
-public class Main {
+public class
+        Main {
 
     public static void main(String[] args) throws Exception {
         // look for external log4j.properties
@@ -167,7 +168,7 @@ public class Main {
         }
 
         // create daemon and start it
-        final MemCacheDaemon<LocalCacheElement> daemon = new MemCacheDaemon();
+        final MemCacheDaemon<LocalCacheElement> daemon = new MemCacheDaemon<LocalCacheElement>();
 
         CacheStorage<String, LocalCacheElement> storage;
         if (!memoryMapped)

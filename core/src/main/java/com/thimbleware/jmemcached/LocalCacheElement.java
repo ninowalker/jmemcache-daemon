@@ -19,7 +19,11 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
+
+import static java.lang.Integer.parseInt;
+import static java.lang.String.valueOf;
 
 /**
  * Represents information about a cache entry.
@@ -58,6 +62,61 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         return getData().length;
     }
 
+    public LocalCacheElement append(LocalCacheElement element) {
+        int newLength = getData().length + element.getData().length;
+        LocalCacheElement replace = new LocalCacheElement(getKeystring(), getFlags(), getExpire(), 0L);
+        ByteBuffer b = ByteBuffer.allocateDirect(newLength);
+        b.put(getData());
+        b.put(element.getData());
+        replace.setData(new byte[newLength]);
+        b.flip();
+        b.get(replace.getData());
+        replace.setCasUnique(replace.getCasUnique() + 1);
+
+        return replace;
+    }
+
+    public LocalCacheElement prepend(LocalCacheElement element) {
+        int newLength = getData().length + element.getData().length;
+
+        LocalCacheElement replace = new LocalCacheElement(getKeystring(), getFlags(), getExpire(), 0L);
+        ByteBuffer b = ByteBuffer.allocateDirect(newLength);
+        b.put(element.getData());
+        b.put(getData());
+        replace.setData(new byte[newLength]);
+        b.flip();
+        b.get(replace.getData());
+        replace.setCasUnique(replace.getCasUnique() + 1);
+
+        return replace;
+    }
+
+    public static class IncrDecrResult {
+        int oldValue;
+        LocalCacheElement replace;
+
+        public IncrDecrResult(int oldValue, LocalCacheElement replace) {
+            this.oldValue = oldValue;
+            this.replace = replace;
+        }
+    }
+
+    public IncrDecrResult add(int mod) {
+        // TODO handle parse failure!
+        int old_val = parseInt(new String(getData())) + mod; // change value
+        if (old_val < 0) {
+            old_val = 0;
+
+        } // check for underflow
+
+        byte[] newData = valueOf(old_val).getBytes();
+
+        LocalCacheElement replace = new LocalCacheElement(getKeystring(), getFlags(), getExpire(), 0L);
+        replace.setData(newData);
+        replace.setCasUnique(replace.getCasUnique() + 1);
+
+        return new IncrDecrResult(old_val, replace);
+    }
 
     @Override
     public boolean equals(Object o) {

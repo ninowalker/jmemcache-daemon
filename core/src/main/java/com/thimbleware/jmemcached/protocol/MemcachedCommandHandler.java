@@ -124,6 +124,7 @@ public final class MemcachedCommandHandler<CACHE_ELEMENT extends CacheElement> e
      */
 
     @Override
+    @SuppressWarnings("unchecked")
     public void messageReceived(ChannelHandlerContext channelHandlerContext, MessageEvent messageEvent) throws Exception {
         if (!(messageEvent.getMessage() instanceof CommandMessage)) {
             // Ignore what this encoder can't encode.

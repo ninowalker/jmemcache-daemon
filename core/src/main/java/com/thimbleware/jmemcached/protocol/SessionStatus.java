@@ -18,13 +18,13 @@ public final class SessionStatus implements Serializable {
     }
 
     // the state the session is in
-    public volatile State state;
+    public State state;
 
     // if we are waiting for more data, how much?
-    public volatile int bytesNeeded;
+    public int bytesNeeded;
 
     // the current working command
-    public volatile CommandMessage cmd;
+    public CommandMessage cmd;
 
 
     public SessionStatus() {
