@@ -23,9 +23,9 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
 
     final Logger logger = LoggerFactory.getLogger(MemcachedResponseEncoder.class);
 
-    public static final String VALUE = "VALUE ";
 
     public static final ChannelBuffer CRLF = ChannelBuffers.copiedBuffer("\r\n", USASCII);
+    private static final ChannelBuffer VALUE = ChannelBuffers.copiedBuffer("VALUE ", USASCII);
     private static final ChannelBuffer EXISTS = ChannelBuffers.copiedBuffer("EXISTS\r\n", USASCII);
     private static final ChannelBuffer NOT_FOUND = ChannelBuffers.copiedBuffer("NOT_FOUND\r\n", USASCII);
     private static final ChannelBuffer NOT_STORED = ChannelBuffers.copiedBuffer("NOT_STORED\r\n", USASCII);
@@ -77,30 +77,24 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
 
             for (CacheElement result : results) {
                 if (result != null) {
-
-                    StringBuilder builder = new StringBuilder();
-                    builder.append(VALUE);
-                    builder.append(result.getKeystring());
-                    builder.append(" ");
-                    builder.append(result.getFlags());
-                    builder.append(" ");
-                    builder.append(result.getData().length);
-                    builder.append(cmd == Command.GETS ? " " + result.getCasUnique() : "");
-
-                    writeBuffer.writeBytes(builder.toString().getBytes(USASCII));
-                    writeBuffer.writeByte( (byte) '\r');
-                    writeBuffer.writeByte( (byte)  '\n');
+                    writeBuffer.writeBytes(VALUE.duplicate());
+                    writeBuffer.writeBytes(ChannelBuffers.copiedBuffer(result.getKeystring(), USASCII));
+                    writeBuffer.writeByte((byte)' ');
+                    writeBuffer.writeBytes(ChannelBuffers.copiedBuffer(String.valueOf(result.getFlags()), USASCII));
+                    writeBuffer.writeByte((byte)' ');
+                    writeBuffer.writeBytes(ChannelBuffers.copiedBuffer(String.valueOf(result.getData().length), USASCII));
+                    if (cmd == Command.GETS) {
+                        writeBuffer.writeByte((byte)' ');
+                        writeBuffer.writeBytes(ChannelBuffers.copiedBuffer(String.valueOf(result.getCasUnique()), USASCII));
+                    }
+                    writeBuffer.writeByte( (byte)'\r');
+                    writeBuffer.writeByte( (byte)'\n');
                     writeBuffer.writeBytes(result.getData());
-                    writeBuffer.writeByte( (byte) '\r');
-                    writeBuffer.writeByte( (byte)  '\n');
+                    writeBuffer.writeByte( (byte)'\r');
+                    writeBuffer.writeByte( (byte)'\n');
                 }
             }
-            writeBuffer.writeByte( (byte) 'E');
-            writeBuffer.writeByte( (byte) 'N');
-            writeBuffer.writeByte( (byte) 'D');
-
-            writeBuffer.writeByte( (byte) '\r');
-            writeBuffer.writeByte( (byte)  '\n');
+            writeBuffer.writeBytes(END.duplicate());
 
             Channels.write(channel, writeBuffer);
         } else if (cmd == Command.SET || cmd == Command.CAS || cmd == Command.ADD || cmd == Command.REPLACE || cmd == Command.APPEND  || cmd == Command.PREPEND) {
@@ -124,10 +118,10 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
                     builder.append(" ");
                     builder.append(String.valueOf(statVal));
                     builder.append("\r\n");
-                   Channels.write(channel, ChannelBuffers.copiedBuffer(builder.toString(), USASCII));
+                    Channels.write(channel, ChannelBuffers.copiedBuffer(builder.toString(), USASCII));
                 }
             }
-            Channels.write(channel,END);
+            Channels.write(channel, END.duplicate());
 
         } else if (cmd == Command.VERSION) {
             Channels.write(channel, ChannelBuffers.copiedBuffer("VERSION " + command.version + "\r\n", USASCII));
@@ -135,26 +129,26 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
             Channels.disconnect(channel);
         } else if (cmd == Command.FLUSH_ALL) {
             if (!command.cmd.noreply) {
-                ChannelBuffer ret = command.flushSuccess ? OK : ERROR;
+                ChannelBuffer ret = command.flushSuccess ? OK.duplicate() : ERROR.duplicate();
 
                 Channels.write(channel, ret);
             }
         } else {
-            Channels.write(channel, ERROR);
+            Channels.write(channel, ERROR.duplicate());
             logger.error("error; unrecognized command: " + cmd);
         }
 
     }
 
     private ChannelBuffer deleteResponseString(Cache.DeleteResponse deleteResponse) {
-        if (deleteResponse == Cache.DeleteResponse.DELETED) return DELETED;
-        else return NOT_FOUND;
+        if (deleteResponse == Cache.DeleteResponse.DELETED) return DELETED.duplicate();
+        else return NOT_FOUND.duplicate();
     }
 
 
     private ChannelBuffer incrDecrResponseString(Integer ret) {
         if (ret == null)
-            return NOT_FOUND;
+            return NOT_FOUND.duplicate();
         else
             return ChannelBuffers.copiedBuffer(valueOf(ret) + "\r\n", USASCII);
     }
@@ -169,13 +163,13 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
     private ChannelBuffer storeResponse(Cache.StoreResponse storeResponse) {
         switch (storeResponse) {
             case EXISTS:
-                return EXISTS;
+                return EXISTS.duplicate();
             case NOT_FOUND:
-                return NOT_FOUND;
+                return NOT_FOUND.duplicate();
             case NOT_STORED:
-                return NOT_STORED;
+                return NOT_STORED.duplicate();
             case STORED:
-                return STORED;
+                return STORED.duplicate();
         }
         throw new RuntimeException("unknown store response from cache: " + storeResponse);
     }

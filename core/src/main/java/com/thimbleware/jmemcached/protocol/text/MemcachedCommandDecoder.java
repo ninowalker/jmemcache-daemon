@@ -62,8 +62,9 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
 
                 processLine(pieces, messageEvent.getChannel(), channelHandlerContext);
             } else if (status.state == SessionStatus.State.PROCESSING_MULTILINE) {
-                byte[] payload = new byte[in.capacity()];
-                in.readBytes(payload);
+                ChannelBuffer slice = in.copy();
+                byte[] payload = slice.array();
+                in.skipBytes(in.readableBytes());
                 continueSet(messageEvent.getChannel(), status, payload, channelHandlerContext);
             } else {
                 throw new InvalidProtocolStateException("invalid protocol state");
