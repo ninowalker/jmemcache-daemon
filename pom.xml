@@ -4,7 +4,7 @@
     <groupId>com.thimbleware.jmemcached</groupId>
     <artifactId>jmemcached-parent</artifactId>
     <packaging>pom</packaging>
-    <version>0.10-SNAPSHOT</version>
+    <version>0.9-SNAPSHOT</version>
     <name>jmemcached Parent Project</name>
     <url>http://www.thimbleware.com/projects/jmemcached</url>
     <description>Caching server speaking the memcached protocol, written in Java.</description>
@@ -98,14 +98,14 @@
 
     <distributionManagement>
         <repository>
-            <id>sonatype-nexus-staging</id>
-            <name>Nexus Release Repository</name>
-            <url>http://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+            <id>thimbleware.repo</id>
+            <name>ThimbleWare Repository</name>
+            <url>scp://ryan@thimbleware.com//var/www/maven</url>
         </repository>
         <snapshotRepository>
-            <id>google-code-snapshots</id>
-            <name>Google Code Releasess</name>
-            <url>http://oss.sonatype.org/content/repositories/googlecode-snapshots</url>
+            <id>thimbleware.repo</id>
+            <name>ThimbleWare Repository</name>
+            <url>scp://ryan@thimbleware.com//var/www/maven</url>
         </snapshotRepository>
     </distributionManagement>
 
