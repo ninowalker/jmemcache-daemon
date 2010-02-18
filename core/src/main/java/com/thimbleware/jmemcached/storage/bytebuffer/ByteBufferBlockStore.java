@@ -19,7 +19,7 @@ public class ByteBufferBlockStore {
     private long freeBytes;
 
     private long storeSizeBytes;
-    private int blockSizeBytes;
+    private final int blockSizeBytes;
 
     private SortedMap<Long, Long> freeList;
     private Set<Region> currentRegions;
@@ -33,6 +33,18 @@ public class ByteBufferBlockStore {
         }
     }
 
+    public static class ByteBufferBlockStoreFactory implements BlockStoreFactory<ByteBufferBlockStore> {
+
+        public ByteBufferBlockStore manufacture(long sizeBytes, int blockSizeBytes) {
+            try {
+                ByteBuffer buffer = ByteBuffer.allocateDirect((int) sizeBytes);
+                return new ByteBufferBlockStore(buffer, blockSizeBytes);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
     /**
      * Construct a new memory mapped block storage against a filename, with a certain size
      * and block size.
@@ -40,21 +52,21 @@ public class ByteBufferBlockStore {
      * @param blockSizeBytes the size of a block in the store
      * @throws java.io.IOException thrown on failure to open the store or map the file
      */
-    public ByteBufferBlockStore(ByteBuffer storageBuffer, int blockSizeBytes) throws IOException {
+    private ByteBufferBlockStore(ByteBuffer storageBuffer, int blockSizeBytes) throws IOException {
         this.storageBuffer = storageBuffer;
         this.blockSizeBytes = blockSizeBytes;
-        initialize(storageBuffer.capacity(), blockSizeBytes);
+        initialize(storageBuffer.capacity());
     }
 
     /**
      * Constructor used only be subclasses, allowing them to provide their own buffer.
      */
-    protected ByteBufferBlockStore() {
+    protected ByteBufferBlockStore(int blockSizeBytes) {
+        this.blockSizeBytes = blockSizeBytes;
     }
 
-    protected void initialize(int storeSizeBytes, int blockSizeBytes) {
-        // set region size used throughout
-        this.blockSizeBytes = blockSizeBytes;
+    protected void initialize(int storeSizeBytes) {
+
 
         // set the size of the store in bytes
         this.storeSizeBytes = storageBuffer.capacity();

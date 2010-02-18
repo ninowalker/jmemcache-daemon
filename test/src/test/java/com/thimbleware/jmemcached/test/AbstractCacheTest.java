@@ -23,7 +23,7 @@ import java.util.Collection;
 /**
  */
 public abstract class AbstractCacheTest {
-    protected static final int MAX_BYTES = (int) Bytes.valueOf("8m").bytes();
+    protected static final int MAX_BYTES = (int) Bytes.valueOf("4m").bytes();
     public static final int CEILING_SIZE = (int)Bytes.valueOf("4m").bytes();
     public static final int MAX_SIZE = 1000;
     protected MemCacheDaemon<LocalCacheElement> daemon;
@@ -70,7 +70,7 @@ public abstract class AbstractCacheTest {
         daemon.setBinary(protocolMode == ProtocolMode.BINARY);
         
         port = AvailablePortFinder.getNextAvailable();
-        daemon.setAddr(new InetSocketAddress("localhost", port));
+        daemon.setAddr(new InetSocketAddress(port));
         daemon.setVerbose(false);
         daemon.start();
 
@@ -91,10 +91,10 @@ public abstract class AbstractCacheTest {
                 cacheStorage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, MAX_SIZE, MAX_BYTES);
                 break;
             case BLOCK:
-                cacheStorage = new BlockStorageCacheStorage(new ByteBufferBlockStore(ByteBuffer.allocateDirect(MAX_BYTES), blockSize), CEILING_SIZE, MAX_SIZE);
+                cacheStorage = new BlockStorageCacheStorage(64, CEILING_SIZE, blockSize, MAX_BYTES, MAX_SIZE, new ByteBufferBlockStore.ByteBufferBlockStoreFactory());
                 break;
             case MAPPED:
-                cacheStorage = new BlockStorageCacheStorage(new MemoryMappedBlockStore(MAX_BYTES, "block_store.dat", blockSize), CEILING_SIZE, MAX_SIZE);
+                cacheStorage = new BlockStorageCacheStorage(64, CEILING_SIZE, blockSize, MAX_BYTES, MAX_SIZE, MemoryMappedBlockStore.getFactory());
 
                 break;
         }

@@ -1,5 +1,6 @@
 package com.thimbleware.jmemcached.storage.mmap;
 
+import com.thimbleware.jmemcached.storage.bytebuffer.BlockStoreFactory;
 import com.thimbleware.jmemcached.storage.bytebuffer.ByteBufferBlockStore;
 
 import java.io.File;
@@ -18,27 +19,33 @@ import static java.nio.channels.FileChannel.MapMode.PRIVATE;
  */
 public final class MemoryMappedBlockStore extends ByteBufferBlockStore {
 
+    private File physicalFile;
     private RandomAccessFile fileStorage;
-    private String fileName;
+    private static final MemoryMappedBlockStoreFactory MEMORY_MAPPED_BLOCK_STORE_FACTORY = new MemoryMappedBlockStoreFactory();
 
     /**
      * Construct a new memory mapped block storage against a filename, with a certain size
      * and block size.
      * @param maxBytes the number of bytes to allocate in the file
-     * @param fileName the filename to use
+     * @param file the file to use
      * @param blockSizeBytes the size of a block in the store
      * @throws java.io.IOException thrown on failure to open the store or map the file
      */
-    public MemoryMappedBlockStore(long maxBytes, String fileName, int blockSizeBytes) throws IOException {
-        super();
-        storageBuffer = getMemoryMappedFileStorage(maxBytes, fileName);
-        initialize(storageBuffer.capacity(), blockSizeBytes);
+    private MemoryMappedBlockStore(long maxBytes, File file, int blockSizeBytes) throws IOException {
+        super(blockSizeBytes);
+        storageBuffer = getMemoryMappedFileStorage(maxBytes, file);
+        initialize(storageBuffer.capacity());
     }
 
-    private MappedByteBuffer getMemoryMappedFileStorage(long maxBytes, String fileName) throws IOException {
+    public static BlockStoreFactory getFactory() {
+        return MEMORY_MAPPED_BLOCK_STORE_FACTORY;
+    }
+
+    private MappedByteBuffer getMemoryMappedFileStorage(long maxBytes, File file) throws IOException {
+        this.physicalFile = file;
+
         // open the file for read-write
-        this.fileName = fileName;
-        fileStorage = new RandomAccessFile(fileName, "rw");
+        fileStorage = new RandomAccessFile(file, "rw");
         fileStorage.seek(maxBytes);
         fileStorage.getChannel().map(PRIVATE, 0, maxBytes);
 
@@ -53,10 +60,23 @@ public final class MemoryMappedBlockStore extends ByteBufferBlockStore {
         fileStorage.close();
 
         // delete the file; it is no longer of any use
-        new File(fileName).delete();
+        physicalFile.delete();
 
+        physicalFile = null;
         fileStorage = null;
     }
 
 
+    public static class MemoryMappedBlockStoreFactory implements BlockStoreFactory<MemoryMappedBlockStore> {
+
+        public MemoryMappedBlockStore manufacture(long sizeBytes, int blockSizeBytes) {
+            try {
+                final File tempFile = File.createTempFile("jmemcached", "blockStore");
+                tempFile.deleteOnExit();
+                return new MemoryMappedBlockStore(sizeBytes, tempFile, blockSizeBytes);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
 }

@@ -17,6 +17,7 @@ package com.thimbleware.jmemcached;
 
 import com.thimbleware.jmemcached.storage.bytebuffer.BlockStorageCacheStorage;
 import com.thimbleware.jmemcached.storage.CacheStorage;
+import com.thimbleware.jmemcached.storage.bytebuffer.BlockStoreFactory;
 import org.apache.commons.cli.*;
 
 import java.net.InetSocketAddress;
@@ -40,7 +41,7 @@ public class
         // setup command line options
         Options options = new Options();
         options.addOption("h", "help", false, "print this help screen");
-        options.addOption("f", "mapped-file", true, "use external (from JVM) heap through a memory mapped file");
+        options.addOption("f", "mapped-file", false, "use external (from JVM) heap through a memory mapped file");
         options.addOption("bs", "block-size", true, "block size (in bytes) for external memory mapped file allocator.  default is 8 bytes");
         options.addOption("i", "idle", true, "disconnect after idle <x> seconds");
         options.addOption("p", "port", true, "port to listen on");
@@ -100,13 +101,10 @@ public class
         }
 
         boolean memoryMapped = false;
-        String mmapFile = "";
         if (cmdline.hasOption("f")) {
             memoryMapped = true;
-            mmapFile = cmdline.getOptionValue("f");
         } else if (cmdline.hasOption("mapped-file")) {
             memoryMapped = true;
-            mmapFile = cmdline.getOptionValue("f");
         }
 
         boolean verbose = false;
@@ -174,9 +172,9 @@ public class
         if (!memoryMapped)
             storage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, max_size, maxBytes);
         else  {
-            MemoryMappedBlockStore mappedBlockStore = new MemoryMappedBlockStore((int)maxBytes, mmapFile, blockSize);
+            BlockStoreFactory blockStoreFactory = MemoryMappedBlockStore.getFactory();
 
-            storage = new BlockStorageCacheStorage(mappedBlockStore, (int)ceiling, max_size);
+            storage = new BlockStorageCacheStorage(64, (int)ceiling, blockSize, maxBytes, max_size, blockStoreFactory);
         }
 
         daemon.setCache(new CacheImpl(storage));
