@@ -73,16 +73,16 @@ public class MemCacheDaemon<CACHE_ELEMENT extends CacheElement> {
         allChannels = new DefaultChannelGroup("jmemcachedChannelGroup");
 
         ServerBootstrap bootstrap = new ServerBootstrap(channelFactory);
-      
+
         ChannelPipelineFactory pipelineFactory;
         if (binary)
             pipelineFactory = createMemcachedBinaryPipelineFactory(cache, memcachedVersion, verbose, idleTime, allChannels);
         else
             pipelineFactory = createMemcachedPipelineFactory(cache, memcachedVersion, verbose, idleTime, frameSize, allChannels);
 
-        bootstrap.setOption("child.tcpNoDelay", true);
-        bootstrap.setOption("child.keepAlive", true);
         bootstrap.setPipelineFactory(pipelineFactory);
+        bootstrap.setOption("sendBufferSize", 65536 );
+        bootstrap.setOption("receiveBufferSize", 65536);
 
         Channel serverChannel = bootstrap.bind(addr);
         allChannels.add(serverChannel);
@@ -104,7 +104,7 @@ public class MemCacheDaemon<CACHE_ELEMENT extends CacheElement> {
 
     public void stop() {
         log.info("terminating daemon; closing all channels");
-        
+
         ChannelGroupFuture future = allChannels.close();
         future.awaitUninterruptibly();
         if (!future.isCompleteSuccess()) {

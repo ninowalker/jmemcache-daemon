@@ -18,6 +18,7 @@ package com.thimbleware.jmemcached;
 import com.thimbleware.jmemcached.storage.bytebuffer.BlockStorageCacheStorage;
 import com.thimbleware.jmemcached.storage.CacheStorage;
 import com.thimbleware.jmemcached.storage.bytebuffer.BlockStoreFactory;
+import com.thimbleware.jmemcached.storage.bytebuffer.ByteBufferBlockStore;
 import org.apache.commons.cli.*;
 
 import java.net.InetSocketAddress;
@@ -41,6 +42,7 @@ public class
         // setup command line options
         Options options = new Options();
         options.addOption("h", "help", false, "print this help screen");
+        options.addOption("bl", "block-store", false, "use external (from JVM) heap");
         options.addOption("f", "mapped-file", false, "use external (from JVM) heap through a memory mapped file");
         options.addOption("bs", "block-size", true, "block size (in bytes) for external memory mapped file allocator.  default is 8 bytes");
         options.addOption("i", "idle", true, "disconnect after idle <x> seconds");
@@ -107,6 +109,13 @@ public class
             memoryMapped = true;
         }
 
+        boolean blockStore = false;
+        if (cmdline.hasOption("bl")) {
+            blockStore = true;
+        } else if (cmdline.hasOption("block-store")) {
+            blockStore = true;
+        }
+
         boolean verbose = false;
         if (cmdline.hasOption("v")) {
             verbose = true;
@@ -157,10 +166,10 @@ public class
             return;
         }
 
-        if (!memoryMapped && maxBytes > Runtime.getRuntime().maxMemory()) {
+        if (!memoryMapped && !blockStore && maxBytes > Runtime.getRuntime().maxMemory()) {
             System.out.println("ERROR : JVM heap size is not big enough. use '-Xmx" + String.valueOf(maxBytes / 1024000) + "m' java argument before the '-jar' option.");
             return;
-        } else if (memoryMapped && maxBytes > Integer.MAX_VALUE) {
+        } else if ((memoryMapped || !blockStore) && maxBytes > Integer.MAX_VALUE) {
             System.out.println("ERROR : when external memory mapped, memory size may not exceed the size of Integer.MAX_VALUE (" + Bytes.bytes(Integer.MAX_VALUE).gigabytes() + "GB");
             return;
         }
@@ -169,13 +178,19 @@ public class
         final MemCacheDaemon<LocalCacheElement> daemon = new MemCacheDaemon<LocalCacheElement>();
 
         CacheStorage<String, LocalCacheElement> storage;
-        if (!memoryMapped)
-            storage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, max_size, maxBytes);
-        else  {
+        if (blockStore) {
+            BlockStoreFactory blockStoreFactory = ByteBufferBlockStore.getFactory();
+
+            storage = new BlockStorageCacheStorage(16, (int)ceiling, blockSize, maxBytes, max_size, blockStoreFactory);
+        }  else if (memoryMapped) {
             BlockStoreFactory blockStoreFactory = MemoryMappedBlockStore.getFactory();
 
-            storage = new BlockStorageCacheStorage(64, (int)ceiling, blockSize, maxBytes, max_size, blockStoreFactory);
+            storage = new BlockStorageCacheStorage(16, (int)ceiling, blockSize, maxBytes, max_size, blockStoreFactory);
         }
+        else  {
+            storage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, max_size, maxBytes);
+        }
+
 
         daemon.setCache(new CacheImpl(storage));
         daemon.setBinary(binary);
@@ -183,7 +198,7 @@ public class
         daemon.setIdleTime(idle);
         daemon.setVerbose(verbose);
         daemon.start();
-        
+
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             public void run() {
                 if (daemon.isRunning()) daemon.stop();

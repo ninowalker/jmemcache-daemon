@@ -91,10 +91,10 @@ public abstract class AbstractCacheTest {
                 cacheStorage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, MAX_SIZE, MAX_BYTES);
                 break;
             case BLOCK:
-                cacheStorage = new BlockStorageCacheStorage(64, CEILING_SIZE, blockSize, MAX_BYTES, MAX_SIZE, new ByteBufferBlockStore.ByteBufferBlockStoreFactory());
+                cacheStorage = new BlockStorageCacheStorage(16, CEILING_SIZE, blockSize, MAX_BYTES, MAX_SIZE, new ByteBufferBlockStore.ByteBufferBlockStoreFactory());
                 break;
             case MAPPED:
-                cacheStorage = new BlockStorageCacheStorage(64, CEILING_SIZE, blockSize, MAX_BYTES, MAX_SIZE, MemoryMappedBlockStore.getFactory());
+                cacheStorage = new BlockStorageCacheStorage(16, CEILING_SIZE, blockSize, MAX_BYTES, MAX_SIZE, MemoryMappedBlockStore.getFactory());
 
                 break;
         }

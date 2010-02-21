@@ -7,7 +7,7 @@ import java.io.Serializable;
 /**
  */
 public interface CacheElement extends Serializable, SizedItem {
-    int THIRTY_DAYS = 60 * 60 * 24 * 30;
+    public final static int THIRTY_DAYS = 2592000;
 
     int size();
 
@@ -33,9 +33,9 @@ public interface CacheElement extends Serializable, SizedItem {
 
     long getBlockedUntil();
 
-    LocalCacheElement append(LocalCacheElement element);
+    CacheElement append(LocalCacheElement element);
 
-    LocalCacheElement prepend(LocalCacheElement element);
+    CacheElement prepend(LocalCacheElement element);
 
     LocalCacheElement.IncrDecrResult add(int mod);
 }

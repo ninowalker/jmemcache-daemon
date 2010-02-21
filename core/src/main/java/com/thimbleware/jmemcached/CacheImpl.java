@@ -22,9 +22,7 @@ import static java.lang.Integer.parseInt;
 import static java.lang.String.valueOf;
 import java.nio.ByteBuffer;
 import java.util.Set;
-import java.util.concurrent.Delayed;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.DelayQueue;
+import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReadWriteLock;
 
@@ -35,6 +33,7 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
 
     final CacheStorage<String, LocalCacheElement> storage;
     final DelayQueue<DelayedMCElement> deleteQueue;
+    private final ScheduledExecutorService scavenger;
 
     /**
      * @inheritDoc
@@ -43,6 +42,13 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
         super();
         this.storage = storage;
         deleteQueue = new DelayQueue<DelayedMCElement>();
+
+        scavenger = Executors.newScheduledThreadPool(1);
+        scavenger.scheduleAtFixedRate(new Runnable(){
+            public void run() {
+                asyncEventPing();
+            }
+        }, 10, 2, TimeUnit.SECONDS);
     }
 
     /**
@@ -223,6 +229,7 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
      * @inheritDoc
      */
     public void close() throws IOException {
+        scavenger.shutdown();;
         storage.close();
     }
 

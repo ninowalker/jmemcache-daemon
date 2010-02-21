@@ -70,7 +70,7 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
             int totalBytes = 0;
             for (CacheElement result : results) {
                 if (result != null) {
-                    totalBytes += result.size() + 256;
+                    totalBytes += result.size() + 512;
                 }
             }
             ChannelBuffer writeBuffer = ChannelBuffers.dynamicBuffer(totalBytes);
@@ -78,14 +78,14 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
             for (CacheElement result : results) {
                 if (result != null) {
                     writeBuffer.writeBytes(VALUE.duplicate());
-                    writeBuffer.writeBytes(ChannelBuffers.copiedBuffer(result.getKeystring(), USASCII));
+                    writeBuffer.writeBytes(result.getKeystring().getBytes());
                     writeBuffer.writeByte((byte)' ');
-                    writeBuffer.writeBytes(ChannelBuffers.copiedBuffer(String.valueOf(result.getFlags()), USASCII));
+                    writeBuffer.writeBytes(String.valueOf(result.getFlags()).getBytes());
                     writeBuffer.writeByte((byte)' ');
-                    writeBuffer.writeBytes(ChannelBuffers.copiedBuffer(String.valueOf(result.getData().length), USASCII));
+                    writeBuffer.writeBytes(String.valueOf(result.getData().length).getBytes());
                     if (cmd == Command.GETS) {
                         writeBuffer.writeByte((byte)' ');
-                        writeBuffer.writeBytes(ChannelBuffers.copiedBuffer(String.valueOf(result.getCasUnique()), USASCII));
+                        writeBuffer.writeBytes(String.valueOf(result.getCasUnique()).getBytes());
                     }
                     writeBuffer.writeByte( (byte)'\r');
                     writeBuffer.writeByte( (byte)'\n');
