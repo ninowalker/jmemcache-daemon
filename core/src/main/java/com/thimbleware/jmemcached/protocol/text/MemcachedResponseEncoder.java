@@ -5,6 +5,7 @@ import com.thimbleware.jmemcached.CacheElement;
 import com.thimbleware.jmemcached.protocol.Command;
 import com.thimbleware.jmemcached.protocol.ResponseMessage;
 import com.thimbleware.jmemcached.protocol.exceptions.ClientException;
+import com.thimbleware.jmemcached.util.BufferUtils;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -13,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import static com.thimbleware.jmemcached.protocol.text.MemcachedPipelineFactory.*;
 import static java.lang.String.valueOf;
+
 import java.util.Set;
 import java.util.Map;
 
@@ -57,6 +59,8 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
         }
     }
 
+
+
     @Override
     public void messageReceived(ChannelHandlerContext channelHandlerContext, MessageEvent messageEvent) throws Exception {
         ResponseMessage<CACHE_ELEMENT> command = (ResponseMessage<CACHE_ELEMENT>) messageEvent.getMessage();
@@ -80,12 +84,12 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
                     writeBuffer.writeBytes(VALUE.duplicate());
                     writeBuffer.writeBytes(result.getKey().bytes);
                     writeBuffer.writeByte((byte)' ');
-                    writeBuffer.writeBytes(String.valueOf(result.getFlags()).getBytes());
+                    writeBuffer.writeBytes(BufferUtils.itoa(result.getFlags()));
                     writeBuffer.writeByte((byte)' ');
-                    writeBuffer.writeBytes(String.valueOf(result.getData().length).getBytes());
+                    writeBuffer.writeBytes(BufferUtils.itoa(result.getData().length));
                     if (cmd == Command.GETS) {
                         writeBuffer.writeByte((byte)' ');
-                        writeBuffer.writeBytes(String.valueOf(result.getCasUnique()).getBytes());
+                        writeBuffer.writeBytes(BufferUtils.itoa((int) result.getCasUnique()));
                     }
                     writeBuffer.writeByte( (byte)'\r');
                     writeBuffer.writeByte( (byte)'\n');

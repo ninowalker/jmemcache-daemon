@@ -22,7 +22,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  * Implementation of the concurrent (linked) sized map using the block buffer storage back end.
  *
- * TODO Rather sub-optimal global locking strategy could be improved with a more intricate striped locking implementation.
+ * TODO Rather sub-optimal global locking strategy could be improved with a more intricate :dstriped locking implementation.
  */
 public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCacheElement> {
 
