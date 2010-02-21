@@ -1,8 +1,14 @@
 package com.thimbleware.jmemcached.storage.bytebuffer;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 /**
  * Memory mapped block storage mechanism with a free-list maintained by TreeMap
@@ -21,8 +27,9 @@ public class ByteBufferBlockStore {
     private long storeSizeBytes;
     private final int blockSizeBytes;
 
-    private SortedMap<Long, Long> freeList;
-    private Set<Region> currentRegions;
+    private BitSet allocated;
+    private static final ByteBufferBlockStoreFactory BYTE_BUFFER_BLOCK_STORE_FACTORY = new ByteBufferBlockStoreFactory();
+
 
     /**
      * Exception thrown on inability to allocate a new block
@@ -31,6 +38,9 @@ public class ByteBufferBlockStore {
         public BadAllocationException(String s) {
             super(s);
         }
+    }
+    public static BlockStoreFactory getFactory() {
+        return BYTE_BUFFER_BLOCK_STORE_FACTORY;
     }
 
     public static class ByteBufferBlockStoreFactory implements BlockStoreFactory<ByteBufferBlockStore> {
@@ -66,8 +76,6 @@ public class ByteBufferBlockStore {
     }
 
     protected void initialize(int storeSizeBytes) {
-
-
         // set the size of the store in bytes
         this.storeSizeBytes = storageBuffer.capacity();
 
@@ -77,11 +85,8 @@ public class ByteBufferBlockStore {
         // clear the buffer
         storageBuffer.clear();
 
-        // the free list starts with one giant free region; we create a tree map as index, then set initial values
-        // with one empty region.
-        freeList = new TreeMap<Long, Long>();
-        currentRegions = new HashSet<Region>();
-
+        allocated = new BitSet(storeSizeBytes / blockSizeBytes);
+        allocated.set((int) (roundUp(storeSizeBytes, blockSizeBytes) / blockSizeBytes), false);
         clear();
     }
 
@@ -115,6 +120,27 @@ public class ByteBufferBlockStore {
         // noop
     }
 
+    private int findPos(int numBlocks) {
+        int startPos = 0;
+        while (startPos < allocated.size()) {
+            int clearSpot = allocated.nextClearBit(startPos);
+            int endSpot = allocated.nextSetBit(clearSpot);
+            if ( (endSpot - clearSpot) >= numBlocks || endSpot == -1)
+                return clearSpot;
+            else
+                startPos = endSpot;
+        }
+        throw new BadAllocationException("unable to allocate room; all blocks consumed");
+    }
+
+    private void markPos(int start, int numBlocks) {
+        allocated.set(start, start + numBlocks);
+    }
+
+    private void clear(int start, int numBlocks) {
+        allocated.set(start, start + numBlocks, false);
+    }
+
     /**
      * Allocate a region in the block storage
      * @param desiredSize size (in bytes) desired for the region
@@ -123,104 +149,48 @@ public class ByteBufferBlockStore {
      */
     public Region alloc(int desiredSize, byte[] data) {
         final long desiredBlockSize = roundUp(desiredSize, blockSizeBytes);
+        int numBlocks = (int) (desiredBlockSize / blockSizeBytes);
 
-        /** Find a free entry.  headMap should give us O(log(N)) search
-         *  time.
-         */
-        Iterator<Map.Entry<Long,Long>> entryIterator = freeList.tailMap(desiredBlockSize).entrySet().iterator();
+        int pos = findPos(numBlocks);
+        markPos(pos, numBlocks);
 
-        if (!entryIterator.hasNext()) {
-            /** No more room.
-             *  We now have three options - we can throw error, grow the store, or compact
-             *  the holes in the existing one.
-             *
-             *  We usually want to grow (fast), and compact (slow) only if necessary
-             *  (i.e. some periodic interval
-             *  has been reached or a maximum store size constant hit.)
-             *
-             *  Incremental compaction is a Nice To Have.
-             *
-             *  TODO implement compaction routine; throw; in theory the cache on top of us should be removing elements before we fill
-             */
-            //    compact();
+        freeBytes -= desiredBlockSize;
 
-            throw new BadAllocationException("unable to allocate room; all blocks consumed");
-        } else {
-            Map.Entry<Long, Long> freeEntry = entryIterator.next();
+        // get the buffer to it
+        storageBuffer.rewind();
+        long position = pos * blockSizeBytes;
+        storageBuffer.position((int)position);
+        storageBuffer.put(data, 0, desiredSize);
 
-            /** Don't let this region overlap a page boundary
-             */
-            // PUT CODE HERE
-
-            long position = freeEntry.getValue();
-
-            /** Size of the free block to be placed back on the free list
-             */
-            long newFreeSize = freeEntry.getKey() - desiredBlockSize;
-
-            /** Split the free entry and add the entry to the allocated list
-             */
-            freeList.remove(freeEntry.getKey());
-
-            /** Add it back to the free list if needed
-             */
-            if ( newFreeSize > 0L ) {
-                freeList.put( newFreeSize, position + desiredBlockSize) ;
-            }
-
-            freeBytes -= desiredBlockSize;
-
-            // get the buffer to it
-            storageBuffer.rewind();
-            storageBuffer.position((int)position);
-            storageBuffer.put(data, 0, desiredSize);
-
-            Region region = new Region(desiredSize, desiredBlockSize, position);
-
-            currentRegions.add(region);
-
-            return region;
-        }
+        return new Region(desiredSize, numBlocks, pos);
     }
 
     public byte[] get(Region region) {
         byte[] result = new byte[region.size];
-        storageBuffer.position((int)region.offset);
+        storageBuffer.position((int)region.startBlock * blockSizeBytes);
         storageBuffer.get(result, 0, region.size);
         return result;
     }
 
     public void free(Region region) {
-        freeList.put(region.physicalSize, region.offset);
-        freeBytes += region.physicalSize;
+        freeBytes += (region.usedBlocks * blockSizeBytes);
         region.valid = false;
-        currentRegions.remove(region);
+        int pos = (int) (region.startBlock);
+        clear(pos, region.size / blockSizeBytes);
     }
 
     public void clear()
     {
-        // mark all blocks invalid
-        clearRegions();
 
         // say goodbye to the region list
-        freeList.clear();
+        allocated.clear();
 
-        // Add a free entry for the entire thing at the start
-        freeList.put(storeSizeBytes, 0L);
 
         // reset the # of free bytes back to the max size
         freeBytes = storeSizeBytes;
     }
 
-    private void clearRegions() {
-        // mark all blocks invalid
-        for (Region currentRegion : currentRegions) {
-            currentRegion.setValid(false);
-        }
 
-        // clear the list of blocks so we're not holding onto them
-        currentRegions.clear();
-    }
 
     public long getStoreSizeBytes() {
         return storeSizeBytes;

@@ -37,12 +37,12 @@ public class MemoryMappedBlockStoreTest {
             Region region = bs.alloc(3, sentData);
 
             long after = bs.getFreeBytes();
-            assertEquals("after allocating region, free space available", after, before - region.physicalSize);
+            assertEquals("after allocating region, free space available", after, before - region.usedBlocks * 8);
 
             assertNotNull("region returned", region);
-            assertTrue("size is less or equal to region size", region.size <= region.physicalSize);
+            assertTrue("size is less or equal to region size", region.size <= region.usedBlocks * 8);
             assertTrue("region is valid", region.valid);
-            assertEquals("rounded up to nearest region boundary", region.physicalSize, 8L);
+            assertEquals("rounded up to nearest region boundary", region.usedBlocks * 8, 8L);
 
             byte[] receivedData = bs.get(region);
             assertEquals("region data matches",  new String(sentData), new String(receivedData));
@@ -51,7 +51,7 @@ public class MemoryMappedBlockStoreTest {
                 before = bs.getFreeBytes();
                 bs.free(region);
                 after = bs.getFreeBytes();
-                assertEquals("after freeing region, free space available", before + region.physicalSize, after);
+                assertEquals("after freeing region, free space available", before + region.usedBlocks * 8, after);
                 assertFalse("after freeing, region is not valid", region.valid);
             }
 

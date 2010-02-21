@@ -6,10 +6,13 @@ import com.thimbleware.jmemcached.storage.bytebuffer.ByteBufferBlockStore;
 import com.thimbleware.jmemcached.storage.bytebuffer.Region;
 import com.thimbleware.jmemcached.storage.hash.ConcurrentLinkedHashMap;
 import com.thimbleware.jmemcached.storage.hash.SizedItem;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -65,10 +68,10 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
         }
 
         public byte[] getData() {
-            ByteBuffer result = ByteBuffer.allocate(size());
+            ChannelBuffer result = ChannelBuffers.buffer(size());
             for (int i = 0; i < regions.length; i++) {
                 final int bucket = buckets[i];
-                result.put(blockStorage[bucket].get(regions[i]));
+                result.writeBytes(blockStorage[bucket].get(regions[i]));
             }
             return result.array();
         }
@@ -96,19 +99,16 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
         this.maximumItems = new AtomicInteger(maximumItemsVal);
         this.maximumSizeBytes = maximumSizeBytes;
 
-        this.index = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.SECOND_CHANCE, maximumItemsVal, maximumSizeBytes, new ConcurrentLinkedHashMap.EvictionListener<String, StoredValue>(){
+        this.index = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.LRU, maximumItemsVal, maximumSizeBytes, new ConcurrentLinkedHashMap.EvictionListener<String, StoredValue>(){
             public void onEviction(String key, StoredValue value) {
-                for (int bucket = 0; bucket < value.buckets.length; bucket++) {
-                    if (blockStorage[bucket].getFreeBytes() < ceilingBytes.get() || index.size() > maximumItems.get()) {
-                        value.free();
-                    }
-                }
+                value.free();
             }
         });
     }
 
     private int pickBucket(String key, int partitionNum) {
-        return Math.abs(key.hashCode() * partitionNum) % blockStorage.length;
+        return new Random().nextInt(blockStorage.length);
+//        return Math.abs(key.hashCode() * partitionNum) % blockStorage.length;
     }
 
     public long getMemoryCapacity() {
@@ -243,6 +243,8 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
     }
 
     public LocalCacheElement put(String key, LocalCacheElement item) {
+        if (index.containsKey(key)) remove(key);
+        
         int numBuckets = numBuckets(item.size(), (int) getMaxPerBucketItemSize());
         ByteBuffer readBuffer = ByteBuffer.wrap(item.getData());
         Region[] regions = new Region[numBuckets];

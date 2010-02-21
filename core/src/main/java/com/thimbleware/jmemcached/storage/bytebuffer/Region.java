@@ -10,14 +10,14 @@ public final class Region {
     public final int size;
 
     /**
-     * Actual size the data rounded up to the nearest block.
+     * Size in blocks of the requested area
      */
-    public final long physicalSize;
+    public final int usedBlocks;
 
     /**
      * Offset into the memory region
      */
-    final long offset;
+    final int startBlock;
 
     /**
      * Flag which is true if the region is valid and in use.
@@ -25,36 +25,11 @@ public final class Region {
      */
     public boolean valid = false;
 
-    public Region(int size, long physicalSize, long offset) {
+    public Region(int size, int usedBlocks, int startBlock) {
         this.size = size;
-        this.physicalSize = physicalSize;
-        this.offset = offset;
+        this.usedBlocks = usedBlocks;
+        this.startBlock = startBlock;
         this.valid = true;
     }
 
-    public void setValid(boolean valid) {
-        this.valid = valid;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Region)) return false;
-
-        Region region = (Region) o;
-
-        if (physicalSize != region.physicalSize) return false;
-        if (offset != region.offset) return false;
-        if (size != region.size) return false;
-
-        return true;
-    }
-
-    @Override
-    public int hashCode() {
-        int result = size;
-        result = 31 * result + (int) (physicalSize ^ (physicalSize >>> 32));
-        result = 31 * result + (int) (offset ^ (offset >>> 32));
-        return result;
-    }
 }
