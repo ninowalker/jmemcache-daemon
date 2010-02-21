@@ -5,6 +5,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.Arrays;
+
 import static com.thimbleware.jmemcached.LocalCacheElement.Now;
 import static junit.framework.Assert.*;
 
@@ -45,7 +47,7 @@ public class CacheFIFOTest extends AbstractCacheTest {
             } else {
                 assertNotNull(i + "th result should be present", result);
                 assertNotNull(i + "th result's should be present", result.getKey());
-                assertEquals("key of present item should match" , ("" + i).getBytes(), result.getKey());
+                assertTrue("key of present item should match" , Arrays.equals(("" + i).getBytes(), result.getKey().bytes));
                 assertEquals(new String(result.getData()), i + "x");
             }
         }
