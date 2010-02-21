@@ -1,5 +1,6 @@
 package com.thimbleware.jmemcached.storage.bytebuffer;
 
+import com.thimbleware.jmemcached.Key;
 import com.thimbleware.jmemcached.LocalCacheElement;
 import com.thimbleware.jmemcached.storage.CacheStorage;
 import com.thimbleware.jmemcached.storage.bytebuffer.ByteBufferBlockStore;
@@ -23,14 +24,14 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  *
  * TODO Rather sub-optimal global locking strategy could be improved with a more intricate striped locking implementation.
  */
-public final class BlockStorageCacheStorage implements CacheStorage<String, LocalCacheElement> {
+public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCacheElement> {
 
     ByteBufferBlockStore[] blockStorage;
     ReentrantReadWriteLock[] storageLock;
 
     final AtomicInteger ceilingBytes;
     final AtomicInteger maximumItems;
-    final ConcurrentLinkedHashMap<String, StoredValue> index;
+    final ConcurrentLinkedHashMap<Key, StoredValue> index;
     final long maximumSizeBytes;
 
 
@@ -53,7 +54,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
             this.casUnique = casUnique;
         }
 
-        public LocalCacheElement toElement(String key) {
+        public LocalCacheElement toElement(Key key) {
             final LocalCacheElement element = new LocalCacheElement(key, flags, expire, casUnique);
             element.setData(getData());
             return element;
@@ -99,14 +100,14 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
         this.maximumItems = new AtomicInteger(maximumItemsVal);
         this.maximumSizeBytes = maximumSizeBytes;
 
-        this.index = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.LRU, maximumItemsVal, maximumSizeBytes, new ConcurrentLinkedHashMap.EvictionListener<String, StoredValue>(){
-            public void onEviction(String key, StoredValue value) {
+        this.index = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.LRU, maximumItemsVal, maximumSizeBytes, new ConcurrentLinkedHashMap.EvictionListener<Key, StoredValue>(){
+            public void onEviction(Key key, StoredValue value) {
                 value.free();
             }
         });
     }
 
-    private int pickBucket(String key, int partitionNum) {
+    private int pickBucket(Key key, int partitionNum) {
         return new Random().nextInt(blockStorage.length);
 //        return Math.abs(key.hashCode() * partitionNum) % blockStorage.length;
     }
@@ -143,7 +144,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
         this.storageLock = null;
     }
 
-    public LocalCacheElement putIfAbsent(String key, LocalCacheElement item) {
+    public LocalCacheElement putIfAbsent(Key key, LocalCacheElement item) {
         // if the item already exists in the store, don't replace!
         StoredValue val = index.get(key);
 
@@ -161,9 +162,9 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
      * {@inheritDoc}
      */
     public boolean remove(Object key, Object value) {
-        if (!(key instanceof String) || (!(value instanceof LocalCacheElement))) return false;
+        if (!(key instanceof Key) || (!(value instanceof LocalCacheElement))) return false;
         StoredValue val = index.get(key);
-        LocalCacheElement el = val.toElement((String) key);
+        LocalCacheElement el = val.toElement((Key) key);
 
         if (!el.equals(value)) {
             return false;
@@ -175,7 +176,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
         }
     }
 
-    public boolean replace(String key, LocalCacheElement LocalCacheElement, LocalCacheElement LocalCacheElement1) {
+    public boolean replace(Key key, LocalCacheElement LocalCacheElement, LocalCacheElement LocalCacheElement1) {
         StoredValue val = index.get(key);
         LocalCacheElement el = val.toElement(key);
 
@@ -191,7 +192,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
 
     }
 
-    public LocalCacheElement replace(String key, LocalCacheElement LocalCacheElement) {
+    public LocalCacheElement replace(Key key, LocalCacheElement LocalCacheElement) {
         StoredValue val = index.get(key);
         if (!index.containsKey(key)) {
             return null;
@@ -221,12 +222,12 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
     }
 
     public LocalCacheElement get(Object key) {
-        if (!(key instanceof String)) return null;
+        if (!(key instanceof Key)) return null;
         StoredValue val = index.get(key);
         if (val == null) return null;
         try {
             lockRead(val);
-            return val.toElement((String) key);
+            return val.toElement((Key) key);
         } finally {
             unlockRead(val);
         }
@@ -242,7 +243,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
         return mod == 0 ? div : div + 1;
     }
 
-    public LocalCacheElement put(String key, LocalCacheElement item) {
+    public LocalCacheElement put(Key key, LocalCacheElement item) {
         if (index.containsKey(key)) remove(key);
         
         int numBuckets = numBuckets(item.size(), (int) getMaxPerBucketItemSize());
@@ -275,10 +276,10 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
     }
 
     public LocalCacheElement remove(Object key) {
-        if (!(key instanceof String)) return null;
-        StoredValue val = index.get((String)key);
+        if (!(key instanceof Key)) return null;
+        StoredValue val = index.get(key);
         if (val != null) {
-            LocalCacheElement el = val.toElement((String) key);
+            LocalCacheElement el = val.toElement((Key) key);
             lockWrite(val);
             val.free();
             unlockWrite(val);
@@ -291,10 +292,10 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
             return null;
     }
 
-    public void putAll(Map<? extends String, ? extends LocalCacheElement> map) {
+    public void putAll(Map<? extends Key, ? extends LocalCacheElement> map) {
         // absent, lock the store and put the new value in
-        for (Entry<? extends String, ? extends LocalCacheElement> entry : map.entrySet()) {
-            String key = entry.getKey();
+        for (Entry<? extends Key, ? extends LocalCacheElement> entry : map.entrySet()) {
+            Key key = entry.getKey();
             LocalCacheElement item;
             item = entry.getValue();
             put(key, item);
@@ -360,7 +361,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
         }
     }
 
-    public Set<String> keySet() {
+    public Set<Key> keySet() {
         return index.keySet();
     }
 
@@ -368,7 +369,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<String, Loca
         throw new RuntimeException("operation not supporteded");
     }
 
-    public Set<Entry<String, LocalCacheElement>> entrySet() {
+    public Set<Entry<Key, LocalCacheElement>> entrySet() {
         throw new RuntimeException("operation not supporteded");
     }
 }

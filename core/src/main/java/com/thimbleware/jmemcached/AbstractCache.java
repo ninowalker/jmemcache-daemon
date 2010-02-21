@@ -34,7 +34,7 @@ public abstract class AbstractCache<CACHE_ELEMENT extends CacheElement> implemen
         return (int) (System.currentTimeMillis() / 1000);
     }
 
-    public abstract Set<String> keys();
+    public abstract Set<Key> keys();
 
     public abstract long getCurrentItems();
 
@@ -69,8 +69,8 @@ public abstract class AbstractCache<CACHE_ELEMENT extends CacheElement> implemen
         Map<String, Set<String>> result = new HashMap<String, Set<String>>();
 
         if ("keys".equals(arg)) {
-            for (String key : this.keys()) {
-                multiSet(result, "key", key);
+            for (Key key : this.keys()) {
+                multiSet(result, "key", new String(key.bytes));
             }
 
             return result;

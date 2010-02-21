@@ -78,7 +78,7 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
             for (CacheElement result : results) {
                 if (result != null) {
                     writeBuffer.writeBytes(VALUE.duplicate());
-                    writeBuffer.writeBytes(result.getKeystring().getBytes());
+                    writeBuffer.writeBytes(result.getKey().bytes);
                     writeBuffer.writeByte((byte)' ');
                     writeBuffer.writeBytes(String.valueOf(result.getFlags()).getBytes());
                     writeBuffer.writeByte((byte)' ');

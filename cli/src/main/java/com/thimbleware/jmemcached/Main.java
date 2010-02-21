@@ -177,7 +177,7 @@ public class
         // create daemon and start it
         final MemCacheDaemon<LocalCacheElement> daemon = new MemCacheDaemon<LocalCacheElement>();
 
-        CacheStorage<String, LocalCacheElement> storage;
+        CacheStorage<Key, LocalCacheElement> storage;
         if (blockStore) {
             BlockStoreFactory blockStoreFactory = ByteBufferBlockStore.getFactory();
 

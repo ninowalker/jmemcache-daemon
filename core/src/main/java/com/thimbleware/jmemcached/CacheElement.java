@@ -21,7 +21,7 @@ public interface CacheElement extends Serializable, SizedItem {
 
     void setData(byte[] data);
 
-    String getKeystring();
+    Key getKey();
 
     long getCasUnique();
 

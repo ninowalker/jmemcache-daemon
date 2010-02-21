@@ -18,6 +18,7 @@ package com.thimbleware.jmemcached.protocol;
 
 import com.thimbleware.jmemcached.Cache;
 import com.thimbleware.jmemcached.CacheElement;
+import com.thimbleware.jmemcached.Key;
 import com.thimbleware.jmemcached.protocol.exceptions.UnknownCommandException;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
@@ -144,7 +145,7 @@ public final class MemcachedCommandHandler<CACHE_ELEMENT extends CacheElement> e
             StringBuilder log = new StringBuilder();
             log.append(cmd);
             if (command.element != null) {
-                log.append(" ").append(command.element.getKeystring());
+                log.append(" ").append(command.element.getKey());
             }
             for (int i = 0; i < cmdKeysSize; i++) {
                 log.append(" ").append(command.keys.get(i));
@@ -212,7 +213,7 @@ public final class MemcachedCommandHandler<CACHE_ELEMENT extends CacheElement> e
     protected void handleStats(ChannelHandlerContext channelHandlerContext, CommandMessage<CACHE_ELEMENT> command, int cmdKeysSize, Channel channel) {
         String option = "";
         if (cmdKeysSize > 0) {
-            option = command.keys.get(0);
+            option = new String(command.keys.get(0).bytes);
         }
         Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withStatResponse(cache.stat(option)), channel.getRemoteAddress());
     }
@@ -269,7 +270,9 @@ public final class MemcachedCommandHandler<CACHE_ELEMENT extends CacheElement> e
     }
 
     protected void handleGets(ChannelHandlerContext channelHandlerContext, CommandMessage<CACHE_ELEMENT> command, Channel channel) {
-        CACHE_ELEMENT[] results = get(command.keys.toArray(new String[command.keys.size()]));
+        Key[] keys = new Key[command.keys.size()];
+        keys = command.keys.toArray(keys);
+        CACHE_ELEMENT[] results = get(keys);
         ResponseMessage<CACHE_ELEMENT> resp = new ResponseMessage<CACHE_ELEMENT>(command).withElements(results);
         Channels.fireMessageReceived(channelHandlerContext, resp, channel.getRemoteAddress());
     }
@@ -280,7 +283,7 @@ public final class MemcachedCommandHandler<CACHE_ELEMENT extends CacheElement> e
      * @param keys the key for the element to lookup
      * @return the element, or 'null' in case of cache miss.
      */
-    private CACHE_ELEMENT[] get(String... keys) {
+    private CACHE_ELEMENT[] get(Key... keys) {
         return cache.get(keys);
     }
 

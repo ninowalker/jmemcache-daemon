@@ -16,6 +16,7 @@
 package com.thimbleware.jmemcached.protocol;
 
 import com.thimbleware.jmemcached.CacheElement;
+import com.thimbleware.jmemcached.Key;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -32,7 +33,7 @@ public final class CommandMessage<CACHE_ELEMENT extends CacheElement> implements
 
     public Command cmd;
     public CACHE_ELEMENT element;
-    public List<String> keys;
+    public List<Key> keys;
     public boolean noreply;
     public Long cas_key;
     public int time = 0;
@@ -44,11 +45,23 @@ public final class CommandMessage<CACHE_ELEMENT extends CacheElement> implements
     public Integer incrDefault;
     public int incrExpiry;
     public int incrAmount;
-    
+
     private CommandMessage(Command cmd) {
         this.cmd = cmd;
         element = null;
-        keys = new ArrayList<String>();
+        keys = new ArrayList<Key>();
+    }
+
+    public void setKey(byte[] key) {
+        this.keys = new ArrayList<Key>();
+        this.keys.add(new Key(key));
+    }
+
+    public void setKeys(Iterable<byte[]> keys) {
+        this.keys = new ArrayList<Key>();
+        for (byte[] key : keys) {
+            this.keys.add(new Key(key));
+        }
     }
 
     public static CommandMessage error(String errorString) {

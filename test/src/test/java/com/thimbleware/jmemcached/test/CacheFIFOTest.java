@@ -39,13 +39,13 @@ public class CacheFIFOTest extends AbstractCacheTest {
 
         // verify that only the last MAX_SIZE items are actually physically in there
         for (int i = 0; i < fillSize; i++) {
-            CacheElement result = daemon.getCache().get("" + i)[0];
+            CacheElement result = daemon.getCache().get(new Key(("" + i).getBytes()))[0];
             if (i < MAX_SIZE) {
                 assertTrue(i + "th result absence", result == null);
             } else {
                 assertNotNull(i + "th result should be present", result);
-                assertNotNull(i + "th result's should be present", result.getKeystring());
-                assertEquals("key of present item should match" , "" + i, result.getKeystring());
+                assertNotNull(i + "th result's should be present", result.getKey());
+                assertEquals("key of present item should match" , ("" + i).getBytes(), result.getKey());
                 assertEquals(new String(result.getData()), i + "x");
             }
         }
@@ -54,7 +54,7 @@ public class CacheFIFOTest extends AbstractCacheTest {
     }
 
     private LocalCacheElement createElement(String testKey, String testvalue) {
-        LocalCacheElement element = new LocalCacheElement(testKey, 0, Now() + (1000*60*5), 0L);
+        LocalCacheElement element = new LocalCacheElement(new Key(testKey.getBytes()), 0, Now() + (1000*60*5), 0L);
         element.setData(testvalue.getBytes());
 
         return element;

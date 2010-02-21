@@ -1,9 +1,6 @@
 package com.thimbleware.jmemcached.test;
 
-import com.thimbleware.jmemcached.Cache;
-import com.thimbleware.jmemcached.CacheImpl;
-import com.thimbleware.jmemcached.LocalCacheElement;
-import com.thimbleware.jmemcached.MemCacheDaemon;
+import com.thimbleware.jmemcached.*;
 import com.thimbleware.jmemcached.storage.bytebuffer.BlockStorageCacheStorage;
 import com.thimbleware.jmemcached.storage.CacheStorage;
 import com.thimbleware.jmemcached.storage.bytebuffer.ByteBufferBlockStore;
@@ -64,7 +61,7 @@ public abstract class AbstractCacheTest {
     public void setup() throws IOException {
         // create daemon and start it
         daemon = new MemCacheDaemon<LocalCacheElement>();
-        CacheStorage<String, LocalCacheElement> cacheStorage = getCacheStorage();
+        CacheStorage<Key, LocalCacheElement> cacheStorage = getCacheStorage();
 
         daemon.setCache(new CacheImpl(cacheStorage));
         daemon.setBinary(protocolMode == ProtocolMode.BINARY);
@@ -84,8 +81,8 @@ public abstract class AbstractCacheTest {
             daemon.stop();
     }
 
-    private CacheStorage<String, LocalCacheElement> getCacheStorage() throws IOException {
-        CacheStorage<String, LocalCacheElement> cacheStorage = null;
+    private CacheStorage<Key, LocalCacheElement> getCacheStorage() throws IOException {
+        CacheStorage<Key, LocalCacheElement> cacheStorage = null;
         switch (cacheType) {
             case LOCAL_HASH:
                 cacheStorage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, MAX_SIZE, MAX_BYTES);

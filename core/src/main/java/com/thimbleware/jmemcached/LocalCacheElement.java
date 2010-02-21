@@ -32,7 +32,7 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
     private int expire ;
     private int flags;
     private byte[] data;
-    private String keystring;
+    private Key key;
     private long casUnique = 0L;
     private boolean blocked = false;
     private long blockedUntil;
@@ -40,12 +40,12 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
     public LocalCacheElement() {
     }
 
-    public LocalCacheElement(String keystring) {
-        this.keystring = keystring;
+    public LocalCacheElement(Key key) {
+        this.key = key;
     }
 
-    public LocalCacheElement(String keystring, int flags, int expire, long casUnique) {
-        this.keystring = keystring;
+    public LocalCacheElement(Key key, int flags, int expire, long casUnique) {
+        this.key = key;
         this.flags = flags;
         this.expire = expire;
         this.casUnique = casUnique;
@@ -64,7 +64,7 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
 
     public LocalCacheElement append(LocalCacheElement element) {
         int newLength = getData().length + element.getData().length;
-        LocalCacheElement replace = new LocalCacheElement(getKeystring(), getFlags(), getExpire(), 0L);
+        LocalCacheElement replace = new LocalCacheElement(getKey(), getFlags(), getExpire(), 0L);
         ByteBuffer b = ByteBuffer.allocateDirect(newLength);
         b.put(getData());
         b.put(element.getData());
@@ -79,7 +79,7 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
     public LocalCacheElement prepend(LocalCacheElement element) {
         int newLength = getData().length + element.getData().length;
 
-        LocalCacheElement replace = new LocalCacheElement(getKeystring(), getFlags(), getExpire(), 0L);
+        LocalCacheElement replace = new LocalCacheElement(getKey(), getFlags(), getExpire(), 0L);
         ByteBuffer b = ByteBuffer.allocateDirect(newLength);
         b.put(element.getData());
         b.put(getData());
@@ -111,7 +111,7 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
 
         byte[] newData = valueOf(old_val).getBytes();
 
-        LocalCacheElement replace = new LocalCacheElement(getKeystring(), getFlags(), getExpire(), 0L);
+        LocalCacheElement replace = new LocalCacheElement(getKey(), getFlags(), getExpire(), 0L);
         replace.setData(newData);
         replace.setCasUnique(replace.getCasUnique() + 1);
 
@@ -131,7 +131,7 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         if (expire != that.expire) return false;
         if (flags != that.flags) return false;
         if (!Arrays.equals(data, that.data)) return false;
-        if (!keystring.equals(that.keystring)) return false;
+        if (!key.equals(that.key)) return false;
 
         return true;
     }
@@ -141,14 +141,14 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         int result = expire;
         result = 31 * result + flags;
         result = 31 * result + (data != null ? Arrays.hashCode(data) : 0);
-        result = 31 * result + keystring.hashCode();
+        result = 31 * result + key.hashCode();
         result = 31 * result + (int) (casUnique ^ (casUnique >>> 32));
         result = 31 * result + (blocked ? 1 : 0);
         result = 31 * result + (int) (blockedUntil ^ (blockedUntil >>> 32));
         return result;
     }
 
-    public static LocalCacheElement key(String key) {
+    public static LocalCacheElement key(Key key) {
         return new LocalCacheElement(key);
     }
 
@@ -164,8 +164,8 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         return data;
     }
 
-    public String getKeystring() {
-        return keystring;
+    public Key getKey() {
+        return key;
     }
 
     public long getCasUnique() {
@@ -204,7 +204,8 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         while( readSize < length)
             readSize += in.read(data, readSize, length - readSize);
 
-        keystring = in.readUTF();
+        key = new Key(new byte[in.readInt()]);
+        in.read(key.bytes);
         casUnique = in.readLong();
         blocked = in.readBoolean();
         blockedUntil = in.readLong();
@@ -215,7 +216,8 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         out.writeInt(flags);
         out.writeInt(data.length);
         out.write(data);
-        out.writeUTF(keystring);
+        out.write(key.bytes.length);
+        out.write(key.bytes);
         out.writeLong(casUnique);
         out.writeBoolean(blocked);
         out.writeLong(blockedUntil);

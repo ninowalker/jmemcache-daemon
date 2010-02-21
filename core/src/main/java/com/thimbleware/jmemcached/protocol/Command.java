@@ -15,10 +15,25 @@
  */
 package com.thimbleware.jmemcached.protocol;
 
+import java.util.Arrays;
+
 /**
  */
 public enum Command {
     GET, GETS, APPEND, PREPEND, DELETE, DECR,
     INCR, REPLACE, ADD, SET, CAS, STATS, VERSION,
-    QUIT, FLUSH_ALL
+    QUIT, FLUSH_ALL;
+
+    private static byte[][] commands = new byte[Command.values().length][];
+    static {
+        for (int x = 0 ; x < Command.values().length; x++)
+            commands[x] = Command.values()[x].toString().toLowerCase().getBytes();
+    }
+
+    public static Command getCommand(byte[] cmd) {
+        for (int x = 0 ; x < commands.length; x++) {
+            if (Arrays.equals(cmd, commands[x])) return Command.values()[x];
+        }
+        return null;
+    }
 }

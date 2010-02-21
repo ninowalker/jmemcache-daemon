@@ -1,6 +1,7 @@
 package com.thimbleware.jmemcached.protocol.text;
 
 import com.thimbleware.jmemcached.CacheElement;
+import com.thimbleware.jmemcached.Key;
 import com.thimbleware.jmemcached.LocalCacheElement;
 import com.thimbleware.jmemcached.protocol.Command;
 import com.thimbleware.jmemcached.protocol.CommandMessage;
@@ -12,6 +13,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static com.thimbleware.jmemcached.protocol.text.MemcachedPipelineFactory.USASCII;
@@ -26,7 +28,7 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
 
     private SessionStatus status;
 
-    private static final String NOREPLY = "noreply";
+    private static final byte[] NOREPLY = "noreply".getBytes();
 
 
     public MemcachedCommandDecoder(SessionStatus status) {
@@ -50,15 +52,19 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
             // Verify that we are in 'processing()' mode
             if (status.state == SessionStatus.State.PROCESSING) {
                 // split into pieces
-                List<String> pieces = new ArrayList<String>(6);
+                List<byte[]> pieces = new ArrayList<byte[]>(6);
                 int pos = in.bytesBefore((byte) ' ');
                 do {
                     if (pos != -1) {
-                        pieces.add(in.toString(in.readerIndex(), pos, USASCII));
-                        in.skipBytes(pos + 1);
+                        byte[] piece = new byte[pos];
+                        in.readBytes(piece);
+                        pieces.add(piece);
+                        in.skipBytes(1);
                     }
                 } while ((pos = in.bytesBefore((byte) ' ')) != -1);
-                pieces.add(in.toString(USASCII));
+                byte[] remainder = new byte[in.readableBytes()];
+                in.readBytes(remainder);
+                pieces.add(remainder);
 
                 processLine(pieces, messageEvent.getChannel(), channelHandlerContext);
             } else if (status.state == SessionStatus.State.PROCESSING_MULTILINE) {
@@ -87,15 +93,15 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
      * @param channel
      * @param channelHandlerContext
      */
-    private void processLine(List<String> parts, Channel channel, ChannelHandlerContext channelHandlerContext) throws UnknownCommandException, MalformedCommandException {
+    private void processLine(List<byte[]> parts, Channel channel, ChannelHandlerContext channelHandlerContext) throws UnknownCommandException, MalformedCommandException {
         final int numParts = parts.size();
 
         // Turn the command into an enum for matching on
         Command cmdType;
         try {
-            cmdType = Command.valueOf(parts.get(0).toUpperCase());
+            cmdType = Command.getCommand(parts.get(0));
         } catch (IllegalArgumentException e) {
-            throw new UnknownCommandException("unknown command: " + parts.get(0).toLowerCase());
+            throw new UnknownCommandException("unknown command: " + new String(parts.get(0)));
         }
 
         // Produce the initial command message, for filling in later
@@ -117,19 +123,19 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
             }
 
             // Fill in all the elements of the command
-            int size = Integer.parseInt(parts.get(4));
-            int expire = Integer.parseInt(parts.get(3));
-            int flags = Integer.parseInt(parts.get(2));
-            cmd.element = new LocalCacheElement(parts.get(1), flags, expire != 0 && expire < CacheElement.THIRTY_DAYS ? LocalCacheElement.Now() + expire : expire, 0L);
+            int size = Integer.parseInt(new String(parts.get(4)));
+            int expire = Integer.parseInt(new String(parts.get(3)));
+            int flags = Integer.parseInt(new String(parts.get(2)));
+            cmd.element = new LocalCacheElement(new Key(parts.get(1)), flags, expire != 0 && expire < CacheElement.THIRTY_DAYS ? LocalCacheElement.Now() + expire : expire, 0L);
 
             // look for cas and "noreply" elements
             if (numParts > 5) {
                 int noreply = cmdType == Command.CAS ? 6 : 5;
                 if (cmdType == Command.CAS) {
-                    cmd.cas_key = Long.valueOf(parts.get(5));
+                    cmd.cas_key = Long.valueOf(new String(parts.get(5)));
                 }
 
-                if (numParts == noreply + 1 && parts.get(noreply).equalsIgnoreCase(NOREPLY))
+                if (numParts == noreply + 1 && Arrays.equals(parts.get(noreply), NOREPLY))
                     cmd.noreply = true;
             }
 
@@ -143,7 +149,7 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
                 cmdType == Command.VERSION) {
 
             // Get all the keys
-            cmd.keys.addAll(parts.subList(1, numParts));
+            cmd.setKeys(parts.subList(1, numParts));
 
             // Pass it on.
             Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
@@ -154,34 +160,34 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
             if (numParts < 2 || numParts > 3)
                 throw new MalformedCommandException("invalid increment command");
 
-            cmd.keys.add(parts.get(1));
-            cmd.incrAmount = Integer.valueOf(parts.get(2));
+            cmd.setKey(parts.get(1));
+            cmd.incrAmount = Integer.valueOf(new String(parts.get(2)));
 
-            if (numParts == 3 && parts.get(2).equalsIgnoreCase(NOREPLY)) {
+            if (numParts == 3 && Arrays.equals(parts.get(2), NOREPLY)) {
                 cmd.noreply = true;
             }
 
             Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
         } else if (cmdType == Command.DELETE) {
-            cmd.keys.add(parts.get(1));
+            cmd.setKey(parts.get(1));
 
             if (numParts >= 2) {
-                if (parts.get(numParts - 1).equalsIgnoreCase(NOREPLY)) {
+                if (Arrays.equals(parts.get(numParts - 1), NOREPLY)) {
                     cmd.noreply = true;
                     if (numParts == 4)
-                        cmd.time = Integer.valueOf(parts.get(2));
+                        cmd.time = Integer.valueOf(new String(parts.get(2)));
                 } else if (numParts == 3)
-                    cmd.time = Integer.valueOf(parts.get(2));
+                    cmd.time = Integer.valueOf(new String(parts.get(2)));
             }
             Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
         } else if (cmdType == Command.FLUSH_ALL) {
             if (numParts >= 1) {
-                if (parts.get(numParts - 1).equalsIgnoreCase(NOREPLY)) {
+                if (Arrays.equals(parts.get(numParts - 1), NOREPLY)) {
                     cmd.noreply = true;
                     if (numParts == 3)
-                        cmd.time = Integer.valueOf(parts.get(1));
+                        cmd.time = Integer.valueOf(new String(parts.get(1)));
                 } else if (numParts == 2)
-                    cmd.time = Integer.valueOf(parts.get(1));
+                    cmd.time = Integer.valueOf(new String(parts.get(1)));
             }
             Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
         } else {
