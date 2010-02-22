@@ -105,7 +105,7 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
 
     public IncrDecrResult add(int mod) {
         // TODO handle parse failure!
-        int old_val = BufferUtils.parseInt(getData()) + mod; // change value
+        int old_val = BufferUtils.atoi(getData()) + mod; // change value
         if (old_val < 0) {
             old_val = 0;
 

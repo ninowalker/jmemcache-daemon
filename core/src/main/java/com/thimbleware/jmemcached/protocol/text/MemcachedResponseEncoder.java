@@ -89,7 +89,7 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
                     writeBuffer.writeBytes(BufferUtils.itoa(result.getData().length));
                     if (cmd == Op.GETS) {
                         writeBuffer.writeByte((byte)' ');
-                        writeBuffer.writeBytes(BufferUtils.itoa((int) result.getCasUnique()));
+                        writeBuffer.writeBytes(BufferUtils.ltoa(result.getCasUnique()));
                     }
                     writeBuffer.writeByte( (byte)'\r');
                     writeBuffer.writeByte( (byte)'\n');
