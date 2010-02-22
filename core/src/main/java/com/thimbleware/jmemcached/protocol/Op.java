@@ -19,20 +19,21 @@ import java.util.Arrays;
 
 /**
  */
-public enum Command {
+public enum Op {
     GET, GETS, APPEND, PREPEND, DELETE, DECR,
     INCR, REPLACE, ADD, SET, CAS, STATS, VERSION,
     QUIT, FLUSH_ALL;
 
-    private static byte[][] commands = new byte[Command.values().length][];
+    private static byte[][] ops = new byte[Op.values().length][];
+
     static {
-        for (int x = 0 ; x < Command.values().length; x++)
-            commands[x] = Command.values()[x].toString().toLowerCase().getBytes();
+        for (int x = 0 ; x < Op.values().length; x++)
+            ops[x] = Op.values()[x].toString().toLowerCase().getBytes();
     }
 
-    public static Command getCommand(byte[] cmd) {
-        for (int x = 0 ; x < commands.length; x++) {
-            if (Arrays.equals(cmd, commands[x])) return Command.values()[x];
+    public static Op FindOp(byte[] cmd) {
+        for (int x = 0 ; x < ops.length; x++) {
+            if (Arrays.equals(cmd, ops[x])) return Op.values()[x];
         }
         return null;
     }

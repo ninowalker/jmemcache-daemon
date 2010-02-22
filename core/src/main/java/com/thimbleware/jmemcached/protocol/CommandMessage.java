@@ -31,7 +31,7 @@ public final class CommandMessage<CACHE_ELEMENT extends CacheElement> implements
         OK, ERROR, CLIENT_ERROR
     }
 
-    public Command cmd;
+    public Op op;
     public CACHE_ELEMENT element;
     public List<Key> keys;
     public boolean noreply;
@@ -46,8 +46,8 @@ public final class CommandMessage<CACHE_ELEMENT extends CacheElement> implements
     public int incrExpiry;
     public int incrAmount;
 
-    private CommandMessage(Command cmd) {
-        this.cmd = cmd;
+    private CommandMessage(Op op) {
+        this.op = op;
         element = null;
         keys = new ArrayList<Key>();
     }
@@ -78,7 +78,7 @@ public final class CommandMessage<CACHE_ELEMENT extends CacheElement> implements
         return errcmd;
     }
 
-    public static CommandMessage command(Command cmd) {
-        return new CommandMessage(cmd);
+    public static CommandMessage command(Op operation) {
+        return new CommandMessage(operation);
     }
 }

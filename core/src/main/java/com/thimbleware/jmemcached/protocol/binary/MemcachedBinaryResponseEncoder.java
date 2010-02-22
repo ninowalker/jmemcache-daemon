@@ -1,6 +1,6 @@
 package com.thimbleware.jmemcached.protocol.binary;
 
-import com.thimbleware.jmemcached.protocol.Command;
+import com.thimbleware.jmemcached.protocol.Op;
 import com.thimbleware.jmemcached.protocol.ResponseMessage;
 import com.thimbleware.jmemcached.protocol.exceptions.UnknownCommandException;
 import com.thimbleware.jmemcached.CacheElement;
@@ -44,10 +44,10 @@ public class MemcachedBinaryResponseEncoder<CACHE_ELEMENT extends CacheElement> 
     }
 
     public ResponseCode getStatusCode(ResponseMessage command) {
-        Command cmd = command.cmd.cmd;
-        if (cmd == Command.GET || cmd == Command.GETS) {
+        Op cmd = command.cmd.op;
+        if (cmd == Op.GET || cmd == Op.GETS) {
             return ResponseCode.OK;
-        } else if (cmd == Command.SET || cmd == Command.CAS || cmd == Command.ADD || cmd == Command.REPLACE || cmd == Command.APPEND  || cmd == Command.PREPEND) {
+        } else if (cmd == Op.SET || cmd == Op.CAS || cmd == Op.ADD || cmd == Op.REPLACE || cmd == Op.APPEND  || cmd == Op.PREPEND) {
             switch (command.response) {
                 case EXISTS:
                     return ResponseCode.KEYEXISTS;
@@ -58,20 +58,20 @@ public class MemcachedBinaryResponseEncoder<CACHE_ELEMENT extends CacheElement> 
                 case STORED:
                     return ResponseCode.OK;
             }
-        } else if (cmd == Command.INCR || cmd == Command.DECR) {
+        } else if (cmd == Op.INCR || cmd == Op.DECR) {
             return command.incrDecrResponse == null ? ResponseCode.KEYNF : ResponseCode.OK;
-        } else if (cmd == Command.DELETE) {
+        } else if (cmd == Op.DELETE) {
             switch (command.deleteResponse) {
                 case DELETED:
                     return ResponseCode.OK;
                 case NOT_FOUND:
                     return ResponseCode.KEYNF;
             }
-        } else if (cmd == Command.STATS) {
+        } else if (cmd == Op.STATS) {
             return ResponseCode.OK;
-        } else if (cmd == Command.VERSION) {
+        } else if (cmd == Op.VERSION) {
             return ResponseCode.OK;
-        } else if (cmd == Command.FLUSH_ALL) {
+        } else if (cmd == Op.FLUSH_ALL) {
             return ResponseCode.OK;
         }
         return ResponseCode.UNKNOWN;
@@ -79,7 +79,7 @@ public class MemcachedBinaryResponseEncoder<CACHE_ELEMENT extends CacheElement> 
 
 
 
-    public ChannelBuffer constructHeader(MemcachedBinaryCommandDecoder.BinaryCommand bcmd, ChannelBuffer extrasBuffer, ChannelBuffer keyBuffer, ChannelBuffer valueBuffer, short responseCode, int opaqueValue, long casUnique) {
+    public ChannelBuffer constructHeader(MemcachedBinaryCommandDecoder.BinaryOp bcmd, ChannelBuffer extrasBuffer, ChannelBuffer keyBuffer, ChannelBuffer valueBuffer, short responseCode, int opaqueValue, long casUnique) {
         // take the ResponseMessage and turn it into a binary payload.
         ChannelBuffer header = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, 24);
         header.writeByte((byte)0x81);  // magic
@@ -114,7 +114,7 @@ public class MemcachedBinaryResponseEncoder<CACHE_ELEMENT extends CacheElement> 
             throw e.getCause();
         } catch (UnknownCommandException unknownCommand) {
             if (ctx.getChannel().isOpen())
-                ctx.getChannel().write(constructHeader(MemcachedBinaryCommandDecoder.BinaryCommand.Noop, null, null, null, (short)0x0081, 0, 0));
+                ctx.getChannel().write(constructHeader(MemcachedBinaryCommandDecoder.BinaryOp.Noop, null, null, null, (short)0x0081, 0, 0));
         } catch (Throwable err) {
             logger.error("error", err);
             if (ctx.getChannel().isOpen())
@@ -128,7 +128,7 @@ public class MemcachedBinaryResponseEncoder<CACHE_ELEMENT extends CacheElement> 
         ResponseMessage<CACHE_ELEMENT> command = (ResponseMessage<CACHE_ELEMENT>) messageEvent.getMessage();
         Object additional = messageEvent.getMessage();
 
-        MemcachedBinaryCommandDecoder.BinaryCommand bcmd = MemcachedBinaryCommandDecoder.BinaryCommand.forCommandMessage(command.cmd);
+        MemcachedBinaryCommandDecoder.BinaryOp bcmd = MemcachedBinaryCommandDecoder.BinaryOp.forCommandMessage(command.cmd);
 
         // write extras == flags & expiry
         ChannelBuffer extrasBuffer = null;
@@ -147,17 +147,17 @@ public class MemcachedBinaryResponseEncoder<CACHE_ELEMENT extends CacheElement> 
             extrasBuffer.writeShort((short) (element != null ? element.getExpire() : 0));
             extrasBuffer.writeShort((short) (element != null ? element.getFlags() : 0));
 
-            if ((command.cmd.cmd == Command.GET || command.cmd.cmd == Command.GETS)) {
+            if ((command.cmd.op == Op.GET || command.cmd.op == Op.GETS)) {
                 if (element != null) {
                     valueBuffer = ChannelBuffers.wrappedBuffer(ByteOrder.BIG_ENDIAN, element.getData());
                 } else {
                     valueBuffer = ChannelBuffers.buffer(0);
                 }
-            } else if (command.cmd.cmd == Command.INCR || command.cmd.cmd == Command.DECR) {
+            } else if (command.cmd.op == Op.INCR || command.cmd.op == Op.DECR) {
                 valueBuffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, 8);
                 valueBuffer.writeLong(command.incrDecrResponse);
             }
-        } else if (command.cmd.cmd == Command.INCR || command.cmd.cmd == Command.DECR) {
+        } else if (command.cmd.op == Op.INCR || command.cmd.op == Op.DECR) {
             valueBuffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, 8);
             valueBuffer.writeLong(command.incrDecrResponse);
         }
@@ -168,7 +168,7 @@ public class MemcachedBinaryResponseEncoder<CACHE_ELEMENT extends CacheElement> 
         }
 
         // stats is special -- with it, we write N times, one for each stat, then an empty payload
-        if (command.cmd.cmd == Command.STATS) {
+        if (command.cmd.op == Op.STATS) {
             // first uncork any corked buffers
             if (corkedBuffers.containsKey(command.cmd.opaque)) uncork(command.cmd.opaque, messageEvent.getChannel());
 

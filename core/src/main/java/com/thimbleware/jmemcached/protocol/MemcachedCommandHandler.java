@@ -134,7 +134,7 @@ public final class MemcachedCommandHandler<CACHE_ELEMENT extends CacheElement> e
         }
 
         CommandMessage<CACHE_ELEMENT> command = (CommandMessage<CACHE_ELEMENT>) messageEvent.getMessage();
-        Command cmd = command.cmd;
+        Op cmd = command.op;
         int cmdKeysSize = command.keys.size();
 
         // first process any messages in the delete queue
@@ -154,33 +154,33 @@ public final class MemcachedCommandHandler<CACHE_ELEMENT extends CacheElement> e
         }
 
         Channel channel = messageEvent.getChannel();
-        if (cmd == Command.GET || cmd == Command.GETS) {
+        if (cmd == Op.GET || cmd == Op.GETS) {
             handleGets(channelHandlerContext, command, channel);
-        } else if (cmd == Command.SET) {
+        } else if (cmd == Op.SET) {
             handleSet(channelHandlerContext, command, channel);
-        } else if (cmd == Command.CAS) {
+        } else if (cmd == Op.CAS) {
             handleCas(channelHandlerContext, command, channel);
-        } else if (cmd == Command.ADD) {
+        } else if (cmd == Op.ADD) {
             handleAdd(channelHandlerContext, command, channel);
-        } else if (cmd == Command.REPLACE) {
+        } else if (cmd == Op.REPLACE) {
             handleReplace(channelHandlerContext, command, channel);
-        } else if (cmd == Command.APPEND) {
+        } else if (cmd == Op.APPEND) {
             handleAppend(channelHandlerContext, command, channel);
-        } else if (cmd == Command.PREPEND) {
+        } else if (cmd == Op.PREPEND) {
             handlePrepend(channelHandlerContext, command, channel);
-        } else if (cmd == Command.INCR) {
+        } else if (cmd == Op.INCR) {
             handleIncr(channelHandlerContext, command, channel);
-        } else if (cmd == Command.DECR) {
+        } else if (cmd == Op.DECR) {
             handleDecr(channelHandlerContext, command, channel);
-        } else if (cmd == Command.DELETE) {
+        } else if (cmd == Op.DELETE) {
             handleDelete(channelHandlerContext, command, channel);
-        } else if (cmd == Command.STATS) {
+        } else if (cmd == Op.STATS) {
             handleStats(channelHandlerContext, command, cmdKeysSize, channel);
-        } else if (cmd == Command.VERSION) {
+        } else if (cmd == Op.VERSION) {
             handleVersion(channelHandlerContext, command, channel);
-        } else if (cmd == Command.QUIT) {
+        } else if (cmd == Op.QUIT) {
             handleQuit(channel);
-        } else if (cmd == Command.FLUSH_ALL) {
+        } else if (cmd == Op.FLUSH_ALL) {
             handleFlush(channelHandlerContext, command, channel);
         } else if (cmd == null) {
             // NOOP

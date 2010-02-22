@@ -3,7 +3,7 @@ package com.thimbleware.jmemcached.protocol.text;
 import com.thimbleware.jmemcached.CacheElement;
 import com.thimbleware.jmemcached.Key;
 import com.thimbleware.jmemcached.LocalCacheElement;
-import com.thimbleware.jmemcached.protocol.Command;
+import com.thimbleware.jmemcached.protocol.Op;
 import com.thimbleware.jmemcached.protocol.CommandMessage;
 import com.thimbleware.jmemcached.protocol.SessionStatus;
 import com.thimbleware.jmemcached.protocol.exceptions.InvalidProtocolStateException;
@@ -16,8 +16,6 @@ import org.jboss.netty.channel.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import static com.thimbleware.jmemcached.protocol.text.MemcachedPipelineFactory.USASCII;
 
 /**
  * The MemcachedCommandDecoder is responsible for taking lines from the MemcachedFrameDecoder and parsing them
@@ -40,8 +38,8 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
      * Process an inbound string from the pipeline's downstream, and depending on the state (waiting for data or
      * processing commands), turn them into the correct type of command.
      *
-     * @param channelHandlerContext
-     * @param messageEvent
+     * @param channelHandlerContext netty channel handler context
+     * @param messageEvent the netty event that corresponds to th emessage
      * @throws Exception
      */
     @Override
@@ -91,119 +89,126 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
      * a state to wait for additional data.
      *
      * @param parts                 the (originally space separated) parts of the command
-     * @param channel
-     * @param channelHandlerContext
+     * @param channel               the netty channel to operate on
+     * @param channelHandlerContext the netty channel handler context
+     * @throws com.thimbleware.jmemcached.protocol.exceptions.MalformedCommandException
+     * @throws com.thimbleware.jmemcached.protocol.exceptions.UnknownCommandException
      */
     private void processLine(List<byte[]> parts, Channel channel, ChannelHandlerContext channelHandlerContext) throws UnknownCommandException, MalformedCommandException {
         final int numParts = parts.size();
 
         // Turn the command into an enum for matching on
-        Command cmdType;
+        Op op;
         try {
-            cmdType = Command.getCommand(parts.get(0));
+            op = Op.FindOp(parts.get(0));
         } catch (IllegalArgumentException e) {
-            throw new UnknownCommandException("unknown command: " + new String(parts.get(0)));
+            throw new UnknownCommandException("unknown operation: " + new String(parts.get(0)));
         }
 
         // Produce the initial command message, for filling in later
-        CommandMessage cmd = CommandMessage.command(cmdType);
+        CommandMessage cmd = CommandMessage.command(op);
 
-        // TODO there is a certain amount of fudgery here related to common things like 'noreply', etc. that could be refactored nicely
+        switch (op) {
+            case DELETE:
+                cmd.setKey(parts.get(1));
 
-        // Dispatch on the type of command
-        if (cmdType == Command.ADD ||
-                cmdType == Command.SET ||
-                cmdType == Command.REPLACE ||
-                cmdType == Command.CAS ||
-                cmdType == Command.APPEND ||
-                cmdType == Command.PREPEND) {
+                if (numParts >= 2) {
+                    if (Arrays.equals(parts.get(numParts - 1), NOREPLY)) {
+                        cmd.noreply = true;
+                        if (numParts == 4)
+                            cmd.time = BufferUtils.parseInt((parts.get(2)));
+                    } else if (numParts == 3)
+                        cmd.time = BufferUtils.parseInt((parts.get(2)));
+                }
+                Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
+                break;
 
-            // if we don't have all the parts, it's malformed
-            if (numParts < 5) {
-                throw new MalformedCommandException("invalid command length");
-            }
+            case DECR:
+            case INCR:
+                // Malformed
+                if (numParts < 2 || numParts > 3)
+                    throw new MalformedCommandException("invalid increment command");
 
-            // Fill in all the elements of the command
-            int size = BufferUtils.parseInt(parts.get(4));
-            int expire = BufferUtils.parseInt(parts.get(3));
-            int flags = BufferUtils.parseInt(parts.get(2));
-            cmd.element = new LocalCacheElement(new Key(parts.get(1)), flags, expire != 0 && expire < CacheElement.THIRTY_DAYS ? LocalCacheElement.Now() + expire : expire, 0L);
+                cmd.setKey(parts.get(1));
+                cmd.incrAmount = Integer.valueOf(new String(parts.get(2)));
 
-            // look for cas and "noreply" elements
-            if (numParts > 5) {
-                int noreply = cmdType == Command.CAS ? 6 : 5;
-                if (cmdType == Command.CAS) {
-                    cmd.cas_key = Long.valueOf(new String(parts.get(5)));
+                if (numParts == 3 && Arrays.equals(parts.get(2), NOREPLY)) {
+                    cmd.noreply = true;
                 }
 
-                if (numParts == noreply + 1 && Arrays.equals(parts.get(noreply), NOREPLY))
-                    cmd.noreply = true;
-            }
+                Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
+                break;
 
-            // Now indicate that we need more for this command by changing the session status's state.
-            // This instructs the frame decoder to start collecting data for us.
-            status.needMore(size, cmd);
-        } else if (cmdType == Command.GET ||
-                cmdType == Command.GETS ||
-                cmdType == Command.STATS ||
-                cmdType == Command.QUIT ||
-                cmdType == Command.VERSION) {
-
-            // Get all the keys
-            cmd.setKeys(parts.subList(1, numParts));
-
-            // Pass it on.
-            Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
-        } else if (cmdType == Command.INCR ||
-                cmdType == Command.DECR) {
-
-            // Malformed
-            if (numParts < 2 || numParts > 3)
-                throw new MalformedCommandException("invalid increment command");
-
-            cmd.setKey(parts.get(1));
-            cmd.incrAmount = Integer.valueOf(new String(parts.get(2)));
-
-            if (numParts == 3 && Arrays.equals(parts.get(2), NOREPLY)) {
-                cmd.noreply = true;
-            }
-
-            Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
-        } else if (cmdType == Command.DELETE) {
-            cmd.setKey(parts.get(1));
-
-            if (numParts >= 2) {
-                if (Arrays.equals(parts.get(numParts - 1), NOREPLY)) {
-                    cmd.noreply = true;
-                    if (numParts == 4)
-                        cmd.time = BufferUtils.parseInt((parts.get(2)));
-                } else if (numParts == 3)
-                    cmd.time = BufferUtils.parseInt((parts.get(2)));
-            }
-            Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
-        } else if (cmdType == Command.FLUSH_ALL) {
-            if (numParts >= 1) {
-                if (Arrays.equals(parts.get(numParts - 1), NOREPLY)) {
-                    cmd.noreply = true;
-                    if (numParts == 3)
+            case FLUSH_ALL:
+                if (numParts >= 1) {
+                    if (Arrays.equals(parts.get(numParts - 1), NOREPLY)) {
+                        cmd.noreply = true;
+                        if (numParts == 3)
+                            cmd.time = BufferUtils.parseInt((parts.get(1)));
+                    } else if (numParts == 2)
                         cmd.time = BufferUtils.parseInt((parts.get(1)));
-                } else if (numParts == 2)
-                    cmd.time = BufferUtils.parseInt((parts.get(1)));
-            }
-            Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
-        } else {
-            throw new UnknownCommandException("unknown command: " + cmdType);
-        }
+                }
+                Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
+                break;
 
+            //
+            case APPEND:
+            case PREPEND:
+            case REPLACE:
+            case ADD:
+            case SET:
+            case CAS:
+                // if we don't have all the parts, it's malformed
+                if (numParts < 5) {
+                    throw new MalformedCommandException("invalid command length");
+                }
+
+                // Fill in all the elements of the command
+                int size = BufferUtils.parseInt(parts.get(4));
+                int expire = BufferUtils.parseInt(parts.get(3));
+                int flags = BufferUtils.parseInt(parts.get(2));
+                cmd.element = new LocalCacheElement(new Key(parts.get(1)), flags, expire != 0 && expire < CacheElement.THIRTY_DAYS ? LocalCacheElement.Now() + expire : expire, 0L);
+
+                // look for cas and "noreply" elements
+                if (numParts > 5) {
+                    int noreply = op == Op.CAS ? 6 : 5;
+                    if (op == Op.CAS) {
+                        cmd.cas_key = Long.valueOf(new String(parts.get(5)));
+                    }
+
+                    if (numParts == noreply + 1 && Arrays.equals(parts.get(noreply), NOREPLY))
+                        cmd.noreply = true;
+                }
+
+                // Now indicate that we need more for this command by changing the session status's state.
+                // This instructs the frame decoder to start collecting data for us.
+                status.needMore(size, cmd);
+                break;
+
+            //
+            case GET:
+            case GETS:
+            case STATS:
+            case VERSION:
+            case QUIT:
+                // Get all the keys
+                cmd.setKeys(parts.subList(1, numParts));
+
+                // Pass it on.
+                Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
+                break;
+            default:
+                throw new UnknownCommandException("unknown command: " + op);
+        }
     }
 
     /**
      * Handles the continuation of a SET/ADD/REPLACE command with the data it was waiting for.
      *
+     * @param channel               netty channel
      * @param state                 the current session status (unused)
      * @param remainder             the bytes picked up
-     * @param channelHandlerContext
-     * @return the new status to set the session to
+     * @param channelHandlerContext netty channel handler context
      */
     private void continueSet(Channel channel, SessionStatus state, byte[] remainder, ChannelHandlerContext channelHandlerContext) {
         state.cmd.element.setData(remainder);

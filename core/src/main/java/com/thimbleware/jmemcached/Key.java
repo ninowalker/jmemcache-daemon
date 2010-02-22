@@ -3,6 +3,9 @@ package com.thimbleware.jmemcached;
 import java.util.Arrays;
 
 /**
+ * Represents a given key for lookup in the cache.
+ *
+ * Wraps a byte array with a precomputed hashCode.
  */
 public class Key {
     public byte[] bytes;

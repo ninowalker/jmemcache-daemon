@@ -2,7 +2,7 @@ package com.thimbleware.jmemcached.protocol.text;
 
 import com.thimbleware.jmemcached.Cache;
 import com.thimbleware.jmemcached.CacheElement;
-import com.thimbleware.jmemcached.protocol.Command;
+import com.thimbleware.jmemcached.protocol.Op;
 import com.thimbleware.jmemcached.protocol.ResponseMessage;
 import com.thimbleware.jmemcached.protocol.exceptions.ClientException;
 import com.thimbleware.jmemcached.util.BufferUtils;
@@ -65,11 +65,11 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
     public void messageReceived(ChannelHandlerContext channelHandlerContext, MessageEvent messageEvent) throws Exception {
         ResponseMessage<CACHE_ELEMENT> command = (ResponseMessage<CACHE_ELEMENT>) messageEvent.getMessage();
 
-        Command cmd = command.cmd.cmd;
+        Op cmd = command.cmd.op;
 
         Channel channel = messageEvent.getChannel();
 
-        if (cmd == Command.GET || cmd == Command.GETS) {
+        if (cmd == Op.GET || cmd == Op.GETS) {
             CacheElement[] results = command.elements;
             int totalBytes = 0;
             for (CacheElement result : results) {
@@ -87,7 +87,7 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
                     writeBuffer.writeBytes(BufferUtils.itoa(result.getFlags()));
                     writeBuffer.writeByte((byte)' ');
                     writeBuffer.writeBytes(BufferUtils.itoa(result.getData().length));
-                    if (cmd == Command.GETS) {
+                    if (cmd == Op.GETS) {
                         writeBuffer.writeByte((byte)' ');
                         writeBuffer.writeBytes(BufferUtils.itoa((int) result.getCasUnique()));
                     }
@@ -101,19 +101,19 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
             writeBuffer.writeBytes(END.duplicate());
 
             Channels.write(channel, writeBuffer);
-        } else if (cmd == Command.SET || cmd == Command.CAS || cmd == Command.ADD || cmd == Command.REPLACE || cmd == Command.APPEND  || cmd == Command.PREPEND) {
+        } else if (cmd == Op.SET || cmd == Op.CAS || cmd == Op.ADD || cmd == Op.REPLACE || cmd == Op.APPEND  || cmd == Op.PREPEND) {
 
             if (!command.cmd.noreply)
                 Channels.write(channel, storeResponse(command.response));
-        } else if (cmd == Command.INCR || cmd == Command.DECR) {
+        } else if (cmd == Op.INCR || cmd == Op.DECR) {
             if (!command.cmd.noreply)
                 Channels.write(channel, incrDecrResponseString(command.incrDecrResponse));
 
-        } else if (cmd == Command.DELETE) {
+        } else if (cmd == Op.DELETE) {
             if (!command.cmd.noreply)
                 Channels.write(channel, deleteResponseString(command.deleteResponse));
 
-        } else if (cmd == Command.STATS) {
+        } else if (cmd == Op.STATS) {
             for (Map.Entry<String, Set<String>> stat : command.stats.entrySet()) {
                 for (String statVal : stat.getValue()) {
                     StringBuilder builder = new StringBuilder();
@@ -127,11 +127,11 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
             }
             Channels.write(channel, END.duplicate());
 
-        } else if (cmd == Command.VERSION) {
+        } else if (cmd == Op.VERSION) {
             Channels.write(channel, ChannelBuffers.copiedBuffer("VERSION " + command.version + "\r\n", USASCII));
-        } else if (cmd == Command.QUIT) {
+        } else if (cmd == Op.QUIT) {
             Channels.disconnect(channel);
-        } else if (cmd == Command.FLUSH_ALL) {
+        } else if (cmd == Op.FLUSH_ALL) {
             if (!command.cmd.noreply) {
                 ChannelBuffer ret = command.flushSuccess ? OK.duplicate() : ERROR.duplicate();
 

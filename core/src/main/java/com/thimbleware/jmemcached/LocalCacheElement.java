@@ -15,6 +15,8 @@
  */
 package com.thimbleware.jmemcached;
 
+import com.thimbleware.jmemcached.util.BufferUtils;
+
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -103,13 +105,13 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
 
     public IncrDecrResult add(int mod) {
         // TODO handle parse failure!
-        int old_val = parseInt(new String(getData())) + mod; // change value
+        int old_val = BufferUtils.parseInt(getData()) + mod; // change value
         if (old_val < 0) {
             old_val = 0;
 
         } // check for underflow
 
-        byte[] newData = valueOf(old_val).getBytes();
+        byte[] newData = BufferUtils.itoa(old_val);
 
         LocalCacheElement replace = new LocalCacheElement(getKey(), getFlags(), getExpire(), 0L);
         replace.setData(newData);
