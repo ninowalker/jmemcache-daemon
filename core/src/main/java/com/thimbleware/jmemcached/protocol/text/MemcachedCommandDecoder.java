@@ -9,6 +9,7 @@ import com.thimbleware.jmemcached.protocol.SessionStatus;
 import com.thimbleware.jmemcached.protocol.exceptions.InvalidProtocolStateException;
 import com.thimbleware.jmemcached.protocol.exceptions.MalformedCommandException;
 import com.thimbleware.jmemcached.protocol.exceptions.UnknownCommandException;
+import com.thimbleware.jmemcached.util.BufferUtils;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.*;
 
@@ -123,9 +124,9 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
             }
 
             // Fill in all the elements of the command
-            int size = Integer.parseInt(new String(parts.get(4)));
-            int expire = Integer.parseInt(new String(parts.get(3)));
-            int flags = Integer.parseInt(new String(parts.get(2)));
+            int size = BufferUtils.parseInt(parts.get(4));
+            int expire = BufferUtils.parseInt(parts.get(3));
+            int flags = BufferUtils.parseInt(parts.get(2));
             cmd.element = new LocalCacheElement(new Key(parts.get(1)), flags, expire != 0 && expire < CacheElement.THIRTY_DAYS ? LocalCacheElement.Now() + expire : expire, 0L);
 
             // look for cas and "noreply" elements
@@ -175,9 +176,9 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
                 if (Arrays.equals(parts.get(numParts - 1), NOREPLY)) {
                     cmd.noreply = true;
                     if (numParts == 4)
-                        cmd.time = Integer.valueOf(new String(parts.get(2)));
+                        cmd.time = BufferUtils.parseInt((parts.get(2)));
                 } else if (numParts == 3)
-                    cmd.time = Integer.valueOf(new String(parts.get(2)));
+                    cmd.time = BufferUtils.parseInt((parts.get(2)));
             }
             Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
         } else if (cmdType == Command.FLUSH_ALL) {
@@ -185,9 +186,9 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
                 if (Arrays.equals(parts.get(numParts - 1), NOREPLY)) {
                     cmd.noreply = true;
                     if (numParts == 3)
-                        cmd.time = Integer.valueOf(new String(parts.get(1)));
+                        cmd.time = BufferUtils.parseInt((parts.get(1)));
                 } else if (numParts == 2)
-                    cmd.time = Integer.valueOf(new String(parts.get(1)));
+                    cmd.time = BufferUtils.parseInt((parts.get(1)));
             }
             Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
         } else {

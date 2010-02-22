@@ -71,7 +71,7 @@ public final class MemcachedFrameDecoder extends FrameDecoder {
         } else {
             int minFrameLength = Integer.MAX_VALUE;
             ChannelBuffer foundDelimiter = null;
-            int frameLength = buffer.bytesBefore(buffer.readerIndex(), buffer.readableBytes(), ChannelBufferIndexFinder.CRLF);
+            int frameLength = buffer.bytesBefore(ChannelBufferIndexFinder.CRLF);
             if (frameLength >= 0 && frameLength < minFrameLength) {
                 minFrameLength = frameLength;
                 foundDelimiter = MemcachedResponseEncoder.CRLF;
