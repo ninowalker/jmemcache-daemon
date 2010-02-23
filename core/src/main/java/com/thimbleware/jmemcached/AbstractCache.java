@@ -34,7 +34,7 @@ public abstract class AbstractCache<CACHE_ELEMENT extends CacheElement> implemen
         return (int) (System.currentTimeMillis() / 1000);
     }
 
-    public abstract Set<Key> keys();
+    protected abstract Set<Key> keys();
 
     public abstract long getCurrentItems();
 
