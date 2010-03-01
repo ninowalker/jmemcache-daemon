@@ -40,6 +40,36 @@
         </plugins>
     </build>
 
+    <profiles>
+        <profile>
+            <id>release-sign-artifacts</id>
+            <activation>
+                <property>
+                    <name>performRelease</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.0-alpha-4</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
     <inceptionYear>2008</inceptionYear>
 
     <licenses>
@@ -68,14 +98,14 @@
 
     <distributionManagement>
         <repository>
-            <id>thimbleware.repo</id>
-            <name>ThimbleWare Repository</name>
-            <url>scp://ryan@thimbleware.com//var/www/maven</url>
+            <id>sonatype-nexus-staging</id>
+            <name>Nexus Release Repository</name>
+            <url>http://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
         <snapshotRepository>
-            <id>thimbleware.repo</id>
-            <name>ThimbleWare Repository</name>
-            <url>scp://ryan@thimbleware.com//var/www/maven</url>
+            <id>google-code-snapshots</id>
+            <name>Google Code Releasess</name>
+            <url>http://oss.sonatype.org/content/repositories/googlecode-snapshots</url>
         </snapshotRepository>
     </distributionManagement>
 
@@ -90,38 +120,39 @@
         </developerConnection>
     </scm>
 
-    <pluginRepositories>
-        <pluginRepository>
-            <id>scala-tools.org</id>
-            <name>Scala-tools Maven2 Repository</name>
-            <url>http://scala-tools.org/repo-releases</url>
-        </pluginRepository>
-    </pluginRepositories>
+    <!--<pluginRepositories>-->
+        <!--<pluginRepository>-->
+            <!--<id>scala-tools.org</id>-->
+            <!--<name>Scala-tools Maven2 Repository</name>-->
+            <!--<url>http://scala-tools.org/repo-releases</url>-->
+        <!--</pluginRepository>-->
+    <!--</pluginRepositories>-->
 
-    <repositories>
-        <repository>
-            <id>scala-tools.org</id>
-            <name>Scala-tools Maven2 Repository</name>
-            <url>http://scala-tools.org/repo-releases</url>
-        </repository>
+    <!--<repositories>-->
+        <!--<repository>-->
+            <!--<id>scala-tools.org</id>-->
+            <!--<name>Scala-tools Maven2 Repository</name>-->
+            <!--<url>http://scala-tools.org/repo-releases</url>-->
+        <!--</repository>-->
 
-        <repository>
-            <id>jboss-repository</id>
-            <name>JBoss Repository</name>
-            <releases><enabled>true</enabled></releases>
-            <url>http://repository.jboss.com/maven2/</url>
-        </repository>
+        <!--<repository>-->
+            <!--<id>jboss-repository</id>-->
+            <!--<name>JBoss Repository</name>-->
+            <!--<releases><enabled>true</enabled></releases>-->
+            <!--<url>http://repository.jboss.com/maven2/</url>-->
+        <!--</repository>-->
 
-        <repository>
-            <id>spy</id>
-            <name>Spy Repository</name>
-            <layout>default</layout>
-            <url>http://bleu.west.spy.net/~dustin/m2repo/</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
+        <!--<repository>-->
+            <!--<id>spy</id>-->
+            <!--<name>Spy Repository</name>-->
+            <!--<layout>default</layout>-->
+            <!--<url>http://bleu.west.spy.net/~dustin/m2repo/</url>-->
+            <!--<snapshots>-->
+                <!--<enabled>false</enabled>-->
+            <!--</snapshots>-->
+        <!--</repository>-->
+    <!--</repositories>-->
+
 
     <dependencyManagement>
         <dependencies>
