@@ -34,7 +34,7 @@ public abstract class AbstractCache<CACHE_ELEMENT extends CacheElement> implemen
         return (int) (System.currentTimeMillis() / 1000);
     }
 
-    public abstract Set<Key> keys();
+    protected abstract Set<Key> keys();
 
     public abstract long getCurrentItems();
 
@@ -67,14 +67,6 @@ public abstract class AbstractCache<CACHE_ELEMENT extends CacheElement> implemen
      */
     public final Map<String, Set<String>> stat(String arg) {
         Map<String, Set<String>> result = new HashMap<String, Set<String>>();
-
-        if ("keys".equals(arg)) {
-            for (Key key : this.keys()) {
-                multiSet(result, "key", new String(key.bytes));
-            }
-
-            return result;
-        }
 
         // stats we know
         multiSet(result, "version", MemCacheDaemon.memcachedVersion);

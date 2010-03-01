@@ -235,7 +235,7 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
      * @inheritDoc
      */
     @Override
-    public Set<Key> keys() {
+    protected Set<Key> keys() {
         return storage.keySet();
     }
 

@@ -113,10 +113,6 @@ public interface Cache<CACHE_ELEMENT extends CacheElement> {
      */
     void close() throws IOException;
 
-    /**
-     * @return all keys currently held in the cache
-     */
-    Set<Key> keys();
 
     /**
      * @return the # of items in the cache
