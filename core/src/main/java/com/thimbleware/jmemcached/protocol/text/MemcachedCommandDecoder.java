@@ -150,8 +150,18 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
                 }
                 Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
                 break;
-
             //
+            case VERBOSITY: // verbosity <time> [noreply]\r\n
+            	// Malformed
+            	if (numParts < 2 || numParts > 3)
+            		throw new MalformedCommandException("invalid verbosity command");
+
+            	cmd.time = BufferUtils.atoi((parts.get(1))); // verbose level
+
+            	if (numParts > 1 && Arrays.equals(parts.get(2), NOREPLY)) 
+            		cmd.noreply = true;
+            	Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
+            	break;
             case APPEND:
             case PREPEND:
             case REPLACE:

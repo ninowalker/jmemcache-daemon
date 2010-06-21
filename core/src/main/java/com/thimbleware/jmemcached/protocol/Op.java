@@ -22,7 +22,7 @@ import java.util.Arrays;
 public enum Op {
     GET, GETS, APPEND, PREPEND, DELETE, DECR,
     INCR, REPLACE, ADD, SET, CAS, STATS, VERSION,
-    QUIT, FLUSH_ALL;
+    QUIT, FLUSH_ALL, VERBOSITY;
 
     private static byte[][] ops = new byte[Op.values().length][];
 

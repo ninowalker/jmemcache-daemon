@@ -182,6 +182,8 @@ public final class MemcachedCommandHandler<CACHE_ELEMENT extends CacheElement> e
             handleQuit(channel);
         } else if (cmd == Op.FLUSH_ALL) {
             handleFlush(channelHandlerContext, command, channel);
+        } else if (cmd == Op.VERBOSITY) {
+        	handleVerbosity(channelHandlerContext, command, channel);
         } else if (cmd == null) {
             // NOOP
             handleNoOp(channelHandlerContext, command);
@@ -199,6 +201,11 @@ public final class MemcachedCommandHandler<CACHE_ELEMENT extends CacheElement> e
     protected void handleFlush(ChannelHandlerContext channelHandlerContext, CommandMessage<CACHE_ELEMENT> command, Channel channel) {
         Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withFlushResponse(cache.flush_all(command.time)), channel.getRemoteAddress());
     }
+    
+    protected void handleVerbosity(ChannelHandlerContext channelHandlerContext, CommandMessage command, Channel channel) {
+    	//TODO set verbosity mode
+    	Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command), channel.getRemoteAddress());
+ 	}
 
     protected void handleQuit(Channel channel) {
         channel.disconnect();
