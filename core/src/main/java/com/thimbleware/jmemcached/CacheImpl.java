@@ -18,8 +18,6 @@ package com.thimbleware.jmemcached;
 import com.thimbleware.jmemcached.storage.CacheStorage;
 
 import java.io.IOException;
-import static java.lang.Integer.parseInt;
-import static java.lang.String.valueOf;
 
 import java.util.Set;
 import java.util.concurrent.*;

@@ -24,8 +24,6 @@ import java.io.ObjectOutput;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-import static java.lang.Integer.parseInt;
-import static java.lang.String.valueOf;
 
 /**
  * Represents information about a cache entry.
