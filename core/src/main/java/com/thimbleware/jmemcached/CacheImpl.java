@@ -76,7 +76,14 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
      * @inheritDoc
      */
     public StoreResponse add(LocalCacheElement e) {
-        return storage.putIfAbsent(e.getKey(), e) == null ? StoreResponse.STORED : StoreResponse.NOT_STORED;
+        final long origCasUnique = e.getCasUnique();
+        e.setCasUnique(casCounter.getAndIncrement());
+        final boolean stored = storage.putIfAbsent(e.getKey(), e) == null;
+        // we should restore the former cas so that the object isn't left dirty
+        if (!stored) {
+            e.setCasUnique(origCasUnique);
+        }
+        return stored ? StoreResponse.STORED : StoreResponse.NOT_STORED;
     }
 
     /**

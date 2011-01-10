@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import com.thimbleware.jmemcached.*;
+import net.spy.memcached.CASValue;
 import net.spy.memcached.MemcachedClient;
 
 import com.thimbleware.jmemcached.storage.hash.ConcurrentLinkedHashMap;
@@ -46,7 +47,8 @@ public class Issue24RegressionTest {
     public void testGetsAfterAdd() {
         _client.add( "foo-n1", 5, "baz-n1" ); // fails
         // _client.set( "foo-n1", 5, "bar" ); // would be fine
-        _client.gets( "foo-n1" );
+        CASValue<Object> result = _client.gets("foo-n1");
+        result.getValue();
     }
 
 }

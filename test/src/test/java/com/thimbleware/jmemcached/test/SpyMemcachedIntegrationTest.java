@@ -148,6 +148,14 @@ public class SpyMemcachedIntegrationTest extends AbstractCacheTest {
     }
 
     @Test
+    public void testCASAfterAdd() throws Exception {
+        Future<Boolean> future = _client.add("foo", 32000, 123);
+        assertTrue(future.get());
+        CASValue<Object> casValue = _client.gets("foo"); // should not produce an error
+        assertEquals( 123, casValue.getValue());
+    }
+
+    @Test
     public void testAppendPrepend() throws Exception {
         Future<Boolean> future = _client.set("foo", 0, "foo");
         assertTrue(future.get());
