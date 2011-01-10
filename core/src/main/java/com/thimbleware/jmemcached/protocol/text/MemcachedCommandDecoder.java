@@ -101,6 +101,8 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
         Op op;
         try {
             op = Op.FindOp(parts.get(0));
+            if (op == null)
+                throw new IllegalArgumentException("unknown operation: " + new String(parts.get(0)));
         } catch (IllegalArgumentException e) {
             throw new UnknownCommandException("unknown operation: " + new String(parts.get(0)));
         }
@@ -152,16 +154,16 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
                 break;
             //
             case VERBOSITY: // verbosity <time> [noreply]\r\n
-            	// Malformed
-            	if (numParts < 2 || numParts > 3)
-            		throw new MalformedCommandException("invalid verbosity command");
+                // Malformed
+                if (numParts < 2 || numParts > 3)
+                    throw new MalformedCommandException("invalid verbosity command");
 
-            	cmd.time = BufferUtils.atoi((parts.get(1))); // verbose level
+                cmd.time = BufferUtils.atoi((parts.get(1))); // verbose level
 
-            	if (numParts > 1 && Arrays.equals(parts.get(2), NOREPLY)) 
-            		cmd.noreply = true;
-            	Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
-            	break;
+                if (numParts > 1 && Arrays.equals(parts.get(2), NOREPLY))
+                    cmd.noreply = true;
+                Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
+                break;
             case APPEND:
             case PREPEND:
             case REPLACE:
