@@ -147,6 +147,7 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
 
         if (element.getCasUnique() == cas_key) {
             // casUnique matches, now set the element
+        	e.setCasUnique(casCounter.getAndIncrement());
             if (storage.replace(e.getKey(), element, e)) return StoreResponse.STORED;
             else {
                 getMisses.incrementAndGet();
