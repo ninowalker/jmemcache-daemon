@@ -149,7 +149,7 @@ public class MemcachedBinaryResponseEncoder<CACHE_ELEMENT extends CacheElement> 
 
             if ((command.cmd.op == Op.GET || command.cmd.op == Op.GETS)) {
                 if (element != null) {
-                    valueBuffer = ChannelBuffers.wrappedBuffer(ByteOrder.BIG_ENDIAN, element.getData());
+                    valueBuffer = ChannelBuffers.wrappedBuffer(element.getData());
                 } else {
                     valueBuffer = ChannelBuffers.buffer(0);
                 }

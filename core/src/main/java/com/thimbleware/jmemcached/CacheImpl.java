@@ -19,6 +19,7 @@ import com.thimbleware.jmemcached.storage.CacheStorage;
 
 import java.io.IOException;
 
+import java.nio.ByteBuffer;
 import java.util.Set;
 import java.util.concurrent.*;
 
@@ -57,7 +58,7 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
         if (time != 0) {
             // block the element and schedule a delete; replace its entry with a blocked element
             LocalCacheElement placeHolder = new LocalCacheElement(key, 0, 0, 0L);
-            placeHolder.setData(new byte[]{});
+            placeHolder.setData(ByteBuffer.allocate(0));
             placeHolder.block(Now() + (long)time);
 
             storage.replace(key, placeHolder);

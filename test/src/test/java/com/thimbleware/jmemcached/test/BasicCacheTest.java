@@ -4,9 +4,13 @@ import static com.thimbleware.jmemcached.LocalCacheElement.Now;
 import com.thimbleware.jmemcached.*;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
+import static junit.framework.Assert.assertTrue;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import java.nio.ByteBuffer;
 
 /**
  */
@@ -33,7 +37,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testvalue = "87654321";
 
         LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, 0L);
-        element.setData(testvalue.getBytes());
+        element.setData(ByteBuffer.wrap(testvalue.getBytes()));
 
         // put in cache
         assertEquals(cache.add(element), Cache.StoreResponse.STORED);
@@ -46,11 +50,11 @@ public class BasicCacheTest extends AbstractCacheTest {
 
         // must be non null and match the original
         assertNotNull("got result", result);
-        assertEquals("data length matches", result.getData().length, element.getData().length);
-        assertEquals("data matches", new String(element.getData()), new String(result.getData()));
+        assertEquals("data length matches", result.size(), element.size());
+        assertEquals("data matches", new String(element.getData().array()), new String(result.getData().array()));
         assertEquals("key matches", element.getKey(), result.getKey());
 
-        assertEquals("size of cache matches element entered", element.getData().length, cache.getCurrentBytes(), 0);
+        assertEquals("size of cache matches element entered", element.size(), cache.getCurrentBytes(), 0);
         assertEquals("cache has 1 element", 1, cache.getCurrentItems());
     }
 
@@ -61,7 +65,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testvalue = "87654321";
 
         LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, 0L);
-        element.setData(testvalue.getBytes());
+        element.setData(ByteBuffer.wrap(testvalue.getBytes()));
 
         // put in cache
         assertEquals(cache.add(element), Cache.StoreResponse.STORED);
@@ -74,16 +78,16 @@ public class BasicCacheTest extends AbstractCacheTest {
 
         // must be non null and match the original
         assertNotNull("got result", result);
-        assertEquals("data length matches", result.getData().length, element.getData().length);
-        assertEquals("data matches", new String(element.getData()), new String(result.getData()));
+        assertEquals("data length matches", result.size(), element.size());
+        assertEquals("data matches", new String(element.getData().array()), new String(result.getData().array()));
 
-        assertEquals("size of cache matches element entered", element.getData().length, cache.getCurrentBytes(), 0);
+        assertEquals("size of cache matches element entered", element.size(), cache.getCurrentBytes(), 0);
         assertEquals("cache has 1 element", 1, cache.getCurrentItems());
 
         // now replace
         testvalue = "54321";
         element = new LocalCacheElement(testKey, 0, Now(), 0L);
-        element.setData(testvalue.getBytes());
+        element.setData(ByteBuffer.wrap(testvalue.getBytes()));
 
         // put in cache
         assertEquals(cache.replace(element), Cache.StoreResponse.STORED);
@@ -96,8 +100,8 @@ public class BasicCacheTest extends AbstractCacheTest {
 
         // must be non null and match the original
         assertNotNull("got result", result);
-        assertEquals("data length matches", result.getData().length, element.getData().length);
-        assertEquals("data matches", new String(element.getData()), new String(result.getData()));
+        assertEquals("data length matches", result.size(), element.size());
+        assertEquals("data matches", new String(element.getData().array()), new String(result.getData().array()));
         assertEquals("key matches", result.getKey(), element.getKey());
         assertEquals("cache has 1 element", 1, cache.getCurrentItems());
 
@@ -110,7 +114,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testvalue = "87654321";
 
         LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, 0L);
-        element.setData(testvalue.getBytes());
+        element.setData(ByteBuffer.wrap(testvalue.getBytes()));
 
         // put in cache
         assertEquals(cache.replace(element), Cache.StoreResponse.NOT_STORED);
@@ -133,7 +137,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testvalue = "87654321";
 
         LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, 0L);
-        element.setData(testvalue.getBytes());
+        element.setData(ByteBuffer.wrap(testvalue.getBytes()));
 
         // put in cache
         assertEquals(cache.set(element), Cache.StoreResponse.STORED);
@@ -146,11 +150,11 @@ public class BasicCacheTest extends AbstractCacheTest {
 
         // must be non null and match the original
         assertNotNull("got result", result);
-        assertEquals("data length matches", result.getData().length, element.getData().length);
-        assertEquals("data matches", new String(element.getData()), new String(result.getData()));
+        assertEquals("data length matches", result.size(), element.size());
+        assertEquals("data matches", new String(element.getData().array()), new String(result.getData().array()));
         assertEquals("key matches", result.getKey(), element.getKey());
 
-        assertEquals("size of cache matches element entered", element.getData().length, cache.getCurrentBytes(), 0);
+        assertEquals("size of cache matches element entered", element.size(), cache.getCurrentBytes(), 0);
         assertEquals("cache has 1 element", 1, cache.getCurrentItems());
     }
 
@@ -161,7 +165,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testvalue = "87654321";
 
         LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, 0L);
-        element.setData(testvalue.getBytes());
+        element.setData(ByteBuffer.wrap(testvalue.getBytes()));
 
         // put in cache
         assertEquals(cache.add(element), Cache.StoreResponse.STORED);
@@ -169,7 +173,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         // put in cache again and fail
         assertEquals(cache.add(element), Cache.StoreResponse.NOT_STORED);
 
-        assertEquals("size of cache matches single element entered", element.getData().length, cache.getCurrentBytes(), 0);
+        assertEquals("size of cache matches single element entered", element.size(), cache.getCurrentBytes(), 0);
         assertEquals("cache has only 1 element", 1, cache.getCurrentItems());
     }
 
@@ -180,7 +184,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testvalue = "87654321";
 
         LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, 0L);
-        element.setData(testvalue.getBytes());
+        element.setData(ByteBuffer.wrap(testvalue.getBytes()));
 
         // put in cache, then flush
         cache.add(element);
@@ -198,7 +202,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         String testvalue = "1";
 
         LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, 0L);
-        element.setData(testvalue.getBytes());
+        element.setData(ByteBuffer.wrap(testvalue.getBytes()));
 
         // put in cache
         assertEquals(cache.set(element), Cache.StoreResponse.STORED);
@@ -213,5 +217,33 @@ public class BasicCacheTest extends AbstractCacheTest {
         assertEquals("value correctly decremented", (Integer)2, cache.get_add(testKey, -5));
     }
 
+
+    @Test
+    public void testSetAndAppendPrepend() {
+        Key testKey = new Key("12345678".getBytes());
+
+        String testvalue = "1";
+
+        LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, 0L);
+        element.setData(ByteBuffer.wrap(testvalue.getBytes()));
+
+        // put in cache
+        assertEquals(cache.set(element), Cache.StoreResponse.STORED);
+
+        // increment
+        LocalCacheElement appendEl = new LocalCacheElement(testKey, 0, NO_EXPIRE, 0L);
+        appendEl.setData(ByteBuffer.wrap(testvalue.getBytes()));
+        Cache.StoreResponse append = cache.append(appendEl);
+        assertEquals("correct response", append, Cache.StoreResponse.STORED);
+        LocalCacheElement[] elements = cache.get(testKey);
+        assertEquals("right # elements", 1, elements.length);
+        ByteBuffer data = elements[0].getData();
+        data.rewind();
+        ByteBuffer copy = ByteBuffer.allocate(data.limit());
+        copy.put(data);
+        copy.rewind();
+        String results = new String(copy.array());
+        assertEquals("11", results);
+    }
 
 }

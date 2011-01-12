@@ -5,6 +5,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import static com.thimbleware.jmemcached.LocalCacheElement.Now;
@@ -48,7 +49,7 @@ public class CacheFIFOTest extends AbstractCacheTest {
                 assertNotNull(i + "th result should be present", result);
                 assertNotNull(i + "th result's should be present", result.getKey());
                 assertTrue("key of present item should match" , Arrays.equals(("" + i).getBytes(), result.getKey().bytes));
-                assertEquals(new String(result.getData()), i + "x");
+                assertEquals(new String(result.getData().array()), i + "x");
             }
         }
         assertEquals("correct number of cache misses", fillSize - MAX_SIZE, daemon.getCache().getGetMisses());
@@ -57,7 +58,7 @@ public class CacheFIFOTest extends AbstractCacheTest {
 
     private LocalCacheElement createElement(String testKey, String testvalue) {
         LocalCacheElement element = new LocalCacheElement(new Key(testKey.getBytes()), 0, Now() + (1000*60*5), 0L);
-        element.setData(testvalue.getBytes());
+        element.setData(ByteBuffer.wrap(testvalue.getBytes()));
 
         return element;
     }

@@ -3,6 +3,7 @@ package com.thimbleware.jmemcached;
 import com.thimbleware.jmemcached.storage.hash.SizedItem;
 
 import java.io.Serializable;
+import java.nio.ByteBuffer;
 
 /**
  */
@@ -17,9 +18,9 @@ public interface CacheElement extends Serializable, SizedItem {
 
     int getFlags();
 
-    byte[] getData();
+    ByteBuffer getData();
 
-    void setData(byte[] data);
+    void setData(ByteBuffer data);
 
     Key getKey();
 

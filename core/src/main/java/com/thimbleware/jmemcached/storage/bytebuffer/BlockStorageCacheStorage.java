@@ -68,13 +68,16 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
             }
         }
 
-        public byte[] getData() {
+        public ByteBuffer getData() {
             ChannelBuffer result = ChannelBuffers.buffer(size());
             for (int i = 0; i < regions.length; i++) {
                 final int bucket = buckets[i];
                 result.writeBytes(blockStorage[bucket].get(regions[i]));
             }
-            return result.array();
+            ByteBuffer byteBuffer = result.toByteBuffer();
+//            byteBuffer.flip();
+//            byteBuffer.rewind();
+            return byteBuffer;
         }
 
         public int size() {
@@ -176,32 +179,32 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
         }
     }
 
-    public boolean replace(Key key, LocalCacheElement LocalCacheElement, LocalCacheElement LocalCacheElement1) {
+    public boolean replace(Key key, LocalCacheElement original, LocalCacheElement replace) {
         StoredValue val = index.get(key);
         LocalCacheElement el = val.toElement(key);
 
-        if (!el.equals(LocalCacheElement)) {
+        if (!el.equals(original)) {
             return false;
         } else {
             // TODO not atomic; should share the write lock here
             remove(key);
-            put(key, LocalCacheElement1);
+            put(key, replace);
 
             return true;
         }
 
     }
 
-    public LocalCacheElement replace(Key key, LocalCacheElement LocalCacheElement) {
+    public LocalCacheElement replace(Key key, LocalCacheElement replace) {
         StoredValue val = index.get(key);
         if (!index.containsKey(key)) {
             return null;
         } else {
             // TODO not atomic; should share the write lock here
             remove(key);
-            put(key, LocalCacheElement);
+            put(key, replace);
 
-            return LocalCacheElement;
+            return replace;
         }
     }
 
@@ -247,7 +250,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
         if (index.containsKey(key)) remove(key);
         
         int numBuckets = numBuckets(item.size(), (int) getMaxPerBucketItemSize());
-        ByteBuffer readBuffer = ByteBuffer.wrap(item.getData());
+        ByteBuffer readBuffer = item.getData();
         Region[] regions = new Region[numBuckets];
         int buckets[] = new int[numBuckets];
         for (int i = 0; i < numBuckets; i++) {
@@ -259,7 +262,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
 
         for (int i = 0; i < numBuckets; i++) {
             int bucket = buckets[i];
-            final int fragmentSize = (i < numBuckets - 1) ? item.getData().length / numBuckets : readBuffer.remaining();
+            final int fragmentSize = (i < numBuckets - 1) ? item.size() / numBuckets : readBuffer.remaining();
             byte[] fragment = new byte[fragmentSize];
             readBuffer.get(fragment);
             Region region = blockStorage[bucket].alloc(fragmentSize, fragment);

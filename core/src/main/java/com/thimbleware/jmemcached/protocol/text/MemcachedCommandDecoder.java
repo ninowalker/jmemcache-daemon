@@ -13,6 +13,7 @@ import com.thimbleware.jmemcached.util.BufferUtils;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.*;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -68,7 +69,7 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
                 processLine(pieces, messageEvent.getChannel(), channelHandlerContext);
             } else if (status.state == SessionStatus.State.PROCESSING_MULTILINE) {
                 ChannelBuffer slice = in.copy();
-                byte[] payload = slice.array();
+                ByteBuffer payload = slice.toByteBuffer();
                 in.skipBytes(in.readableBytes());
                 continueSet(messageEvent.getChannel(), status, payload, channelHandlerContext);
             } else {
@@ -222,7 +223,7 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
      * @param remainder             the bytes picked up
      * @param channelHandlerContext netty channel handler context
      */
-    private void continueSet(Channel channel, SessionStatus state, byte[] remainder, ChannelHandlerContext channelHandlerContext) {
+    private void continueSet(Channel channel, SessionStatus state, ByteBuffer remainder, ChannelHandlerContext channelHandlerContext) {
         state.cmd.element.setData(remainder);
         Channels.fireMessageReceived(channelHandlerContext, state.cmd, channelHandlerContext.getChannel().getRemoteAddress());
     }

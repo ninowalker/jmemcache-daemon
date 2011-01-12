@@ -13,6 +13,7 @@ import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.nio.ByteOrder;
@@ -157,8 +158,10 @@ public class MemcachedBinaryCommandDecoder extends FrameDecoder {
                 int size = totalBodyLength - keyLength - extraLength;
 
                 cmdMessage.element = new LocalCacheElement(new Key(key), flags, expire != 0 && expire < CacheElement.THIRTY_DAYS ? LocalCacheElement.Now() + expire : expire, 0L);
-                cmdMessage.element.setData(new byte[size]);
-                channelBuffer.readBytes(cmdMessage.element.getData(), 0, size);
+                ByteBuffer data = ByteBuffer.allocate(size);
+                channelBuffer.readBytes(data);
+                data.flip();
+                cmdMessage.element.setData(data);
             } else if (cmdType == Op.INCR || cmdType == Op.DECR) {
                 long initialValue = extrasBuffer.readUnsignedInt();
                 long amount = extrasBuffer.readUnsignedInt();
