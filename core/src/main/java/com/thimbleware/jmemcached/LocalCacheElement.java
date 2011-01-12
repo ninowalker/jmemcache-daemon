@@ -223,8 +223,10 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
             readSize += in.read(dataArrary, readSize, length - readSize);
         data = ChannelBuffers.wrappedBuffer(dataArrary);
 
-        key = new Key(new byte[in.readInt()]);
-        in.read(key.bytes);
+
+        byte[] keyBytes = new byte[in.readInt()];
+        in.read(keyBytes);
+        key = new Key(ChannelBuffers.wrappedBuffer(keyBytes));
         casUnique = in.readLong();
         blocked = in.readBoolean();
         blockedUntil = in.readLong();
@@ -233,11 +235,11 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
     public void writeExternal(ObjectOutput out) throws IOException {
         out.writeInt(expire) ;
         out.writeInt(flags);
-        byte[] dataArray = data.array();
+        byte[] dataArray = data.copy().array();
         out.writeInt(dataArray.length);
         out.write(dataArray);
-        out.write(key.bytes.length);
-        out.write(key.bytes);
+        out.write(key.bytes.capacity());
+        out.write(key.bytes.copy().array());
         out.writeLong(casUnique);
         out.writeBoolean(blocked);
         out.writeLong(blockedUntil);

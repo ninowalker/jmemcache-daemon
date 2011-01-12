@@ -1,5 +1,7 @@
 package com.thimbleware.jmemcached;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+
 import java.util.Arrays;
 
 /**
@@ -8,12 +10,12 @@ import java.util.Arrays;
  * Wraps a byte array with a precomputed hashCode.
  */
 public class Key {
-    public byte[] bytes;
+    public ChannelBuffer bytes;
     private int hashCode;
 
-    public Key(byte[] bytes) {
+    public Key(ChannelBuffer bytes) {
         this.bytes = bytes;
-        this.hashCode = Arrays.hashCode(bytes);
+        this.hashCode = bytes.hashCode();
     }
 
     @Override
@@ -23,7 +25,9 @@ public class Key {
 
         Key key1 = (Key) o;
 
-        if (!Arrays.equals(bytes, key1.bytes)) return false;
+        bytes.readerIndex(0);
+        key1.bytes.readerIndex(0);
+        if (!bytes.equals(key1.bytes)) return false;
 
         return true;
     }

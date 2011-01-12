@@ -301,7 +301,7 @@ public final class CacheImpl extends AbstractCache<LocalCacheElement> implements
             if (!(delayed instanceof CacheImpl.DelayedMCElement))
                 return -1;
             else
-                return new String(element.getKey().bytes).compareTo(new String(((DelayedMCElement)delayed).element.getKey().bytes));
+                return element.getKey().toString().compareTo(((DelayedMCElement) delayed).element.getKey().toString());
         }
     }
 }

@@ -35,7 +35,7 @@ public class BasicCacheTest extends AbstractCacheTest {
 
     @Test
     public void testAddGet() {
-        Key testKey = new Key("12345678".getBytes());
+        Key testKey = new Key(ChannelBuffers.wrappedBuffer("12345678".getBytes()));
         String testvalue = "87654321";
 
         LocalCacheElement element = new LocalCacheElement(testKey, 0, NO_EXPIRE, 0L);
@@ -62,7 +62,7 @@ public class BasicCacheTest extends AbstractCacheTest {
 
     @Test
     public void testAddReplace() {
-        Key testKey = new Key("12345678".getBytes());
+        Key testKey = new Key(ChannelBuffers.wrappedBuffer("12345678".getBytes()));
 
         String testvalue = "87654321";
 
@@ -111,7 +111,7 @@ public class BasicCacheTest extends AbstractCacheTest {
 
     @Test
     public void testReplaceFail() {
-        Key testKey = new Key("12345678".getBytes());
+        Key testKey = new Key(ChannelBuffers.wrappedBuffer("12345678".getBytes()));
 
         String testvalue = "87654321";
 
@@ -134,7 +134,7 @@ public class BasicCacheTest extends AbstractCacheTest {
 
     @Test
     public void testSet() {
-        Key testKey = new Key("12345678".getBytes());
+        Key testKey = new Key(ChannelBuffers.wrappedBuffer("12345678".getBytes()));
 
         String testvalue = "87654321";
 
@@ -162,7 +162,7 @@ public class BasicCacheTest extends AbstractCacheTest {
 
     @Test
     public void testAddAddFail() {
-        Key testKey = new Key("12345678".getBytes());
+        Key testKey = new Key(ChannelBuffers.wrappedBuffer("12345678".getBytes()));
 
         String testvalue = "87654321";
 
@@ -181,7 +181,7 @@ public class BasicCacheTest extends AbstractCacheTest {
 
     @Test
     public void testAddFlush() {
-        Key testKey = new Key("12345678".getBytes());
+        Key testKey = new Key(ChannelBuffers.wrappedBuffer("12345678".getBytes()));
 
         String testvalue = "87654321";
 
@@ -199,7 +199,7 @@ public class BasicCacheTest extends AbstractCacheTest {
 
     @Test
     public void testSetAndIncrement() {
-        Key testKey = new Key("12345678".getBytes());
+        Key testKey = new Key(ChannelBuffers.wrappedBuffer("12345678".getBytes()));
 
         String testvalue = "1";
 
@@ -222,7 +222,7 @@ public class BasicCacheTest extends AbstractCacheTest {
 
     @Test
     public void testSetAndAppendPrepend() {
-        Key testKey = new Key("12345678".getBytes());
+        Key testKey = new Key(ChannelBuffers.wrappedBuffer("12345678".getBytes()));
 
         String testvalue = "1";
 

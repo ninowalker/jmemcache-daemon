@@ -11,6 +11,7 @@ import com.thimbleware.jmemcached.protocol.exceptions.MalformedCommandException;
 import com.thimbleware.jmemcached.protocol.exceptions.UnknownCommandException;
 import com.thimbleware.jmemcached.util.BufferUtils;
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.*;
 
 import java.nio.ByteBuffer;
@@ -28,7 +29,7 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
 
     private SessionStatus status;
 
-    private static final byte[] NOREPLY = "noreply".getBytes();
+    private static final ChannelBuffer NOREPLY = ChannelBuffers.wrappedBuffer("noreply".getBytes());
 
 
     public MemcachedCommandDecoder(SessionStatus status) {
@@ -52,19 +53,18 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
             // Verify that we are in 'processing()' mode
             if (status.state == SessionStatus.State.PROCESSING) {
                 // split into pieces
-                List<byte[]> pieces = new ArrayList<byte[]>(6);
+                List<ChannelBuffer> pieces = new ArrayList<ChannelBuffer>(6);
                 int pos = in.bytesBefore((byte) ' ');
                 do {
                     if (pos != -1) {
-                        byte[] piece = new byte[pos];
-                        in.readBytes(piece);
-                        pieces.add(piece);
-                        in.skipBytes(1);
+                        ChannelBuffer slice = in.slice(in.readerIndex(), pos);
+                        slice.readerIndex(0);
+                        pieces.add(slice);
+                        in.skipBytes(pos + 1);
                     }
                 } while ((pos = in.bytesBefore((byte) ' ')) != -1);
-                byte[] remainder = new byte[in.readableBytes()];
-                in.readBytes(remainder);
-                pieces.add(remainder);
+                pieces.add(in.slice());
+                in.skipBytes(in.readableBytes());
 
                 processLine(pieces, messageEvent.getChannel(), channelHandlerContext);
             } else if (status.state == SessionStatus.State.PROCESSING_MULTILINE) {
@@ -94,7 +94,7 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
      * @throws com.thimbleware.jmemcached.protocol.exceptions.MalformedCommandException
      * @throws com.thimbleware.jmemcached.protocol.exceptions.UnknownCommandException
      */
-    private void processLine(List<byte[]> parts, Channel channel, ChannelHandlerContext channelHandlerContext) throws UnknownCommandException, MalformedCommandException {
+    private void processLine(List<ChannelBuffer> parts, Channel channel, ChannelHandlerContext channelHandlerContext) throws UnknownCommandException, MalformedCommandException {
         final int numParts = parts.size();
 
         // Turn the command into an enum for matching on
@@ -102,9 +102,9 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
         try {
             op = Op.FindOp(parts.get(0));
             if (op == null)
-                throw new IllegalArgumentException("unknown operation: " + new String(parts.get(0)));
+                throw new IllegalArgumentException("unknown operation: " + parts.get(0).toString());
         } catch (IllegalArgumentException e) {
-            throw new UnknownCommandException("unknown operation: " + new String(parts.get(0)));
+            throw new UnknownCommandException("unknown operation: " + parts.get(0).toString());
         }
 
         // Produce the initial command message, for filling in later
@@ -115,7 +115,7 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
                 cmd.setKey(parts.get(1));
 
                 if (numParts >= 2) {
-                    if (Arrays.equals(parts.get(numParts - 1), NOREPLY)) {
+                    if (parts.get(numParts - 1).equals(NOREPLY)) {
                         cmd.noreply = true;
                         if (numParts == 4)
                             cmd.time = BufferUtils.atoi((parts.get(2)));
@@ -134,7 +134,7 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
                 cmd.setKey(parts.get(1));
                 cmd.incrAmount = BufferUtils.atoi(parts.get(2));
 
-                if (numParts == 3 && Arrays.equals(parts.get(2), NOREPLY)) {
+                if (numParts == 3 && parts.get(2).equals(NOREPLY)) {
                     cmd.noreply = true;
                 }
 
@@ -143,7 +143,7 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
 
             case FLUSH_ALL:
                 if (numParts >= 1) {
-                    if (Arrays.equals(parts.get(numParts - 1), NOREPLY)) {
+                    if (parts.get(numParts - 1).equals(NOREPLY)) {
                         cmd.noreply = true;
                         if (numParts == 3)
                             cmd.time = BufferUtils.atoi((parts.get(1)));
@@ -160,7 +160,7 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
 
                 cmd.time = BufferUtils.atoi((parts.get(1))); // verbose level
 
-                if (numParts > 1 && Arrays.equals(parts.get(2), NOREPLY))
+                if (numParts > 1 && parts.get(2).equals(NOREPLY))
                     cmd.noreply = true;
                 Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
                 break;
@@ -179,16 +179,16 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
                 int size = BufferUtils.atoi(parts.get(4));
                 int expire = BufferUtils.atoi(parts.get(3));
                 int flags = BufferUtils.atoi(parts.get(2));
-                cmd.element = new LocalCacheElement(new Key(parts.get(1)), flags, expire != 0 && expire < CacheElement.THIRTY_DAYS ? LocalCacheElement.Now() + expire : expire, 0L);
+                cmd.element = new LocalCacheElement(new Key(parts.get(1).slice()), flags, expire != 0 && expire < CacheElement.THIRTY_DAYS ? LocalCacheElement.Now() + expire : expire, 0L);
 
                 // look for cas and "noreply" elements
                 if (numParts > 5) {
                     int noreply = op == Op.CAS ? 6 : 5;
                     if (op == Op.CAS) {
-                        cmd.cas_key = BufferUtils.atol(parts.get(5));
+                        cmd.cas_key = BufferUtils.atol(parts.get(5).copy().array());
                     }
 
-                    if (numParts == noreply + 1 && Arrays.equals(parts.get(noreply), NOREPLY))
+                    if (numParts == noreply + 1 && parts.get(noreply).equals(NOREPLY))
                         cmd.noreply = true;
                 }
 

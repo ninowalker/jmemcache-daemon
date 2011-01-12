@@ -15,6 +15,9 @@
  */
 package com.thimbleware.jmemcached.protocol;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+
 import java.util.Arrays;
 
 /**
@@ -25,10 +28,14 @@ public enum Op {
     QUIT, FLUSH_ALL, VERBOSITY;
 
     private static byte[][] ops = new byte[Op.values().length][];
+    private static ChannelBuffer[] opsbf = new ChannelBuffer[Op.values().length];
 
     static {
-        for (int x = 0 ; x < Op.values().length; x++)
-            ops[x] = Op.values()[x].toString().toLowerCase().getBytes();
+        for (int x = 0 ; x < Op.values().length; x++) {
+            byte[] bytes = Op.values()[x].toString().toLowerCase().getBytes();
+            ops[x] = bytes;
+            opsbf[x] = ChannelBuffers.wrappedBuffer(bytes);
+        }
     }
 
     public static Op FindOp(byte[] cmd) {
@@ -37,4 +44,14 @@ public enum Op {
         }
         return null;
     }
+
+    public static Op FindOp(ChannelBuffer cmd) {
+        for (int x = 0 ; x < ops.length; x++) {
+            opsbf[x].readerIndex(0);
+            cmd.readerIndex(0);
+            if (opsbf[x].equals(cmd)) return Op.values()[x];
+        }
+        return null;
+    }
+
 }

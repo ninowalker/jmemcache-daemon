@@ -220,7 +220,7 @@ public final class MemcachedCommandHandler<CACHE_ELEMENT extends CacheElement> e
     protected void handleStats(ChannelHandlerContext channelHandlerContext, CommandMessage<CACHE_ELEMENT> command, int cmdKeysSize, Channel channel) {
         String option = "";
         if (cmdKeysSize > 0) {
-            option = new String(command.keys.get(0).bytes);
+            option = command.keys.get(0).bytes.toString();
         }
         Channels.fireMessageReceived(channelHandlerContext, new ResponseMessage(command).withStatResponse(cache.stat(option)), channel.getRemoteAddress());
     }
