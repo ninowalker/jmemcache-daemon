@@ -1,6 +1,7 @@
 package com.thimbleware.jmemcached.test;
 
 import com.thimbleware.jmemcached.*;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -58,7 +59,7 @@ public class CacheFIFOTest extends AbstractCacheTest {
 
     private LocalCacheElement createElement(String testKey, String testvalue) {
         LocalCacheElement element = new LocalCacheElement(new Key(testKey.getBytes()), 0, Now() + (1000*60*5), 0L);
-        element.setData(ByteBuffer.wrap(testvalue.getBytes()));
+        element.setData(ChannelBuffers.wrappedBuffer(testvalue.getBytes()));
 
         return element;
     }

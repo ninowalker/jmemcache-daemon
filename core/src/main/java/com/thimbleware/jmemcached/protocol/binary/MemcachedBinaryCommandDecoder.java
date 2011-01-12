@@ -158,9 +158,8 @@ public class MemcachedBinaryCommandDecoder extends FrameDecoder {
                 int size = totalBodyLength - keyLength - extraLength;
 
                 cmdMessage.element = new LocalCacheElement(new Key(key), flags, expire != 0 && expire < CacheElement.THIRTY_DAYS ? LocalCacheElement.Now() + expire : expire, 0L);
-                ByteBuffer data = ByteBuffer.allocate(size);
+                ChannelBuffer data = ChannelBuffers.buffer(size);
                 channelBuffer.readBytes(data);
-                data.flip();
                 cmdMessage.element.setData(data);
             } else if (cmdType == Op.INCR || cmdType == Op.DECR) {
                 long initialValue = extrasBuffer.readUnsignedInt();

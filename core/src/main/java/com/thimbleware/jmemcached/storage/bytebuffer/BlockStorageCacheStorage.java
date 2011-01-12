@@ -68,16 +68,13 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
             }
         }
 
-        public ByteBuffer getData() {
+        public ChannelBuffer getData() {
             ChannelBuffer result = ChannelBuffers.buffer(size());
             for (int i = 0; i < regions.length; i++) {
                 final int bucket = buckets[i];
                 result.writeBytes(blockStorage[bucket].get(regions[i]));
             }
-            ByteBuffer byteBuffer = result.toByteBuffer();
-//            byteBuffer.flip();
-//            byteBuffer.rewind();
-            return byteBuffer;
+            return result;
         }
 
         public int size() {
@@ -250,7 +247,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
         if (index.containsKey(key)) remove(key);
         
         int numBuckets = numBuckets(item.size(), (int) getMaxPerBucketItemSize());
-        ByteBuffer readBuffer = item.getData();
+        ChannelBuffer readBuffer = item.getData();
         Region[] regions = new Region[numBuckets];
         int buckets[] = new int[numBuckets];
         for (int i = 0; i < numBuckets; i++) {
@@ -262,9 +259,9 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
 
         for (int i = 0; i < numBuckets; i++) {
             int bucket = buckets[i];
-            final int fragmentSize = (i < numBuckets - 1) ? item.size() / numBuckets : readBuffer.remaining();
+            final int fragmentSize = (i < numBuckets - 1) ? item.size() / numBuckets : readBuffer.readableBytes();
             byte[] fragment = new byte[fragmentSize];
-            readBuffer.get(fragment);
+            readBuffer.readBytes(fragment);
             Region region = blockStorage[bucket].alloc(fragmentSize, fragment);
             regions[i] = region;
         }

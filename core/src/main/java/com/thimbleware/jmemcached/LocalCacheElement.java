@@ -16,6 +16,8 @@
 package com.thimbleware.jmemcached;
 
 import com.thimbleware.jmemcached.util.BufferUtils;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 
 import java.io.Externalizable;
 import java.io.IOException;
@@ -30,7 +32,7 @@ import java.nio.ByteBuffer;
 public final class LocalCacheElement implements CacheElement, Externalizable {
     private int expire ;
     private int flags;
-    private ByteBuffer data;
+    private ChannelBuffer data;
     private Key key;
     private long casUnique = 0L;
     private boolean blocked = false;
@@ -58,24 +60,23 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
     }
 
     public int size() {
-        return getData().limit();
+        return getData().capacity();
     }
 
     public LocalCacheElement append(LocalCacheElement appendElement) {
         int newLength = size() + appendElement.size();
         LocalCacheElement appendedElement = new LocalCacheElement(getKey(), getFlags(), getExpire(), 0L);
-        ByteBuffer appended = ByteBuffer.allocateDirect(newLength);
-        ByteBuffer existing = getData();
-        ByteBuffer append = appendElement.getData();
+        ChannelBuffer appended = ChannelBuffers.buffer(newLength);
+        ChannelBuffer existing = getData();
+        ChannelBuffer append = appendElement.getData();
 
-        appended.put(existing);
-        appended.put(append);
+        appended.writeBytes(existing);
+        appended.writeBytes(append);
 
-        appended.flip();
-        appended.rewind();
+        appended.readerIndex(0);
 
-        existing.rewind();
-        append.rewind();
+        existing.readerIndex(0);
+        append.readerIndex(0);
 
         appendedElement.setData(appended);
         appendedElement.setCasUnique(appendedElement.getCasUnique() + 1);
@@ -87,18 +88,17 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         int newLength = size() + prependElement.size();
 
         LocalCacheElement prependedElement = new LocalCacheElement(getKey(), getFlags(), getExpire(), 0L);
-        ByteBuffer prepended = ByteBuffer.allocateDirect(newLength);
-        ByteBuffer prepend = prependElement.getData();
-        ByteBuffer existing = getData();
+        ChannelBuffer prepended = ChannelBuffers.buffer(newLength);
+        ChannelBuffer prepend = prependElement.getData();
+        ChannelBuffer existing = getData();
 
-        prepended.put(prepend);
-        prepended.put(existing);
+        prepended.writeBytes(prepend);
+        prepended.writeBytes(existing);
 
-        existing.rewind();
-        prepend.rewind();
+        existing.readerIndex(0);
+        prepend.readerIndex(0);
 
-        prepended.flip();
-        prepended.rewind();
+        prepended.readerIndex(0);
 
         prependedElement.setData(prepended);
         prependedElement.setCasUnique(prependedElement.getCasUnique() + 1);
@@ -118,7 +118,7 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
 
     public IncrDecrResult add(int mod) {
         // TODO handle parse failure!
-        int modVal = BufferUtils.atoi(getData().array()) + mod; // change value
+        int modVal = BufferUtils.atoi(getData()) + mod; // change value
         if (modVal < 0) {
             modVal = 0;
 
@@ -127,7 +127,7 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         byte[] newData = BufferUtils.itoa(modVal);
 
         LocalCacheElement replace = new LocalCacheElement(getKey(), getFlags(), getExpire(), 0L);
-        ByteBuffer buf = ByteBuffer.wrap(newData);
+        ChannelBuffer buf = ChannelBuffers.wrappedBuffer(newData);
         replace.setData(buf);
         replace.setCasUnique(replace.getCasUnique() + 1);
 
@@ -176,8 +176,8 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         return flags;
     }
 
-    public ByteBuffer getData() {
-        data.rewind();
+    public ChannelBuffer getData() {
+        data.readerIndex(0);
         return data;
     }
 
@@ -207,8 +207,8 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
     }
 
 
-    public void setData(ByteBuffer data) {
-        data.rewind();
+    public void setData(ChannelBuffer data) {
+        data.readerIndex(0);
         this.data = data;
     }
 
@@ -221,7 +221,7 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         byte[] dataArrary = new byte[length];
         while( readSize < length)
             readSize += in.read(dataArrary, readSize, length - readSize);
-        data = ByteBuffer.wrap(dataArrary);
+        data = ChannelBuffers.wrappedBuffer(dataArrary);
 
         key = new Key(new byte[in.readInt()]);
         in.read(key.bytes);

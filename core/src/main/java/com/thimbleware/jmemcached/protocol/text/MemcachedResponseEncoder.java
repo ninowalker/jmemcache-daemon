@@ -74,7 +74,7 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
             int totalBytes = 0;
             for (CacheElement result : results) {
                 if (result != null) {
-                    totalBytes += result.size() + 512;
+                    totalBytes += result.size() ;
                 }
             }
             ChannelBuffer writeBuffer = ChannelBuffers.dynamicBuffer(totalBytes);

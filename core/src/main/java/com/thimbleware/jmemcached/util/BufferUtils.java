@@ -1,5 +1,7 @@
 package com.thimbleware.jmemcached.util;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+
 /**
  */
 public class BufferUtils {
@@ -94,6 +96,51 @@ public class BufferUtils {
         if (sign != 0) {
             buf [--charPos] = sign;
         }
+    }
+
+    public static int atoi(ChannelBuffer s)
+            throws NumberFormatException
+    {
+        int result = 0;
+        boolean negative = false;
+        int i = 0, len = s.capacity();
+        int limit = -Integer.MAX_VALUE;
+        int multmin;
+        int digit;
+
+        if (len > 0) {
+            byte firstChar = s.getByte(0);
+            if (firstChar < '0') { // Possible leading "-"
+                if (firstChar == '-') {
+                    negative = true;
+                    limit = Integer.MIN_VALUE;
+                } else
+                    throw new NumberFormatException();
+
+                if (len == 1) // Cannot have lone "-"
+                    throw new NumberFormatException();
+                i++;
+            }
+            multmin = limit / 10;
+            while (i < len) {
+                // Accumulating negatively avoids surprises near MAX_VALUE
+                digit = Character.digit(s.getByte(i++),10);
+                if (digit < 0) {
+                    throw new NumberFormatException();
+                }
+                if (result < multmin) {
+                    throw new NumberFormatException();
+                }
+                result *= 10;
+                if (result < limit + digit) {
+                    throw new NumberFormatException();
+                }
+                result -= digit;
+            }
+        } else {
+            throw new NumberFormatException();
+        }
+        return negative ? result : -result;
     }
 
     public static int atoi(byte[] s)

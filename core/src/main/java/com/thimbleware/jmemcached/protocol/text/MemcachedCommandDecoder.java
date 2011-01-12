@@ -68,8 +68,7 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
 
                 processLine(pieces, messageEvent.getChannel(), channelHandlerContext);
             } else if (status.state == SessionStatus.State.PROCESSING_MULTILINE) {
-                ChannelBuffer slice = in.copy();
-                ByteBuffer payload = slice.toByteBuffer();
+                ChannelBuffer payload = in.copy(in.readerIndex(), in.readableBytes());
                 in.skipBytes(in.readableBytes());
                 continueSet(messageEvent.getChannel(), status, payload, channelHandlerContext);
             } else {
@@ -133,7 +132,7 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
                     throw new MalformedCommandException("invalid increment command");
 
                 cmd.setKey(parts.get(1));
-                cmd.incrAmount = Integer.valueOf(new String(parts.get(2)));
+                cmd.incrAmount = BufferUtils.atoi(parts.get(2));
 
                 if (numParts == 3 && Arrays.equals(parts.get(2), NOREPLY)) {
                     cmd.noreply = true;
@@ -186,7 +185,7 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
                 if (numParts > 5) {
                     int noreply = op == Op.CAS ? 6 : 5;
                     if (op == Op.CAS) {
-                        cmd.cas_key = Long.valueOf(new String(parts.get(5)));
+                        cmd.cas_key = BufferUtils.atol(parts.get(5));
                     }
 
                     if (numParts == noreply + 1 && Arrays.equals(parts.get(noreply), NOREPLY))
@@ -223,7 +222,7 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
      * @param remainder             the bytes picked up
      * @param channelHandlerContext netty channel handler context
      */
-    private void continueSet(Channel channel, SessionStatus state, ByteBuffer remainder, ChannelHandlerContext channelHandlerContext) {
+    private void continueSet(Channel channel, SessionStatus state, ChannelBuffer remainder, ChannelHandlerContext channelHandlerContext) {
         state.cmd.element.setData(remainder);
         Channels.fireMessageReceived(channelHandlerContext, state.cmd, channelHandlerContext.getChannel().getRemoteAddress());
     }
