@@ -154,44 +154,58 @@ public final class MemcachedCommandHandler<CACHE_ELEMENT extends CacheElement> e
         }
 
         Channel channel = messageEvent.getChannel();
-        if (cmd == Op.GET || cmd == Op.GETS) {
-            handleGets(channelHandlerContext, command, channel);
-        } else if (cmd == Op.SET) {
-            handleSet(channelHandlerContext, command, channel);
-        } else if (cmd == Op.CAS) {
-            handleCas(channelHandlerContext, command, channel);
-        } else if (cmd == Op.ADD) {
-            handleAdd(channelHandlerContext, command, channel);
-        } else if (cmd == Op.REPLACE) {
-            handleReplace(channelHandlerContext, command, channel);
-        } else if (cmd == Op.APPEND) {
-            handleAppend(channelHandlerContext, command, channel);
-        } else if (cmd == Op.PREPEND) {
-            handlePrepend(channelHandlerContext, command, channel);
-        } else if (cmd == Op.INCR) {
-            handleIncr(channelHandlerContext, command, channel);
-        } else if (cmd == Op.DECR) {
-            handleDecr(channelHandlerContext, command, channel);
-        } else if (cmd == Op.DELETE) {
-            handleDelete(channelHandlerContext, command, channel);
-        } else if (cmd == Op.STATS) {
-            handleStats(channelHandlerContext, command, cmdKeysSize, channel);
-        } else if (cmd == Op.VERSION) {
-            handleVersion(channelHandlerContext, command, channel);
-        } else if (cmd == Op.QUIT) {
-            handleQuit(channel);
-        } else if (cmd == Op.FLUSH_ALL) {
-            handleFlush(channelHandlerContext, command, channel);
-        } else if (cmd == Op.VERBOSITY) {
-        	handleVerbosity(channelHandlerContext, command, channel);
-        } else if (cmd == null) {
-            // NOOP
-            handleNoOp(channelHandlerContext, command);
-        } else {
-            throw new UnknownCommandException("unknown command:" + cmd);
-
+        if (cmd == null) handleNoOp(channelHandlerContext, command);
+        else
+        switch (cmd) {
+            case GET:
+            case GETS:
+                handleGets(channelHandlerContext, command, channel);
+                break;
+            case APPEND:
+                handleAppend(channelHandlerContext, command, channel);
+                break;
+            case PREPEND:
+                handlePrepend(channelHandlerContext, command, channel);
+                break;
+            case DELETE:
+                handleDelete(channelHandlerContext, command, channel);
+                break;
+            case DECR:
+                handleDecr(channelHandlerContext, command, channel);
+                break;
+            case INCR:
+                handleIncr(channelHandlerContext, command, channel);
+                break;
+            case REPLACE:
+                handleReplace(channelHandlerContext, command, channel);
+                break;
+            case ADD:
+                handleAdd(channelHandlerContext, command, channel);
+                break;
+            case SET:
+                handleSet(channelHandlerContext, command, channel);
+                break;
+            case CAS:
+                handleCas(channelHandlerContext, command, channel);
+                break;
+            case STATS:
+                handleStats(channelHandlerContext, command, cmdKeysSize, channel);
+                break;
+            case VERSION:
+                handleVersion(channelHandlerContext, command, channel);
+                break;
+            case QUIT:
+                handleQuit(channel);
+                break;
+            case FLUSH_ALL:
+                handleFlush(channelHandlerContext, command, channel);
+                break;
+            case VERBOSITY:
+                handleVerbosity(channelHandlerContext, command, channel);
+                break;
+            default:
+                 throw new UnknownCommandException("unknown command");
         }
-
     }
 
     protected void handleNoOp(ChannelHandlerContext channelHandlerContext, CommandMessage<CACHE_ELEMENT> command) {
