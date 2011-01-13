@@ -124,11 +124,10 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
 
         } // check for underflow
 
-        byte[] newData = BufferUtils.itoa(modVal);
+        ChannelBuffer newData = BufferUtils.itoa(modVal);
 
         LocalCacheElement replace = new LocalCacheElement(getKey(), getFlags(), getExpire(), 0L);
-        ChannelBuffer buf = ChannelBuffers.wrappedBuffer(newData);
-        replace.setData(buf);
+        replace.setData(newData);
         replace.setCasUnique(replace.getCasUnique() + 1);
 
         return new IncrDecrResult(modVal, replace);

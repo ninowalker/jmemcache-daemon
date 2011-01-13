@@ -84,12 +84,12 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
                         buffers[i++] = VALUE.duplicate();
                         buffers[i++] = (result.getKey().bytes);
                         buffers[i++] = (SPACE.duplicate());
-                        buffers[i++] = (ChannelBuffers.wrappedBuffer(BufferUtils.itoa(result.getFlags())));
+                        buffers[i++] = BufferUtils.itoa(result.getFlags());
                         buffers[i++] = (SPACE.duplicate());
-                        buffers[i++] = (ChannelBuffers.wrappedBuffer(BufferUtils.itoa(result.size())));
+                        buffers[i++] = BufferUtils.itoa(result.size());
                         if (cmd == Op.GETS) {
                             buffers[i++] = (SPACE.duplicate());
-                            buffers[i++] = (ChannelBuffers.wrappedBuffer(BufferUtils.ltoa(result.getCasUnique())));
+                            buffers[i++] = BufferUtils.ltoa(result.getCasUnique());
                         }
                         buffers[i++] = (CRLF.duplicate());
                         buffers[i++] = (result.getData().duplicate());
