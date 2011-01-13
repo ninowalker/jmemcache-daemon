@@ -17,18 +17,6 @@ public class BufferUtils {
                 return i+1;
     }
 
-    /** Blatant copy of Integer.toString, but returning a byte array instead of a String, as
-     *  string charset decoding/encoding was killing us on performance.
-     * @param i integer to convert
-     * @return byte[] array containing literal ASCII char representation 
-     */
-    public static byte[] itoa(int i) {
-        int size = (i < 0) ? stringSize(-i) + 1 : stringSize(i);
-        byte[] buf = new byte[size];
-        getChars(i, size, buf);
-        return buf;
-    }
-
     final static byte[] digits = {
             '0' , '1' , '2' , '3' , '4' , '5' ,
             '6' , '7' , '8' , '9' , 'a' , 'b' ,
@@ -143,22 +131,22 @@ public class BufferUtils {
         return negative ? result : -result;
     }
 
-    public static int atoi(byte[] s)
+    public static long atol(ChannelBuffer s)
             throws NumberFormatException
     {
-        int result = 0;
+        long result = 0;
         boolean negative = false;
-        int i = 0, len = s.length;
-        int limit = -Integer.MAX_VALUE;
-        int multmin;
+        int i = 0, len = s.capacity();
+        long limit = -Long.MAX_VALUE;
+        long multmin;
         int digit;
 
         if (len > 0) {
-            byte firstChar = s[0];
+            byte firstChar = s.getByte(0);
             if (firstChar < '0') { // Possible leading "-"
                 if (firstChar == '-') {
                     negative = true;
-                    limit = Integer.MIN_VALUE;
+                    limit = Long.MIN_VALUE;
                 } else
                     throw new NumberFormatException();
 
@@ -169,7 +157,7 @@ public class BufferUtils {
             multmin = limit / 10;
             while (i < len) {
                 // Accumulating negatively avoids surprises near MAX_VALUE
-                digit = Character.digit(s[i++],10);
+                digit = Character.digit(s.getByte(i++),10);
                 if (digit < 0) {
                     throw new NumberFormatException();
                 }
@@ -187,6 +175,19 @@ public class BufferUtils {
         }
         return negative ? result : -result;
     }
+
+    /** Blatant copy of Integer.toString, but returning a byte array instead of a String, as
+     *  string charset decoding/encoding was killing us on performance.
+     * @param i integer to convert
+     * @return byte[] array containing literal ASCII char representation
+     */
+    public static byte[] itoa(int i) {
+        int size = (i < 0) ? stringSize(-i) + 1 : stringSize(i);
+        byte[] buf = new byte[size];
+        getChars(i, size, buf);
+        return buf;
+    }
+
 
     public static byte[] ltoa(long i) {
         if (i == Long.MIN_VALUE)
@@ -264,93 +265,4 @@ public class BufferUtils {
         return 19;
     }
 
-    public static long atol(byte[] s)
-            throws NumberFormatException
-    {
-        long result = 0;
-        boolean negative = false;
-        int i = 0, len = s.length;
-        long limit = -Long.MAX_VALUE;
-        long multmin;
-        int digit;
-
-        if (len > 0) {
-            byte firstChar = s[0];
-            if (firstChar < '0') { // Possible leading "-"
-                if (firstChar == '-') {
-                    negative = true;
-                    limit = Long.MIN_VALUE;
-                } else
-                    throw new NumberFormatException();
-
-                if (len == 1) // Cannot have lone "-"
-                    throw new NumberFormatException();
-                i++;
-            }
-            multmin = limit / 10;
-            while (i < len) {
-                // Accumulating negatively avoids surprises near MAX_VALUE
-                digit = Character.digit(s[i++],10);
-                if (digit < 0) {
-                    throw new NumberFormatException();
-                }
-                if (result < multmin) {
-                    throw new NumberFormatException();
-                }
-                result *= 10;
-                if (result < limit + digit) {
-                    throw new NumberFormatException();
-                }
-                result -= digit;
-            }
-        } else {
-            throw new NumberFormatException();
-        }
-        return negative ? result : -result;
-    }
-
-    public static long atol(ChannelBuffer s)
-            throws NumberFormatException
-    {
-        long result = 0;
-        boolean negative = false;
-        int i = 0, len = s.capacity();
-        long limit = -Long.MAX_VALUE;
-        long multmin;
-        int digit;
-
-        if (len > 0) {
-            byte firstChar = s.getByte(0);
-            if (firstChar < '0') { // Possible leading "-"
-                if (firstChar == '-') {
-                    negative = true;
-                    limit = Long.MIN_VALUE;
-                } else
-                    throw new NumberFormatException();
-
-                if (len == 1) // Cannot have lone "-"
-                    throw new NumberFormatException();
-                i++;
-            }
-            multmin = limit / 10;
-            while (i < len) {
-                // Accumulating negatively avoids surprises near MAX_VALUE
-                digit = Character.digit(s.getByte(i++),10);
-                if (digit < 0) {
-                    throw new NumberFormatException();
-                }
-                if (result < multmin) {
-                    throw new NumberFormatException();
-                }
-                result *= 10;
-                if (result < limit + digit) {
-                    throw new NumberFormatException();
-                }
-                result -= digit;
-            }
-        } else {
-            throw new NumberFormatException();
-        }
-        return negative ? result : -result;
-    }
 }

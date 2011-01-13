@@ -19,6 +19,8 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  */
@@ -27,31 +29,19 @@ public enum Op {
     INCR, REPLACE, ADD, SET, CAS, STATS, VERSION,
     QUIT, FLUSH_ALL, VERBOSITY;
 
-    private static byte[][] ops = new byte[Op.values().length][];
-    private static ChannelBuffer[] opsbf = new ChannelBuffer[Op.values().length];
+    private static Map<ChannelBuffer, Op> opsbf = new HashMap<ChannelBuffer, Op>();
 
     static {
         for (int x = 0 ; x < Op.values().length; x++) {
             byte[] bytes = Op.values()[x].toString().toLowerCase().getBytes();
-            ops[x] = bytes;
-            opsbf[x] = ChannelBuffers.wrappedBuffer(bytes);
+            opsbf.put(ChannelBuffers.wrappedBuffer(bytes), Op.values()[x]);
         }
     }
 
-    public static Op FindOp(byte[] cmd) {
-        for (int x = 0 ; x < ops.length; x++) {
-            if (Arrays.equals(cmd, ops[x])) return Op.values()[x];
-        }
-        return null;
-    }
 
     public static Op FindOp(ChannelBuffer cmd) {
-        for (int x = 0 ; x < ops.length; x++) {
-            opsbf[x].readerIndex(0);
-            cmd.readerIndex(0);
-            if (opsbf[x].equals(cmd)) return Op.values()[x];
-        }
-        return null;
+        cmd.readerIndex(0);
+        return opsbf.get(cmd);
     }
 
 }

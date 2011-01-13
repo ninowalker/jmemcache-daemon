@@ -3,8 +3,8 @@ package com.thimbleware.jmemcached.protocol.text;
 import com.thimbleware.jmemcached.CacheElement;
 import com.thimbleware.jmemcached.Key;
 import com.thimbleware.jmemcached.LocalCacheElement;
-import com.thimbleware.jmemcached.protocol.Op;
 import com.thimbleware.jmemcached.protocol.CommandMessage;
+import com.thimbleware.jmemcached.protocol.Op;
 import com.thimbleware.jmemcached.protocol.SessionStatus;
 import com.thimbleware.jmemcached.protocol.exceptions.InvalidProtocolStateException;
 import com.thimbleware.jmemcached.protocol.exceptions.MalformedCommandException;
@@ -14,9 +14,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.*;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -118,9 +116,9 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
                     if (parts.get(numParts - 1).equals(NOREPLY)) {
                         cmd.noreply = true;
                         if (numParts == 4)
-                            cmd.time = BufferUtils.atoi((parts.get(2)));
+                            cmd.time = BufferUtils.atoi(parts.get(2));
                     } else if (numParts == 3)
-                        cmd.time = BufferUtils.atoi((parts.get(2)));
+                        cmd.time = BufferUtils.atoi(parts.get(2));
                 }
                 Channels.fireMessageReceived(channelHandlerContext, cmd, channel.getRemoteAddress());
                 break;
