@@ -15,6 +15,8 @@ import org.slf4j.LoggerFactory;
 import static com.thimbleware.jmemcached.protocol.text.MemcachedPipelineFactory.*;
 import static java.lang.String.valueOf;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.Map;
 
@@ -27,6 +29,7 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
 
 
     public static final ChannelBuffer CRLF = ChannelBuffers.copiedBuffer("\r\n", USASCII);
+    private static final ChannelBuffer SPACE = ChannelBuffers.copiedBuffer(" ", USASCII);
     private static final ChannelBuffer VALUE = ChannelBuffers.copiedBuffer("VALUE ", USASCII);
     private static final ChannelBuffer EXISTS = ChannelBuffers.copiedBuffer("EXISTS\r\n", USASCII);
     private static final ChannelBuffer NOT_FOUND = ChannelBuffers.copiedBuffer("NOT_FOUND\r\n", USASCII);
@@ -69,77 +72,88 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
 
         Channel channel = messageEvent.getChannel();
 
-        if (cmd == Op.GET || cmd == Op.GETS) {
-            CacheElement[] results = command.elements;
-            int totalBytes = 0;
-            for (CacheElement result : results) {
-                if (result != null) {
-                    totalBytes += result.size() ;
-                }
-            }
-            ChannelBuffer writeBuffer = ChannelBuffers.dynamicBuffer(totalBytes);
+        switch (cmd) {
+            case GET:
+            case GETS:
+                CacheElement[] results = command.elements;
 
-            for (CacheElement result : results) {
-                if (result != null) {
-                    writeBuffer.writeBytes(VALUE.duplicate());
-                    writeBuffer.writeBytes(result.getKey().bytes);
-                    writeBuffer.writeByte((byte)' ');
-                    writeBuffer.writeBytes(BufferUtils.itoa(result.getFlags()));
-                    writeBuffer.writeByte((byte)' ');
-                    writeBuffer.writeBytes(BufferUtils.itoa(result.size()));
-                    if (cmd == Op.GETS) {
-                        writeBuffer.writeByte((byte)' ');
-                        writeBuffer.writeBytes(BufferUtils.ltoa(result.getCasUnique()));
+                ChannelBuffer buffers[] = new ChannelBuffer[(results.length * 11) + 1];
+                int i = 0;
+                for (CacheElement result : results) {
+                    if (result != null) {
+                        buffers[i++] = VALUE.duplicate();
+                        buffers[i++] = (result.getKey().bytes);
+                        buffers[i++] = (SPACE.duplicate());
+                        buffers[i++] = (ChannelBuffers.wrappedBuffer(BufferUtils.itoa(result.getFlags())));
+                        buffers[i++] = (SPACE.duplicate());
+                        buffers[i++] = (ChannelBuffers.wrappedBuffer(BufferUtils.itoa(result.size())));
+                        if (cmd == Op.GETS) {
+                            buffers[i++] = (SPACE.duplicate());
+                            buffers[i++] = (ChannelBuffers.wrappedBuffer(BufferUtils.ltoa(result.getCasUnique())));
+                        }
+                        buffers[i++] = (CRLF.duplicate());
+                        buffers[i++] = (result.getData().duplicate());
+                        buffers[i++] = (CRLF.duplicate());
                     }
-                    writeBuffer.writeByte( (byte)'\r');
-                    writeBuffer.writeByte( (byte)'\n');
-                    writeBuffer.writeBytes(result.getData());
-                    writeBuffer.writeByte( (byte)'\r');
-                    writeBuffer.writeByte( (byte)'\n');
                 }
-            }
-            writeBuffer.writeBytes(END.duplicate());
+                buffers[i] = (END.duplicate());
 
-            Channels.write(channel, writeBuffer);
-        } else if (cmd == Op.SET || cmd == Op.CAS || cmd == Op.ADD || cmd == Op.REPLACE || cmd == Op.APPEND  || cmd == Op.PREPEND) {
+                Channels.write(channel, ChannelBuffers.wrappedBuffer(buffers));
+                break;
+            case APPEND:
+            case PREPEND:
+            case ADD:
+            case SET:
+            case REPLACE:
+            case CAS:
+                if (!command.cmd.noreply)
+                    Channels.write(channel, storeResponse(command.response));
+                break;
+            case DELETE:
+                if (!command.cmd.noreply)
+                    Channels.write(channel, deleteResponseString(command.deleteResponse));
 
-            if (!command.cmd.noreply)
-                Channels.write(channel, storeResponse(command.response));
-        } else if (cmd == Op.INCR || cmd == Op.DECR) {
-            if (!command.cmd.noreply)
-                Channels.write(channel, incrDecrResponseString(command.incrDecrResponse));
-
-        } else if (cmd == Op.DELETE) {
-            if (!command.cmd.noreply)
-                Channels.write(channel, deleteResponseString(command.deleteResponse));
-
-        } else if (cmd == Op.STATS) {
-            for (Map.Entry<String, Set<String>> stat : command.stats.entrySet()) {
-                for (String statVal : stat.getValue()) {
-                    StringBuilder builder = new StringBuilder();
-                    builder.append("STAT ");
-                    builder.append(stat.getKey());
-                    builder.append(" ");
-                    builder.append(String.valueOf(statVal));
-                    builder.append("\r\n");
-                    Channels.write(channel, ChannelBuffers.copiedBuffer(builder.toString(), USASCII));
+                break;
+            case DECR:
+            case INCR:
+                if (!command.cmd.noreply)
+                    Channels.write(channel, incrDecrResponseString(command.incrDecrResponse));
+                break;
+            case STATS:
+                for (Map.Entry<String, Set<String>> stat : command.stats.entrySet()) {
+                    for (String statVal : stat.getValue()) {
+                        StringBuilder builder = new StringBuilder();
+                        builder.append("STAT ");
+                        builder.append(stat.getKey());
+                        builder.append(" ");
+                        builder.append(String.valueOf(statVal));
+                        builder.append("\r\n");
+                        Channels.write(channel, ChannelBuffers.copiedBuffer(builder.toString(), USASCII));
+                    }
                 }
-            }
-            Channels.write(channel, END.duplicate());
+                Channels.write(channel, END.duplicate());
 
-        } else if (cmd == Op.VERSION) {
-            Channels.write(channel, ChannelBuffers.copiedBuffer("VERSION " + command.version + "\r\n", USASCII));
-        } else if (cmd == Op.QUIT) {
-            Channels.disconnect(channel);
-        } else if (cmd == Op.FLUSH_ALL) {
-            if (!command.cmd.noreply) {
-                ChannelBuffer ret = command.flushSuccess ? OK.duplicate() : ERROR.duplicate();
+                break;
+            case VERSION:
+                Channels.write(channel, ChannelBuffers.copiedBuffer("VERSION " + command.version + "\r\n", USASCII));
+                break;
+            case QUIT:
+                Channels.disconnect(channel);
 
-                Channels.write(channel, ret);
-            }
-        } else {
-            Channels.write(channel, ERROR.duplicate());
-            logger.error("error; unrecognized command: " + cmd);
+                break;
+            case FLUSH_ALL:
+                if (!command.cmd.noreply) {
+                    ChannelBuffer ret = command.flushSuccess ? OK.duplicate() : ERROR.duplicate();
+
+                    Channels.write(channel, ret);
+                }
+                break;
+            case VERBOSITY:
+                break;
+            default:
+                Channels.write(channel, ERROR.duplicate());
+                logger.error("error; unrecognized command: " + cmd);
+
         }
 
     }
