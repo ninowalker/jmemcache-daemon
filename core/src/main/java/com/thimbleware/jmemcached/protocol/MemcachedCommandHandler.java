@@ -135,7 +135,7 @@ public final class MemcachedCommandHandler<CACHE_ELEMENT extends CacheElement> e
 
         CommandMessage<CACHE_ELEMENT> command = (CommandMessage<CACHE_ELEMENT>) messageEvent.getMessage();
         Op cmd = command.op;
-        int cmdKeysSize = command.keys.size();
+        int cmdKeysSize = command.keys == null ? 0 : command.keys.size();
 
         // first process any messages in the delete queue
         cache.asyncEventPing();

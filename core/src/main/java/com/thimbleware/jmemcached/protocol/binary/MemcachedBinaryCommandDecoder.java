@@ -166,7 +166,6 @@ public class MemcachedBinaryCommandDecoder extends FrameDecoder {
                 long expiration = extrasBuffer.readUnsignedInt();
 
                 cmdMessage.incrAmount = (int) amount;
-                cmdMessage.incrDefault = (int) initialValue;
                 cmdMessage.incrExpiry = (int) expiration;
             }
         }

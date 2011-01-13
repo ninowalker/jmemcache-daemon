@@ -28,29 +28,22 @@ import java.util.List;
  */
 public final class CommandMessage<CACHE_ELEMENT extends CacheElement> implements Serializable {
 
-    public static enum ErrorType {
-        OK, ERROR, CLIENT_ERROR
-    }
 
     public Op op;
     public CACHE_ELEMENT element;
     public List<Key> keys;
     public boolean noreply;
-    public Long cas_key;
+    public long cas_key;
     public int time = 0;
-    public ErrorType error = ErrorType.OK;
-    public String errorString;
     public int opaque;
     public boolean addKeyToResponse = false;
 
-    public Integer incrDefault;
     public int incrExpiry;
     public int incrAmount;
 
     private CommandMessage(Op op) {
         this.op = op;
         element = null;
-        keys = new ArrayList<Key>();
     }
 
     public void setKey(ChannelBuffer key) {
@@ -59,24 +52,10 @@ public final class CommandMessage<CACHE_ELEMENT extends CacheElement> implements
     }
 
     public void setKeys(List<ChannelBuffer> keys) {
-        this.keys = new ArrayList<Key>();
+        this.keys = new ArrayList<Key>(keys.size());
         for (ChannelBuffer key : keys) {
             this.keys.add(new Key(key));
         }
-    }
-
-    public static CommandMessage error(String errorString) {
-        CommandMessage errcmd = new CommandMessage(null);
-        errcmd.error = ErrorType.ERROR;
-        errcmd.errorString = errorString;
-        return errcmd;
-    }
-
-    public static CommandMessage clientError(String errorString) {
-        CommandMessage errcmd = new CommandMessage(null);
-        errcmd.error = ErrorType.CLIENT_ERROR;
-        errcmd.errorString = errorString;
-        return errcmd;
     }
 
     public static CommandMessage command(Op operation) {
