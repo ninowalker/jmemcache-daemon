@@ -1,5 +1,7 @@
 package com.thimbleware.jmemcached;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
@@ -28,10 +30,10 @@ public class MemoryMappedBlockStoreTest {
     @Test
     public void writeBlocks() {
         for (int i = 0; i < 1800; i++){
-            byte[] sentData = new byte[3];
-            sentData[0] = 'h';
-            sentData[1] = 'i';
-            sentData[2] = '\n';
+            ChannelBuffer sentData = ChannelBuffers.buffer(3);
+            sentData.writeByte('h');
+            sentData.writeByte('i');
+            sentData.writeByte('\n');
 
             long before = bs.getFreeBytes();
             Region region = bs.alloc(3, sentData);
@@ -44,9 +46,9 @@ public class MemoryMappedBlockStoreTest {
             assertTrue("region is valid", region.valid);
             assertEquals("rounded up to nearest region boundary", region.usedBlocks * 8, 8L);
 
-            byte[] receivedData = bs.get(region);
-            assertEquals("region data matches",  new String(sentData), new String(receivedData));
-            
+            ChannelBuffer receivedData = bs.get(region);
+            assertEquals("region data matches",  sentData, receivedData);
+
             if (i % 5 == 0) {
                 before = bs.getFreeBytes();
                 bs.free(region);
@@ -56,6 +58,6 @@ public class MemoryMappedBlockStoreTest {
             }
 
         }
-        
+
     }
 }

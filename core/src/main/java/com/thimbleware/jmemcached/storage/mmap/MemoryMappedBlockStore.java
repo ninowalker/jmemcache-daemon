@@ -2,6 +2,7 @@ package com.thimbleware.jmemcached.storage.mmap;
 
 import com.thimbleware.jmemcached.storage.bytebuffer.BlockStoreFactory;
 import com.thimbleware.jmemcached.storage.bytebuffer.ByteBufferBlockStore;
+import org.jboss.netty.buffer.ChannelBuffers;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,7 +34,7 @@ public final class MemoryMappedBlockStore extends ByteBufferBlockStore {
      */
     private MemoryMappedBlockStore(long maxBytes, File file, int blockSizeBytes) throws IOException {
         super(blockSizeBytes);
-        storageBuffer = getMemoryMappedFileStorage(maxBytes, file);
+        storageBuffer = ChannelBuffers.wrappedBuffer(getMemoryMappedFileStorage(maxBytes, file));
         initialize(storageBuffer.capacity());
     }
 

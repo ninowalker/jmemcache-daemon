@@ -53,7 +53,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         // must be non null and match the original
         assertNotNull("got result", result);
         assertEquals("data length matches", result.size(), element.size());
-        assertEquals("data matches", new String(element.getData().array()), new String(result.getData().array()));
+        assertEquals("data matches", element.getData(), result.getData());
         assertEquals("key matches", element.getKey(), result.getKey());
 
         assertEquals("size of cache matches element entered", element.size(), cache.getCurrentBytes(), 0);
@@ -81,7 +81,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         // must be non null and match the original
         assertNotNull("got result", result);
         assertEquals("data length matches", result.size(), element.size());
-        assertEquals("data matches", new String(element.getData().array()), new String(result.getData().array()));
+        assertEquals("data matches", element.getData(), result.getData());
 
         assertEquals("size of cache matches element entered", element.size(), cache.getCurrentBytes(), 0);
         assertEquals("cache has 1 element", 1, cache.getCurrentItems());
@@ -103,7 +103,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         // must be non null and match the original
         assertNotNull("got result", result);
         assertEquals("data length matches", result.size(), element.size());
-        assertEquals("data matches", new String(element.getData().array()), new String(result.getData().array()));
+        assertEquals("data matches", element.getData(), result.getData());
         assertEquals("key matches", result.getKey(), element.getKey());
         assertEquals("cache has 1 element", 1, cache.getCurrentItems());
 
@@ -153,7 +153,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         // must be non null and match the original
         assertNotNull("got result", result);
         assertEquals("data length matches", result.size(), element.size());
-        assertEquals("data matches", new String(element.getData().array()), new String(result.getData().array()));
+        assertEquals("data matches", element.getData(), result.getData());
         assertEquals("key matches", result.getKey(), element.getKey());
 
         assertEquals("size of cache matches element entered", element.size(), cache.getCurrentBytes(), 0);
@@ -240,8 +240,7 @@ public class BasicCacheTest extends AbstractCacheTest {
         LocalCacheElement[] elements = cache.get(testKey);
         assertEquals("right # elements", 1, elements.length);
         ChannelBuffer data = elements[0].getData();
-        String results = new String(data.array());
-        assertEquals("11", results);
+        assertEquals(ChannelBuffers.wrappedBuffer("11".getBytes()), data);
     }
 
 }

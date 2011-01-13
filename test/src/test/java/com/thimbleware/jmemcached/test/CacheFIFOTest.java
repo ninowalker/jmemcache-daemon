@@ -50,7 +50,7 @@ public class CacheFIFOTest extends AbstractCacheTest {
                 assertNotNull(i + "th result should be present", result);
                 assertNotNull(i + "th result's should be present", result.getKey());
                 assertTrue("key of present item should match" , Arrays.equals(("" + i).getBytes(), result.getKey().bytes.copy().array()));
-                assertEquals(new String(result.getData().array()), i + "x");
+                assertEquals(ChannelBuffers.wrappedBuffer((i + "x").getBytes()), result.getData());
             }
         }
         assertEquals("correct number of cache misses", fillSize - MAX_SIZE, daemon.getCache().getGetMisses());

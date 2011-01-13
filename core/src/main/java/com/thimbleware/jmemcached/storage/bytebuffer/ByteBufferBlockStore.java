@@ -1,5 +1,8 @@
 package com.thimbleware.jmemcached.storage.bytebuffer;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -14,7 +17,7 @@ import java.util.*;
  */
 public class ByteBufferBlockStore {
 
-    protected ByteBuffer storageBuffer;
+    protected ChannelBuffer storageBuffer;
 
     private long freeBytes;
 
@@ -57,7 +60,7 @@ public class ByteBufferBlockStore {
      * @throws java.io.IOException thrown on failure to open the store or map the file
      */
     private ByteBufferBlockStore(ByteBuffer storageBuffer, int blockSizeBytes) throws IOException {
-        this.storageBuffer = storageBuffer;
+        this.storageBuffer = ChannelBuffers.wrappedBuffer(storageBuffer);
         this.blockSizeBytes = blockSizeBytes;
         initialize(storageBuffer.capacity());
     }
@@ -141,7 +144,7 @@ public class ByteBufferBlockStore {
      * @param data initial data to place in it
      * @return the region descriptor
      */
-    public Region alloc(int desiredSize, byte[] data) {
+    public Region alloc(int desiredSize, ChannelBuffer data) {
         final long desiredBlockSize = roundUp(desiredSize, blockSizeBytes);
         int numBlocks = (int) (desiredBlockSize / blockSizeBytes);
 
@@ -151,34 +154,28 @@ public class ByteBufferBlockStore {
         freeBytes -= desiredBlockSize;
 
         // get the buffer to it
-        storageBuffer.rewind();
-        long position = pos * blockSizeBytes;
-        storageBuffer.position((int)position);
-        storageBuffer.put(data, 0, desiredSize);
+        int position = pos * blockSizeBytes;
+        storageBuffer.writerIndex(position);
+        storageBuffer.writeBytes(data);
 
         return new Region(desiredSize, numBlocks, pos);
     }
 
-    public byte[] get(Region region) {
-        byte[] result = new byte[region.size];
-        storageBuffer.position((int)region.startBlock * blockSizeBytes);
-        storageBuffer.get(result, 0, region.size);
-        return result;
+    public ChannelBuffer get(Region region) {
+        return storageBuffer.slice(region.startBlock * blockSizeBytes, region.size);
     }
 
     public void free(Region region) {
         freeBytes += (region.usedBlocks * blockSizeBytes);
         region.valid = false;
-        int pos = (int) (region.startBlock);
+        int pos = region.startBlock;
         clear(pos, region.size / blockSizeBytes);
     }
 
     public void clear()
     {
-
         // say goodbye to the region list
         allocated.clear();
-
 
         // reset the # of free bytes back to the max size
         freeBytes = storeSizeBytes;
