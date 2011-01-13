@@ -309,4 +309,48 @@ public class BufferUtils {
         return negative ? result : -result;
     }
 
+    public static long atol(ChannelBuffer s)
+            throws NumberFormatException
+    {
+        long result = 0;
+        boolean negative = false;
+        int i = 0, len = s.capacity();
+        long limit = -Long.MAX_VALUE;
+        long multmin;
+        int digit;
+
+        if (len > 0) {
+            byte firstChar = s.getByte(0);
+            if (firstChar < '0') { // Possible leading "-"
+                if (firstChar == '-') {
+                    negative = true;
+                    limit = Long.MIN_VALUE;
+                } else
+                    throw new NumberFormatException();
+
+                if (len == 1) // Cannot have lone "-"
+                    throw new NumberFormatException();
+                i++;
+            }
+            multmin = limit / 10;
+            while (i < len) {
+                // Accumulating negatively avoids surprises near MAX_VALUE
+                digit = Character.digit(s.getByte(i++),10);
+                if (digit < 0) {
+                    throw new NumberFormatException();
+                }
+                if (result < multmin) {
+                    throw new NumberFormatException();
+                }
+                result *= 10;
+                if (result < limit + digit) {
+                    throw new NumberFormatException();
+                }
+                result -= digit;
+            }
+        } else {
+            throw new NumberFormatException();
+        }
+        return negative ? result : -result;
+    }
 }

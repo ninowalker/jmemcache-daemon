@@ -14,8 +14,8 @@ public class Key {
     private int hashCode;
 
     public Key(ChannelBuffer bytes) {
-        this.bytes = bytes;
-        this.hashCode = bytes.hashCode();
+        this.bytes = bytes.copy();
+        this.hashCode = this.bytes.hashCode();
     }
 
     @Override

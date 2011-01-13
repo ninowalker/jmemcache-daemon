@@ -48,11 +48,11 @@ public abstract class AbstractCacheTest {
     public static Collection blockSizeValues() {
         return Arrays.asList(new Object[][] {
                 {CacheType.LOCAL_HASH, 1, ProtocolMode.TEXT },
-//                {CacheType.LOCAL_HASH, 1, ProtocolMode.BINARY },
-//                {CacheType.BLOCK, 4, ProtocolMode.TEXT},
-//                {CacheType.BLOCK, 4, ProtocolMode.BINARY},
-//                {CacheType.MAPPED, 4, ProtocolMode.TEXT},
-//                {CacheType.MAPPED, 4, ProtocolMode.BINARY }
+                {CacheType.LOCAL_HASH, 1, ProtocolMode.BINARY },
+                {CacheType.BLOCK, 4, ProtocolMode.TEXT},
+                {CacheType.BLOCK, 4, ProtocolMode.BINARY},
+                {CacheType.MAPPED, 4, ProtocolMode.TEXT},
+                {CacheType.MAPPED, 4, ProtocolMode.BINARY }
         });
     }
 

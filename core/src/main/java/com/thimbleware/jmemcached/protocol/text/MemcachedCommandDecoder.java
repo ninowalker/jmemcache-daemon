@@ -185,7 +185,7 @@ public final class MemcachedCommandDecoder extends SimpleChannelUpstreamHandler 
                 if (numParts > 5) {
                     int noreply = op == Op.CAS ? 6 : 5;
                     if (op == Op.CAS) {
-                        cmd.cas_key = BufferUtils.atol(parts.get(5).copy().array());
+                        cmd.cas_key = BufferUtils.atol(parts.get(5));
                     }
 
                     if (numParts == noreply + 1 && parts.get(noreply).equals(NOREPLY))
