@@ -77,26 +77,19 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
             case GETS:
                 CacheElement[] results = command.elements;
 
-                ChannelBuffer buffers[] = new ChannelBuffer[(results.length * 11) + 1];
+                ChannelBuffer buffers[] = new ChannelBuffer[(results.length * 3) + 1];
                 int i = 0;
                 for (CacheElement result : results) {
                     if (result != null) {
-                        buffers[i++] = VALUE.duplicate();
-                        buffers[i++] = (result.getKey().bytes);
-                        buffers[i++] = (SPACE.duplicate());
-                        buffers[i++] = BufferUtils.itoa(result.getFlags());
-                        buffers[i++] = (SPACE.duplicate());
-                        buffers[i++] = BufferUtils.itoa(result.size());
+                        buffers[i++] = ChannelBuffers.wrappedBuffer(VALUE, result.getKey().bytes, SPACE,
+                                BufferUtils.itoa(result.getFlags()),SPACE, BufferUtils.itoa(result.size()));
                         if (cmd == Op.GETS) {
-                            buffers[i++] = (SPACE.duplicate());
-                            buffers[i++] = BufferUtils.ltoa(result.getCasUnique());
+                            buffers[i++] = ChannelBuffers.wrappedBuffer(SPACE, BufferUtils.ltoa(result.getCasUnique()));
                         }
-                        buffers[i++] = (CRLF.duplicate());
-                        buffers[i++] = (result.getData().duplicate());
-                        buffers[i++] = (CRLF.duplicate());
+                        buffers[i++] = ChannelBuffers.wrappedBuffer(CRLF, result.getData(), CRLF);
                     }
                 }
-                buffers[i] = (END.duplicate());
+                buffers[i] = END;
 
                 Channels.write(channel, ChannelBuffers.wrappedBuffer(buffers));
                 break;
