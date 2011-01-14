@@ -41,7 +41,6 @@ public final class MemcachedPipelineFactory implements ChannelPipelineFactory {
         SessionStatus status = new SessionStatus().ready();
 
         return Channels.pipeline(
-                new MemcachedFrameDecoder(status, frameSize),
                 new MemcachedCommandDecoder(status),
                 memcachedCommandHandler,
                 memcachedResponseEncoder);

@@ -48,7 +48,7 @@ public class Issue24RegressionTest {
         _client.add( "foo-n1", 5, "baz-n1" ); // fails
         // _client.set( "foo-n1", 5, "bar" ); // would be fine
         CASValue<Object> result = _client.gets("foo-n1");
-        result.getValue();
+//        result.getValue();
     }
 
 }

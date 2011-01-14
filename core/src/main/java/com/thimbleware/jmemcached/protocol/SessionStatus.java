@@ -13,7 +13,6 @@ public final class SessionStatus implements Serializable {
     public static enum State {
         WAITING_FOR_DATA,
         READY,
-        PROCESSING,
         PROCESSING_MULTILINE,
     }
 
@@ -35,12 +34,6 @@ public final class SessionStatus implements Serializable {
         this.cmd = null;
         this.bytesNeeded = -1;
         this.state = State.READY;
-
-        return this;
-    }
-
-    public SessionStatus processing() {
-        this.state = State.PROCESSING;
 
         return this;
     }
