@@ -4,7 +4,7 @@
     <groupId>com.thimbleware.jmemcached</groupId>
     <artifactId>jmemcached-parent</artifactId>
     <packaging>pom</packaging>
-    <version>1.0.0</version>
+    <version>1.0.1-SNAPSHOT</version>
     <name>jmemcached Parent Project</name>
     <url>http://www.thimbleware.com/projects/jmemcached</url>
     <description>Caching server speaking the memcached protocol, written in Java.</description>
