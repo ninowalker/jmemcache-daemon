@@ -125,26 +125,26 @@
 
 
 
-    <repositories>
+<!--     <repositories> -->
 
-        <repository>
-            <id>repository.jboss.org</id>
-            <url>http://repository.jboss.org/nexus/content/groups/public/</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
+<!--         <repository> -->
+<!--             <id>repository.jboss.org</id> -->
+<!--             <url>http://repository.jboss.org/nexus/content/groups/public/</url> -->
+<!--             <snapshots> -->
+<!--                 <enabled>false</enabled> -->
+<!--             </snapshots> -->
+<!--         </repository> -->
 
-        <repository>
-            <id>spy</id>
-            <name>Spy Repository</name>
-            <layout>default</layout>
-            <url>http://bleu.west.spy.net/~dustin/m2repo/</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
+<!--         <repository> -->
+<!--             <id>spy</id> -->
+<!--             <name>Spy Repository</name> -->
+<!--             <layout>default</layout> -->
+<!--             <url>http://bleu.west.spy.net/~dustin/m2repo/</url> -->
+<!--             <snapshots> -->
+<!--                 <enabled>false</enabled> -->
+<!--             </snapshots> -->
+<!--         </repository> -->
+<!--     </repositories> -->
 
 
     <dependencyManagement>
