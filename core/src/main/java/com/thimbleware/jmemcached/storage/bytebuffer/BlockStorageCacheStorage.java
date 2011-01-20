@@ -217,7 +217,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
     }
 
     public final boolean containsValue(Object o) {
-        throw new IllegalArgumentException("operation not supported");
+        throw new UnsupportedOperationException("operation not supported");
     }
 
     public final  LocalCacheElement get(Object key) {
@@ -355,10 +355,10 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
     }
 
     public Collection<LocalCacheElement> values() {
-        throw new IllegalArgumentException("operation not supported");
+        throw new UnsupportedOperationException("operation not supported");
     }
 
     public Set<Entry<Key, LocalCacheElement>> entrySet() {
-        throw new IllegalArgumentException("operation not supported");
+        throw new UnsupportedOperationException("operation not supported");
     }
 }
