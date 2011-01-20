@@ -99,13 +99,11 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
         this.maximumItems = new AtomicInteger(maximumItemsVal);
         this.maximumSizeBytes = maximumSizeBytes;
 
-//        this.index = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.LRU, maximumItemsVal, maximumSizeBytes, new ConcurrentLinkedHashMap.EvictionListener<Key, StoredValue>(){
-//            public void onEviction(Key key, StoredValue value) {
-//                value.free();
-//            }
-//        });
-
-         this.index = new ConcurrentHashMap<Key, StoredValue>();
+        this.index = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.LRU, maximumItemsVal, maximumSizeBytes, new ConcurrentLinkedHashMap.EvictionListener<Key, StoredValue>(){
+            public void onEviction(Key key, StoredValue value) {
+                value.free();
+            }
+        });
     }
 
     private int pickBucket(Key key, int partitionNum) {
@@ -219,7 +217,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
     }
 
     public final boolean containsValue(Object o) {
-        throw new RuntimeException("operation not supported");
+        throw new IllegalArgumentException("operation not supported");
     }
 
     public final  LocalCacheElement get(Object key) {
@@ -357,10 +355,10 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
     }
 
     public Collection<LocalCacheElement> values() {
-        throw new RuntimeException("operation not supported");
+        throw new IllegalArgumentException("operation not supported");
     }
 
     public Set<Entry<Key, LocalCacheElement>> entrySet() {
-        throw new RuntimeException("operation not supported");
+        throw new IllegalArgumentException("operation not supported");
     }
 }
