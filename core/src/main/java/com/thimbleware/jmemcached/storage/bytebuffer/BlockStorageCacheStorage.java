@@ -216,11 +216,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
 
             // there, check for equivalence of value
             LocalCacheElement el = null;
-            try {
-                el = region.toValue(partition.blockStore);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+            el = region.toValue(partition.blockStore);
             if (!el.equals(original)) {
                 return false;
             } else {
@@ -255,11 +251,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
 
             // there,
             LocalCacheElement el = null;
-            try {
-                el = region.toValue(partition.blockStore);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+            el = region.toValue(partition.blockStore);
             partition.storageLock.readLock().unlock();
             partition.storageLock.writeLock().lock();
             try {
@@ -316,11 +308,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
             partition.storageLock.readLock().lock();
             region = partition.find(key);
             if (region == null) return null;
-            try {
-                return region.toValue(partition.blockStore);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+            return region.toValue(partition.blockStore);
         } finally {
             partition.storageLock.readLock().unlock();
         }
@@ -339,11 +327,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
             try {
                 LocalCacheElement old = null;
                 if (region != null) {
-                    try {
-                        old = region.toValue(partition.blockStore);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
+                    old = region.toValue(partition.blockStore);
                 }
                 if (region != null) partition.remove(key, region);
                 partition.add(key, item);
@@ -376,11 +360,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
                 partition.storageLock.writeLock().lock();
                 try {
                     LocalCacheElement old = null;
-                    try {
-                        old = region.toValue(partition.blockStore);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
+                    old = region.toValue(partition.blockStore);
                     partition.blockStore.free(region);
                     partition.remove(key, region);
                     numberItems.decrementAndGet();

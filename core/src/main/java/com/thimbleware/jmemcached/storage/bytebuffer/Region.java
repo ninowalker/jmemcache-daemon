@@ -47,8 +47,8 @@ public final class Region {
         return new Key(buffer.copy(buffer.readerIndex(), length));
     }
 
-    public LocalCacheElement toValue(ByteBufferBlockStore store) throws IOException, ClassNotFoundException {
-        return LocalCacheElement.readFromBuffer(store.get(this).slice());
+    public LocalCacheElement toValue(ByteBufferBlockStore store) {
+        return LocalCacheElement.readFromBuffer(store.get(this));
     }
 
     public boolean sameAs(Region r, ByteBufferBlockStore store) {
