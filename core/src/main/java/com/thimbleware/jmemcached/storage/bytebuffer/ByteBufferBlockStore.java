@@ -1,5 +1,6 @@
 package com.thimbleware.jmemcached.storage.bytebuffer;
 
+import com.thimbleware.jmemcached.Key;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 
@@ -26,6 +27,12 @@ public class ByteBufferBlockStore {
 
     private BitSet allocated;
     private static final ByteBufferBlockStoreFactory BYTE_BUFFER_BLOCK_STORE_FACTORY = new ByteBufferBlockStoreFactory();
+
+    final static class HashBuckets {
+        List<Key> keys;
+    }
+
+    HashBuckets[] buckets = new HashBuckets[256];
 
 
     /**
@@ -162,6 +169,10 @@ public class ByteBufferBlockStore {
     }
 
     public ChannelBuffer get(Region region) {
+        return storageBuffer.slice(region.startBlock * blockSizeBytes, region.size);
+    }
+
+    public ChannelBuffer get(Region region, int limit) {
         return storageBuffer.slice(region.startBlock * blockSizeBytes, region.size);
     }
 

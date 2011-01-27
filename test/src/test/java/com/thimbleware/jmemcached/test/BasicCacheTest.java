@@ -47,16 +47,16 @@ public class BasicCacheTest extends AbstractCacheTest {
         // get result
         CacheElement result = cache.get(testKey)[0];
 
-        // assert no miss
-        assertEquals("confirmed no misses", 0, cache.getGetMisses());
-
         // must be non null and match the original
         assertNotNull("got result", result);
+
+        // assert no miss
+        assertEquals("misses", 0, cache.getGetMisses());
+
         assertEquals("data length matches", result.size(), element.size());
         assertEquals("data matches", element.getData(), result.getData());
         assertEquals("key matches", element.getKey(), result.getKey());
 
-        assertEquals("size of cache matches element entered", element.size(), cache.getCurrentBytes(), 0);
         assertEquals("cache has 1 element", 1, cache.getCurrentItems());
     }
 
@@ -83,7 +83,6 @@ public class BasicCacheTest extends AbstractCacheTest {
         assertEquals("data length matches", result.size(), element.size());
         assertEquals("data matches", element.getData(), result.getData());
 
-        assertEquals("size of cache matches element entered", element.size(), cache.getCurrentBytes(), 0);
         assertEquals("cache has 1 element", 1, cache.getCurrentItems());
 
         // now replace
@@ -156,7 +155,6 @@ public class BasicCacheTest extends AbstractCacheTest {
         assertEquals("data matches", element.getData(), result.getData());
         assertEquals("key matches", result.getKey(), element.getKey());
 
-        assertEquals("size of cache matches element entered", element.size(), cache.getCurrentBytes(), 0);
         assertEquals("cache has 1 element", 1, cache.getCurrentItems());
     }
 
@@ -175,7 +173,6 @@ public class BasicCacheTest extends AbstractCacheTest {
         // put in cache again and fail
         assertEquals(cache.add(element), Cache.StoreResponse.NOT_STORED);
 
-        assertEquals("size of cache matches single element entered", element.size(), cache.getCurrentBytes(), 0);
         assertEquals("cache has only 1 element", 1, cache.getCurrentItems());
     }
 

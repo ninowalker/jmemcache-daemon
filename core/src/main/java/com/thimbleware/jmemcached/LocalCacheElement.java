@@ -211,7 +211,10 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         this.data = data;
     }
 
+
     public void readExternal(ObjectInput in) throws IOException{
+        byte[] keyBytes = new byte[in.readInt()];
+        in.read(keyBytes);
         expire = in.readInt() ;
         flags = in.readInt();
 
@@ -223,22 +226,53 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         data = ChannelBuffers.wrappedBuffer(dataArrary);
 
 
-        byte[] keyBytes = new byte[in.readInt()];
-        in.read(keyBytes);
         key = new Key(ChannelBuffers.wrappedBuffer(keyBytes));
         casUnique = in.readLong();
         blocked = in.readBoolean();
         blockedUntil = in.readLong();
     }
 
+    public static LocalCacheElement readFromBuffer(ChannelBuffer in) {
+        int keyLength = in.readInt();
+        ChannelBuffer key = in.copy(in.readerIndex(), keyLength);
+        in.skipBytes(keyLength);
+        LocalCacheElement localCacheElement = new LocalCacheElement(new Key(key));
+
+        localCacheElement.expire = in.readInt();
+        localCacheElement.flags = in.readInt();
+
+        int dataLength = in.readInt();
+        localCacheElement.data = in.copy(in.readerIndex(), dataLength);
+        in.skipBytes(dataLength);
+
+        localCacheElement.casUnique = in.readInt();
+        localCacheElement.blocked = in.readByte() == 1;
+        localCacheElement.blockedUntil = in.readLong();
+
+        return localCacheElement;
+    }
+
+    public void writeToBuffer(ChannelBuffer out) {
+        out.writeInt(key.bytes.capacity());
+        out.writeBytes(key.bytes);
+        out.writeInt(expire) ;
+        out.writeInt(flags);
+        byte[] dataArray = data.copy().array();
+        out.writeInt(dataArray.length);
+        out.writeBytes(data);
+        out.writeLong(casUnique);
+        out.writeByte(blocked ? 1 : 0);
+        out.writeLong(blockedUntil);
+    }
+
     public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeInt(key.bytes.capacity());
+        out.write(key.bytes.copy().array());
         out.writeInt(expire) ;
         out.writeInt(flags);
         byte[] dataArray = data.copy().array();
         out.writeInt(dataArray.length);
         out.write(dataArray);
-        out.write(key.bytes.capacity());
-        out.write(key.bytes.copy().array());
         out.writeLong(casUnique);
         out.writeBoolean(blocked);
         out.writeLong(blockedUntil);
