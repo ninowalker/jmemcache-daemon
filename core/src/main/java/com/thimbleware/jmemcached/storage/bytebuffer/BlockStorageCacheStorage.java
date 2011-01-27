@@ -29,6 +29,24 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
         List<Region> regions = new LinkedList<Region>();
     }
 
+     /**
+     * Applies a supplemental hash function to a given hashCode, which
+     * defends against poor quality hash functions.  This is critical
+     * because ConcurrentHashMap uses power-of-two length hash tables,
+     * that otherwise encounter collisions for hashCodes that do not
+     * differ in lower or upper bits.
+     */
+    protected static int hash(int h) {
+        // Spread bits to regularize both segment and index locations,
+        // using variant of single-word Wang/Jenkins hash.
+        h += (h <<  15) ^ 0xffffcd7d;
+        h ^= (h >>> 10);
+        h += (h <<   3);
+        h ^= (h >>>  6);
+        h += (h <<   2) + (h << 14);
+        return h ^ (h >>> 16);
+    }
+
     final static class Partition {
         private static final int NUM_BUCKETS = 32768;
 
@@ -38,13 +56,15 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
 
         ByteBufferBlockStore blockStore;
 
+        int numberItems;
+
         Partition(ByteBufferBlockStore blockStore) {
             this.blockStore = blockStore;
             for (int i = 0; i < NUM_BUCKETS; i++) buckets[i] = new Buckets();
         }
 
         public Region find(Key key) {
-            int bucket = Math.abs(key.hashCode() % buckets.length);
+            int bucket = Math.abs(hash(key.hashCode()) % buckets.length);
 
             for (Region region : buckets[bucket].regions) {
                 if (region.sameAs(key, blockStore)) return region;
@@ -53,8 +73,9 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
         }
 
         public void remove(Key key, Region region) {
-            int bucket = Math.abs(key.hashCode() % buckets.length);
+            int bucket = Math.abs(hash(key.hashCode()) % buckets.length);
             buckets[bucket].regions.remove(region);
+            numberItems--;
         }
 
         public Region add(Key key, LocalCacheElement e) {
@@ -62,8 +83,14 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
             e.writeToBuffer(buffer);
 
             Region region = blockStore.alloc(buffer.capacity(), buffer);
-            int bucket = Math.abs(key.hashCode() % buckets.length);
+            int bucket = Math.abs(hash(key.hashCode()) % buckets.length);
             buckets[bucket].regions.add(region);
+
+            numberItems++;
+
+            // check # buckets, trigger resize
+//            if ((double)numberItems * 0.75 > buckets.length)
+//                System.err.println("grow");
 
             return region;
         }
@@ -73,6 +100,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
                 bucket.regions.clear();
             }
             blockStore.clear();
+            numberItems = 0;
         }
 
         public Collection<Key> keys() {
@@ -83,6 +111,10 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
                 }
             }
             return keys;
+        }
+
+        public int getNumberItems() {
+            return numberItems;
         }
     }
 
@@ -102,7 +134,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
     }
 
     private Partition pickPartition(Key key) {
-        return partitions[Math.abs(key.hashCode()) % partitions.length];
+        return partitions[Math.abs(hash(key.hashCode())) % partitions.length];
     }
 
     public final long getMemoryCapacity() {
@@ -159,11 +191,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
                 return null;
             } else {
                 // there? return its value
-                try {
-                    return region.toValue(partition.blockStore);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
+                return region.toValue(partition.blockStore);
             }
         } finally {
             partition.storageLock.readLock().unlock();
