@@ -26,15 +26,10 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
 
 
     final static class Buckets {
-        List<Region> regions = new LinkedList<Region>();
+        List<Region> regions = new ArrayList<Region>(32);
     }
 
      /**
-     * Applies a supplemental hash function to a given hashCode, which
-     * defends against poor quality hash functions.  This is critical
-     * because ConcurrentHashMap uses power-of-two length hash tables,
-     * that otherwise encounter collisions for hashCodes that do not
-     * differ in lower or upper bits.
      */
     protected static int hash(int h) {
         // Spread bits to regularize both segment and index locations,
@@ -64,7 +59,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
         }
 
         public Region find(Key key) {
-            int bucket = Math.abs(hash(key.hashCode()) % buckets.length);
+            int bucket = findBucketNum(key);
 
             for (Region region : buckets[bucket].regions) {
                 if (region.sameAs(key, blockStore)) return region;
@@ -72,8 +67,13 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
             return null;
         }
 
+        private int findBucketNum(Key key) {
+            int hash = hash(key.hashCode());
+            return hash & (buckets.length - 1);
+        }
+
         public void remove(Key key, Region region) {
-            int bucket = Math.abs(hash(key.hashCode()) % buckets.length);
+            int bucket = findBucketNum(key);
             buckets[bucket].regions.remove(region);
             numberItems--;
         }
@@ -83,7 +83,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
             e.writeToBuffer(buffer);
 
             Region region = blockStore.alloc(buffer.capacity(), buffer);
-            int bucket = Math.abs(hash(key.hashCode()) % buckets.length);
+            int bucket = findBucketNum(key);
             buckets[bucket].regions.add(region);
 
             numberItems++;
@@ -134,7 +134,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
     }
 
     private Partition pickPartition(Key key) {
-        return partitions[Math.abs(hash(key.hashCode())) % partitions.length];
+        return partitions[hash(key.hashCode()) & (partitions.length - 1)];
     }
 
     public final long getMemoryCapacity() {
