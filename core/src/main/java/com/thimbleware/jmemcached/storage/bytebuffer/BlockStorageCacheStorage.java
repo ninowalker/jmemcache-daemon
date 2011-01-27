@@ -14,7 +14,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  * Implementation of the concurrent (linked) sized map using the block buffer storage back end.
  *
- * TODO Rather sub-optimal global locking strategy could be improved with a more intricate :dstriped locking implementation.
  */
 public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCacheElement> {
 
@@ -26,26 +25,29 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
     final long maximumSizeBytes;
 
 
-    final static class BucketsIdx {
+    final static class Buckets {
         List<Region> regions = new LinkedList<Region>();
     }
 
     final static class Partition {
+        private static final int NUM_BUCKETS = 32768;
+
         ReentrantReadWriteLock storageLock = new ReentrantReadWriteLock();
 
-        BucketsIdx[] buckets = new BucketsIdx[256];
+        Buckets[] buckets = new Buckets[NUM_BUCKETS];
+
         ByteBufferBlockStore blockStore;
 
         Partition(ByteBufferBlockStore blockStore) {
             this.blockStore = blockStore;
-            for (int i = 0; i < 256; i++) buckets[i] = new BucketsIdx();
+            for (int i = 0; i < NUM_BUCKETS; i++) buckets[i] = new Buckets();
         }
 
         public Region find(Key key) {
             int bucket = Math.abs(key.hashCode() % buckets.length);
 
             for (Region region : buckets[bucket].regions) {
-                if (region.keyFromRegion(blockStore).equals(key)) return region;
+                if (region.sameAs(key, blockStore)) return region;
             }
             return null;
         }
@@ -67,7 +69,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
         }
 
         public void clear() {
-            for (BucketsIdx bucket : buckets) {
+            for (Buckets bucket : buckets) {
                 bucket.regions.clear();
             }
             blockStore.clear();
@@ -75,7 +77,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
 
         public Collection<Key> keys() {
             Set<Key> keys = new HashSet<Key>();
-            for (BucketsIdx bucket : buckets) {
+            for (Buckets bucket : buckets) {
                 for (Region region : bucket.regions) {
                     keys.add(region.keyFromRegion(blockStore));
                 }

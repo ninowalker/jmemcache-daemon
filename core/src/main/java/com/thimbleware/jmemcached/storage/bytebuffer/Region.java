@@ -41,7 +41,7 @@ public final class Region {
     }
 
     public Key keyFromRegion(ByteBufferBlockStore store) {
-        ChannelBuffer buffer = store.get(this).slice();
+        ChannelBuffer buffer = store.get(this);
 
         int length = buffer.readInt();
         return new Key(buffer.copy(buffer.readerIndex(), length));
@@ -49,5 +49,35 @@ public final class Region {
 
     public LocalCacheElement toValue(ByteBufferBlockStore store) throws IOException, ClassNotFoundException {
         return LocalCacheElement.readFromBuffer(store.get(this).slice());
+    }
+
+    public boolean sameAs(Region r, ByteBufferBlockStore store) {
+        ChannelBuffer bufferA = store.get(this).slice();
+
+        int lengthA = bufferA.readInt();
+        ChannelBuffer keyA = bufferA.slice(bufferA.readerIndex(), lengthA);
+
+        ChannelBuffer bufferB = store.get(r).slice();
+        int lengthB = bufferB.readInt();
+        ChannelBuffer keyB = bufferA.slice(bufferA.readerIndex(), lengthB);
+
+        keyA.readerIndex(0);
+        keyB.readerIndex(0);
+
+        return keyA.equals(keyB);
+    }
+
+    public boolean sameAs(Key r, ByteBufferBlockStore store) {
+        ChannelBuffer bufferA = store.get(this).slice();
+
+        int lengthA = bufferA.readInt();
+        ChannelBuffer keyA = bufferA.slice(bufferA.readerIndex(), lengthA);
+
+        ChannelBuffer keyB = r.bytes;
+
+        keyA.readerIndex(0);
+        keyB.readerIndex(0);
+
+        return keyA.equals(keyB);
     }
 }
