@@ -68,7 +68,7 @@ public final class Region {
     }
 
     public boolean sameAs(Key r, ByteBufferBlockStore store) {
-        ChannelBuffer bufferA = store.get(this).slice();
+        ChannelBuffer bufferA = store.get(this);
 
         int lengthA = bufferA.readInt();
         ChannelBuffer keyA = bufferA.slice(bufferA.readerIndex(), lengthA);
