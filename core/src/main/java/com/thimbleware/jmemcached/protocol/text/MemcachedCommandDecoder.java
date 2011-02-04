@@ -67,10 +67,10 @@ public final class MemcachedCommandDecoder extends FrameDecoder {
                 if (pos != -1) {
                     eol = eol(pos, in);
                     int skip = eol ? MIN_BYTES_LINE : 1;
-                    ChannelBuffer slice = in.slice(in.readerIndex(), pos);
+                    ChannelBuffer slice = in.readSlice(pos);
                     slice.readerIndex(0);
                     pieces.add(slice);
-                    in.skipBytes(pos + skip);
+                    in.skipBytes(skip);
                     if (eol) break;
                 }
             } while ((pos = in.bytesBefore(CRLF_OR_WS)) != -1);

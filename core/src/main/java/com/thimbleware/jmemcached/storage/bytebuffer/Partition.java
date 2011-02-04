@@ -16,7 +16,7 @@ public final class Partition {
     ReentrantReadWriteLock storageLock = new ReentrantReadWriteLock();
 
     public final static class Buckets {
-        List<Region> regions = new ArrayList<Region>(32);
+        ChannelBuffer regions = ChannelBuffers.dynamicBuffer(128);
     }
 
     Buckets[] buckets = new Buckets[NUM_BUCKETS];
@@ -33,9 +33,31 @@ public final class Partition {
     public Region find(Key key) {
         int bucket = findBucketNum(key);
 
-        for (Region region : buckets[bucket].regions) {
-            if (region.sameAs(key)) return region;
+        ChannelBuffer regions = buckets[bucket].regions;
+        regions.readerIndex(0);
+        while (regions.readableBytes() > 0) {
+            // read key portion then region portion
+            boolean valid = regions.readByte() == 1;
+            int totsize = regions.readInt();
+            if (valid) {
+                int rsize = regions.readInt();
+                int rusedBlocks = regions.readInt();
+                int rstartBlock = regions.readInt();
+                int rkeySize = regions.readInt();
+
+                if (rkeySize == key.bytes.capacity()) {
+                    ChannelBuffer rkey = regions.readSlice(rkeySize);
+
+                    key.bytes.readerIndex(0);
+                    if (rkey.equals(key.bytes)) return new Region(rsize, rusedBlocks, rstartBlock, blockStore.get(rstartBlock, rsize));
+                } else {
+                    regions.skipBytes(rkeySize);
+                }
+            } else {
+                regions.skipBytes(totsize);
+            }
         }
+
         return null;
     }
 
@@ -46,7 +68,41 @@ public final class Partition {
 
     public void remove(Key key, Region region) {
         int bucket = findBucketNum(key);
-        buckets[bucket].regions.remove(region);
+
+        ChannelBuffer newRegion = ChannelBuffers.dynamicBuffer(128);
+        ChannelBuffer regions = buckets[bucket].regions;
+        regions.readerIndex(0);
+        while (regions.readableBytes() > 0) {
+            // read key portion then region portion
+            boolean valid = regions.readByte() != 0;
+            int totsize = regions.readInt();
+            if (valid) {
+                int rsize = regions.readInt();
+                int rusedBlocks = regions.readInt();
+                int rstartBlock = regions.readInt();
+                int rkeySize = regions.readInt();
+                ChannelBuffer rkey = regions.readBytes(rkeySize);
+
+                if (rkeySize != key.bytes.capacity() || !rkey.equals(key.bytes)) {
+                    ChannelBuffer outbuf = ChannelBuffers.directBuffer(16 + rkey.capacity());
+                    outbuf.writeInt(rsize);
+                    outbuf.writeInt(rusedBlocks);
+                    outbuf.writeInt(rstartBlock);
+                    outbuf.writeInt(rkeySize);
+                    rkey.readerIndex(0);
+                    outbuf.writeBytes(rkey);
+
+                    newRegion.writeByte(1);
+                    newRegion.writeInt(outbuf.capacity());
+                    newRegion.writeBytes(outbuf);
+                }
+            } else {
+                regions.skipBytes(totsize);
+            }
+        }
+
+        buckets[bucket].regions = newRegion;
+
         numberItems--;
     }
 
@@ -54,13 +110,21 @@ public final class Partition {
         Region region = blockStore.alloc(e.bufferSize());
         e.writeToBuffer(region.slice);
         int bucket = findBucketNum(key);
-        buckets[bucket].regions.add(region);
+
+        ChannelBuffer outbuf = ChannelBuffers.directBuffer(16 + key.bytes.capacity());
+        outbuf.writeInt(region.size);
+        outbuf.writeInt(region.usedBlocks);
+        outbuf.writeInt(region.startBlock);
+        outbuf.writeInt(key.bytes.capacity());
+        key.bytes.readerIndex(0);
+        outbuf.writeBytes(key.bytes);
+
+        ChannelBuffer regions = buckets[bucket].regions;
+        regions.writeByte(1);
+        regions.writeInt(outbuf.capacity());
+        regions.writeBytes(outbuf);
 
         numberItems++;
-
-        // check # buckets, trigger resize
-//            if ((double)numberItems * 0.75 > buckets.length)
-//                System.err.println("grow");
 
         return region;
     }
@@ -75,9 +139,25 @@ public final class Partition {
 
     public Collection<Key> keys() {
         Set<Key> keys = new HashSet<Key>();
+
         for (Buckets bucket : buckets) {
-            for (Region region : bucket.regions) {
-                keys.add(region.keyFromRegion());
+            ChannelBuffer regions = bucket.regions;
+            regions.readerIndex(0);
+            while (regions.readableBytes() > 0) {
+                // read key portion then region portion
+                boolean valid = regions.readByte() != 0;
+                int totsize = regions.readInt();
+                if (valid) {
+                    regions.readInt();
+                    regions.readInt();
+                    regions.readInt();
+                    int rkeySize = regions.readInt();
+                    ChannelBuffer rkey = regions.readBytes(rkeySize);
+
+                    keys.add(new Key(rkey));
+                } else {
+                    regions.skipBytes(totsize);
+                }
             }
         }
         return keys;

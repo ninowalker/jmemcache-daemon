@@ -161,6 +161,10 @@ public class ByteBufferBlockStore {
         return new Region(desiredSize, numBlocks, pos, slice);
     }
 
+    public ChannelBuffer get(int startBlock, int size) {
+        return storageBuffer.slice(startBlock * blockSizeBytes, size);
+    }
+
     public void free(Region region) {
         freeBytes += (region.usedBlocks * blockSizeBytes);
         region.valid = false;

@@ -55,42 +55,4 @@ public final class Region {
         return LocalCacheElement.readFromBuffer(slice);
     }
 
-    public boolean sameAs(Region r) {
-        if (r.valid != valid) return false;
-        if (r.slice == r.slice) return true;
-
-        slice.readerIndex(0);
-
-        int lengthA = slice.readInt();
-
-        ChannelBuffer keyA = slice.slice(slice.readerIndex(), lengthA);
-
-        ChannelBuffer bufferB = r.slice.slice();
-        int lengthB = bufferB.readInt();
-        ChannelBuffer keyB = slice.slice(slice.readerIndex(), lengthB);
-
-        keyA.readerIndex(0);
-        keyB.readerIndex(0);
-
-        return keyA.equals(keyB);
-    }
-
-    public boolean sameAs(Key r) {
-        if (!valid) return false;
-
-        slice.readerIndex(0);
-
-        int lengthA = slice.readInt();
-
-        // triage here to avoid slice and compare
-        if (lengthA != r.bytes.capacity()) return false;
-
-        ChannelBuffer keyA = slice.slice(slice.readerIndex(), lengthA);
-        ChannelBuffer keyB = r.bytes;
-
-        keyA.readerIndex(0);
-        keyB.readerIndex(0);
-
-        return keyA.equals(keyB);
-    }
 }
