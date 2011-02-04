@@ -15,11 +15,7 @@ public final class Partition {
 
     ReentrantReadWriteLock storageLock = new ReentrantReadWriteLock();
 
-    public final static class Buckets {
-        ChannelBuffer regions = ChannelBuffers.dynamicBuffer(128);
-    }
-
-    Buckets[] buckets = new Buckets[NUM_BUCKETS];
+    ChannelBuffer[] buckets = new ChannelBuffer[NUM_BUCKETS];
 
     ByteBufferBlockStore blockStore;
 
@@ -27,13 +23,14 @@ public final class Partition {
 
     Partition(ByteBufferBlockStore blockStore) {
         this.blockStore = blockStore;
-        for (int i = 0; i < NUM_BUCKETS; i++) buckets[i] = new Buckets();
     }
 
     public Region find(Key key) {
         int bucket = findBucketNum(key);
 
-        ChannelBuffer regions = buckets[bucket].regions;
+        ChannelBuffer regions = buckets[bucket];
+        if (regions == null) return null;
+
         regions.readerIndex(0);
         while (regions.readableBytes() > 0) {
             // read key portion then region portion
@@ -70,7 +67,9 @@ public final class Partition {
         int bucket = findBucketNum(key);
 
         ChannelBuffer newRegion = ChannelBuffers.dynamicBuffer(128);
-        ChannelBuffer regions = buckets[bucket].regions;
+        ChannelBuffer regions = buckets[bucket];
+        if (regions == null) return;
+
         regions.readerIndex(0);
         while (regions.readableBytes() > 0) {
             // read key portion then region portion
@@ -101,7 +100,7 @@ public final class Partition {
             }
         }
 
-        buckets[bucket].regions = newRegion;
+        buckets[bucket] = newRegion;
 
         numberItems--;
     }
@@ -119,7 +118,12 @@ public final class Partition {
         key.bytes.readerIndex(0);
         outbuf.writeBytes(key.bytes);
 
-        ChannelBuffer regions = buckets[bucket].regions;
+        ChannelBuffer regions = buckets[bucket];
+        if (regions == null) {
+            regions = ChannelBuffers.dynamicBuffer(128);
+            buckets[bucket] = regions;
+        }
+
         regions.writeByte(1);
         regions.writeInt(outbuf.capacity());
         regions.writeBytes(outbuf);
@@ -130,8 +134,9 @@ public final class Partition {
     }
 
     public void clear() {
-        for (Buckets bucket : buckets) {
-            bucket.regions.clear();
+        for (ChannelBuffer bucket : buckets) {
+            if (bucket != null)
+                bucket.clear();
         }
         blockStore.clear();
         numberItems = 0;
@@ -140,23 +145,24 @@ public final class Partition {
     public Collection<Key> keys() {
         Set<Key> keys = new HashSet<Key>();
 
-        for (Buckets bucket : buckets) {
-            ChannelBuffer regions = bucket.regions;
-            regions.readerIndex(0);
-            while (regions.readableBytes() > 0) {
-                // read key portion then region portion
-                boolean valid = regions.readByte() != 0;
-                int totsize = regions.readInt();
-                if (valid) {
-                    regions.readInt();
-                    regions.readInt();
-                    regions.readInt();
-                    int rkeySize = regions.readInt();
-                    ChannelBuffer rkey = regions.readBytes(rkeySize);
+        for (ChannelBuffer regions : buckets) {
+            if (regions != null) {
+                regions.readerIndex(0);
+                while (regions.readableBytes() > 0) {
+                    // read key portion then region portion
+                    boolean valid = regions.readByte() != 0;
+                    int totsize = regions.readInt();
+                    if (valid) {
+                        regions.readInt();
+                        regions.readInt();
+                        regions.readInt();
+                        int rkeySize = regions.readInt();
+                        ChannelBuffer rkey = regions.readBytes(rkeySize);
 
-                    keys.add(new Key(rkey));
-                } else {
-                    regions.skipBytes(totsize);
+                        keys.add(new Key(rkey));
+                    } else {
+                        regions.skipBytes(totsize);
+                    }
                 }
             }
         }
