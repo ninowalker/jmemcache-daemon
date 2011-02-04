@@ -234,7 +234,7 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
 
     public static LocalCacheElement readFromBuffer(ChannelBuffer in) {
         int keyLength = in.readInt();
-        ChannelBuffer key = in.copy(in.readerIndex(), keyLength);
+        ChannelBuffer key = in.slice(in.readerIndex(), keyLength);
         in.skipBytes(keyLength);
         LocalCacheElement localCacheElement = new LocalCacheElement(new Key(key));
 
@@ -242,7 +242,7 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         localCacheElement.flags = in.readInt();
 
         int dataLength = in.readInt();
-        localCacheElement.data = in.copy(in.readerIndex(), dataLength);
+        localCacheElement.data = in.slice(in.readerIndex(), dataLength);
         in.skipBytes(dataLength);
 
         localCacheElement.casUnique = in.readInt();
@@ -252,13 +252,16 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         return localCacheElement;
     }
 
+    public int bufferSize() {
+        return 4 + key.bytes.capacity() + 4 + 4 + 4 + data.capacity() + 8 + 1 + 8;
+    }
+
     public void writeToBuffer(ChannelBuffer out) {
         out.writeInt(key.bytes.capacity());
         out.writeBytes(key.bytes);
         out.writeInt(expire) ;
         out.writeInt(flags);
-        byte[] dataArray = data.copy().array();
-        out.writeInt(dataArray.length);
+        out.writeInt(data.capacity());
         out.writeBytes(data);
         out.writeLong(casUnique);
         out.writeByte(blocked ? 1 : 0);

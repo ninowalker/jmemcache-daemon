@@ -1,6 +1,5 @@
 package com.thimbleware.jmemcached.storage.bytebuffer;
 
-import com.thimbleware.jmemcached.Key;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 
@@ -27,12 +26,6 @@ public class ByteBufferBlockStore {
 
     private BitSet allocated;
     private static final ByteBufferBlockStoreFactory BYTE_BUFFER_BLOCK_STORE_FACTORY = new ByteBufferBlockStoreFactory();
-
-    final static class HashBuckets {
-        List<Key> keys;
-    }
-
-    HashBuckets[] buckets = new HashBuckets[256];
 
 
     /**
@@ -148,10 +141,9 @@ public class ByteBufferBlockStore {
     /**
      * Allocate a region in the block storage
      * @param desiredSize size (in bytes) desired for the region
-     * @param data initial data to place in it
      * @return the region descriptor
      */
-    public Region alloc(int desiredSize, ChannelBuffer data) {
+    public Region alloc(int desiredSize) {
         final long desiredBlockSize = roundUp(desiredSize, blockSizeBytes);
         int numBlocks = (int) (desiredBlockSize / blockSizeBytes);
 
@@ -162,18 +154,11 @@ public class ByteBufferBlockStore {
 
         // get the buffer to it
         int position = pos * blockSizeBytes;
-        storageBuffer.writerIndex(position);
-        storageBuffer.writeBytes(data);
+        ChannelBuffer slice = storageBuffer.slice(position, desiredSize);
+        slice.writerIndex(0);
+        slice.readerIndex(0);
 
-        return new Region(desiredSize, numBlocks, pos);
-    }
-
-    public ChannelBuffer get(Region region) {
-        return storageBuffer.slice(region.startBlock * blockSizeBytes, region.size);
-    }
-
-    public ChannelBuffer get(Region region, int limit) {
-        return storageBuffer.slice(region.startBlock * blockSizeBytes, region.size);
+        return new Region(desiredSize, numBlocks, pos, slice);
     }
 
     public void free(Region region) {
@@ -205,6 +190,7 @@ public class ByteBufferBlockStore {
     public long getFreeBytes() {
         return freeBytes;
     }
+
 
 
 }

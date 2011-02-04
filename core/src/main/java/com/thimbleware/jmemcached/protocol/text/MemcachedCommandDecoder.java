@@ -96,7 +96,7 @@ public final class MemcachedCommandDecoder extends FrameDecoder {
                     status.processingMultiline();
 
                     // There's enough bytes in the buffer and the delimiter is at the end. Read it.
-                    ChannelBuffer result = buffer.copy(buffer.readerIndex(), status.bytesNeeded);
+                    ChannelBuffer result = buffer.slice(buffer.readerIndex(), status.bytesNeeded);
 
                     buffer.skipBytes(status.bytesNeeded + MemcachedResponseEncoder.CRLF.capacity());
 

@@ -141,7 +141,7 @@ public class Main {
             binary = true;
         }
 
-        int blockSize = 8;
+        int blockSize = 64;
         if (!memoryMapped && (cmdline.hasOption("bs") || cmdline.hasOption("block-size"))) {
             System.out.println("WARN : block size option is only valid for memory mapped external heap storage; ignoring");
         } else if (cmdline.hasOption("bs")) {

@@ -33,33 +33,38 @@ public final class Region {
      */
     public boolean valid = false;
 
-    public Region(int size, int usedBlocks, int startBlock) {
+    public final ChannelBuffer slice;
+
+    public Region(int size, int usedBlocks, int startBlock, ChannelBuffer slice) {
         this.size = size;
         this.usedBlocks = usedBlocks;
         this.startBlock = startBlock;
+        this.slice = slice;
         this.valid = true;
     }
 
-    public Key keyFromRegion(ByteBufferBlockStore store) {
-        ChannelBuffer buffer = store.get(this);
+    public Key keyFromRegion() {
+        slice.readerIndex(0);
 
-        int length = buffer.readInt();
-        return new Key(buffer.copy(buffer.readerIndex(), length));
+        int length = slice.readInt();
+        return new Key(slice.copy(slice.readerIndex(), length));
     }
 
-    public LocalCacheElement toValue(ByteBufferBlockStore store) {
-        return LocalCacheElement.readFromBuffer(store.get(this));
+    public LocalCacheElement toValue() {
+        slice.readerIndex(0);
+        return LocalCacheElement.readFromBuffer(slice);
     }
 
-    public boolean sameAs(Region r, ByteBufferBlockStore store) {
-        ChannelBuffer bufferA = store.get(this).slice();
+    public boolean sameAs(Region r) {
+        slice.readerIndex(0);
 
-        int lengthA = bufferA.readInt();
-        ChannelBuffer keyA = bufferA.slice(bufferA.readerIndex(), lengthA);
+        int lengthA = slice.readInt();
 
-        ChannelBuffer bufferB = store.get(r).slice();
+        ChannelBuffer keyA = slice.slice(slice.readerIndex(), lengthA);
+
+        ChannelBuffer bufferB = r.slice.slice();
         int lengthB = bufferB.readInt();
-        ChannelBuffer keyB = bufferA.slice(bufferA.readerIndex(), lengthB);
+        ChannelBuffer keyB = slice.slice(slice.readerIndex(), lengthB);
 
         keyA.readerIndex(0);
         keyB.readerIndex(0);
@@ -67,11 +72,11 @@ public final class Region {
         return keyA.equals(keyB);
     }
 
-    public boolean sameAs(Key r, ByteBufferBlockStore store) {
-        ChannelBuffer bufferA = store.get(this);
+    public boolean sameAs(Key r) {
+        slice.readerIndex(0);
 
-        int lengthA = bufferA.readInt();
-        ChannelBuffer keyA = bufferA.slice(bufferA.readerIndex(), lengthA);
+        int lengthA = slice.readInt();
+        ChannelBuffer keyA = slice.slice(slice.readerIndex(), lengthA);
 
         ChannelBuffer keyB = r.bytes;
 

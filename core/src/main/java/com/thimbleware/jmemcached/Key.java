@@ -14,7 +14,7 @@ public class Key {
     private int hashCode;
 
     public Key(ChannelBuffer bytes) {
-        this.bytes = bytes.copy();
+        this.bytes = bytes.slice();
         this.hashCode = this.bytes.hashCode();
     }
 
