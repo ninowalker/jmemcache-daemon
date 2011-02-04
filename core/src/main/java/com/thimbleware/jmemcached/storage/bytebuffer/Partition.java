@@ -11,7 +11,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  */
 public final class Partition {
-    private static final int NUM_BUCKETS = 32768;
+    private static final int NUM_BUCKETS = 65536;
 
     ReentrantReadWriteLock storageLock = new ReentrantReadWriteLock();
 

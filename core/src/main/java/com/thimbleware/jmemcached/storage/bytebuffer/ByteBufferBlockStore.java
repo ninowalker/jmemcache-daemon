@@ -44,8 +44,8 @@ public class ByteBufferBlockStore {
 
         public ByteBufferBlockStore manufacture(long sizeBytes, int blockSizeBytes) {
             try {
-                ByteBuffer buffer = ByteBuffer.allocateDirect((int) sizeBytes);
-                return new ByteBufferBlockStore(buffer, blockSizeBytes);
+                ChannelBuffer buffer = ChannelBuffers.directBuffer((int) sizeBytes);
+                return new ByteBufferBlockStore(buffer, sizeBytes, blockSizeBytes);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -59,10 +59,10 @@ public class ByteBufferBlockStore {
      * @param blockSizeBytes the size of a block in the store
      * @throws java.io.IOException thrown on failure to open the store or map the file
      */
-    private ByteBufferBlockStore(ByteBuffer storageBuffer, int blockSizeBytes) throws IOException {
-        this.storageBuffer = ChannelBuffers.wrappedBuffer(storageBuffer);
+    private ByteBufferBlockStore(ChannelBuffer storageBuffer, long sizeBytes, int blockSizeBytes) throws IOException {
+        this.storageBuffer = storageBuffer;
         this.blockSizeBytes = blockSizeBytes;
-        initialize(storageBuffer.capacity());
+        initialize((int)sizeBytes);
     }
 
     /**
@@ -164,6 +164,7 @@ public class ByteBufferBlockStore {
     public void free(Region region) {
         freeBytes += (region.usedBlocks * blockSizeBytes);
         region.valid = false;
+        region.slice = null;
         int pos = region.startBlock;
         clear(pos, region.size / blockSizeBytes);
     }

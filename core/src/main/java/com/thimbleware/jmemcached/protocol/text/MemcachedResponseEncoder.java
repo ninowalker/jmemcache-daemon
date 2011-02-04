@@ -77,16 +77,23 @@ public final class MemcachedResponseEncoder<CACHE_ELEMENT extends CacheElement> 
             case GETS:
                 CacheElement[] results = command.elements;
 
-                ChannelBuffer buffers[] = new ChannelBuffer[(results.length * 3) + 1];
+                ChannelBuffer[] buffers = new ChannelBuffer[results.length * (9 + (cmd == Op.GETS ? 2 : 0)) + 1];
                 int i = 0;
                 for (CacheElement result : results) {
                     if (result != null) {
-                        buffers[i++] = ChannelBuffers.wrappedBuffer(VALUE, result.getKey().bytes, SPACE,
-                                BufferUtils.itoa(result.getFlags()),SPACE, BufferUtils.itoa(result.size()));
+                        buffers[i++] = VALUE;
+                        buffers[i++] = result.getKey().bytes;
+                        buffers[i++] = SPACE;
+                        buffers[i++] = BufferUtils.itoa(result.getFlags());
+                        buffers[i++] = SPACE;
+                        buffers[i++] = BufferUtils.itoa(result.size());
                         if (cmd == Op.GETS) {
-                            buffers[i++] = ChannelBuffers.wrappedBuffer(SPACE, BufferUtils.ltoa(result.getCasUnique()));
+                            buffers[i++] = SPACE;
+                            buffers[i++] = BufferUtils.ltoa(result.getCasUnique());
                         }
-                        buffers[i++] = ChannelBuffers.wrappedBuffer(CRLF, result.getData(), CRLF);
+                        buffers[i++] = CRLF;
+                        buffers[i++] = result.getData();
+                        buffers[i++] = CRLF;
                     }
                 }
                 buffers[i] = END;

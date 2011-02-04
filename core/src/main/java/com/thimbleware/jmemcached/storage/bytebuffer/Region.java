@@ -33,7 +33,7 @@ public final class Region {
      */
     public boolean valid = false;
 
-    public final ChannelBuffer slice;
+    public ChannelBuffer slice;
 
     public Region(int size, int usedBlocks, int startBlock, ChannelBuffer slice) {
         this.size = size;
@@ -47,7 +47,7 @@ public final class Region {
         slice.readerIndex(0);
 
         int length = slice.readInt();
-        return new Key(slice.copy(slice.readerIndex(), length));
+        return new Key(slice.slice(slice.readerIndex(), length));
     }
 
     public LocalCacheElement toValue() {
@@ -56,6 +56,9 @@ public final class Region {
     }
 
     public boolean sameAs(Region r) {
+        if (r.valid != valid) return false;
+        if (r.slice == r.slice) return true;
+
         slice.readerIndex(0);
 
         int lengthA = slice.readInt();
@@ -73,11 +76,16 @@ public final class Region {
     }
 
     public boolean sameAs(Key r) {
+        if (!valid) return false;
+
         slice.readerIndex(0);
 
         int lengthA = slice.readInt();
-        ChannelBuffer keyA = slice.slice(slice.readerIndex(), lengthA);
 
+        // triage here to avoid slice and compare
+        if (lengthA != r.bytes.capacity()) return false;
+
+        ChannelBuffer keyA = slice.slice(slice.readerIndex(), lengthA);
         ChannelBuffer keyB = r.bytes;
 
         keyA.readerIndex(0);
