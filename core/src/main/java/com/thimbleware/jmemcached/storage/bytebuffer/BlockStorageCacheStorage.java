@@ -15,9 +15,9 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
 
     Partition[] partitions;
 
-    final AtomicInteger ceilingBytes;
-    final AtomicInteger maximumItems;
-    final AtomicInteger numberItems;
+    volatile int ceilingBytes;
+    volatile int maximumItems;
+    volatile int numberItems;
     final long maximumSizeBytes;
 
     public BlockStorageCacheStorage(int blockStoreBuckets, int ceilingBytesParam, int blockSizeBytes, long maximumSizeBytes, int maximumItemsVal, BlockStoreFactory factory) {
@@ -28,9 +28,9 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
             this.partitions[i] = new Partition(factory.manufacture(bucketSizeBytes, blockSizeBytes));
         }
 
-        this.numberItems = new AtomicInteger();
-        this.ceilingBytes = new AtomicInteger(ceilingBytesParam);
-        this.maximumItems = new AtomicInteger(maximumItemsVal);
+        this.numberItems = 0;
+        this.ceilingBytes = 0;
+        this.maximumItems = 0;
         this.maximumSizeBytes = maximumSizeBytes;
     }
 
@@ -55,7 +55,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
     }
 
     public final int capacity() {
-        return maximumItems.get();
+        return maximumItems;
     }
 
     public final void close() throws IOException {
@@ -81,7 +81,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
                 partition.storageLock.readLock().unlock();
                 partition.storageLock.writeLock().lock();
                 try {
-                    numberItems.incrementAndGet();
+                    numberItems++;
                     partition.add(key, item);
                 } finally {
                     partition.storageLock.readLock().lock();
@@ -118,7 +118,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
                 try {
                     partition.blockStore.free(region);
                     partition.remove(key, region);
-                    numberItems.decrementAndGet();
+                    numberItems++;
                     return true;
                 } finally {
                     partition.storageLock.readLock().lock();
@@ -196,11 +196,11 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
     }
 
     public final int size() {
-        return numberItems.get();
+        return numberItems;
     }
 
     public final boolean isEmpty() {
-        return numberItems.get() == 0;
+        return numberItems == 0;
     }
 
     public final boolean containsKey(Object okey) {
@@ -255,7 +255,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
                 }
                 if (region != null) partition.remove(key, region);
                 partition.add(key, item);
-                numberItems.incrementAndGet();
+                numberItems++;
                 return old;
             } finally {
                 partition.storageLock.readLock().lock();
@@ -286,7 +286,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
                     old = region.toValue();
                     partition.blockStore.free(region);
                     partition.remove(key, region);
-                    numberItems.decrementAndGet();
+                    numberItems--;
                     return old;
                 } finally {
                     partition.storageLock.readLock().lock();
@@ -312,7 +312,7 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
     public final void clear() {
         for (Partition partition : partitions) {
             partition.storageLock.writeLock().lock();
-            numberItems.addAndGet(partition.keys().size() * - 1);
+            numberItems += partition.keys().size() * - 1;
             try {
                 partition.clear();
             } finally {
