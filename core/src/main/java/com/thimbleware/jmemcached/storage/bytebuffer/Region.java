@@ -27,6 +27,11 @@ public final class Region {
      */
     final int startBlock;
 
+
+    final long timestamp;
+
+    final long expiry;
+
     /**
      * Flag which is true if the region is valid and in use.
      * Set to false on free()
@@ -35,11 +40,13 @@ public final class Region {
 
     public ChannelBuffer slice;
 
-    public Region(int size, int usedBlocks, int startBlock, ChannelBuffer slice) {
+    public Region(int size, int usedBlocks, int startBlock, ChannelBuffer slice, long expiry, long timestamp) {
         this.size = size;
         this.usedBlocks = usedBlocks;
         this.startBlock = startBlock;
         this.slice = slice;
+        this.expiry = expiry;
+        this.timestamp = timestamp;
         this.valid = true;
     }
 

@@ -4,7 +4,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 
 import java.io.IOException;
-import java.util.*;
+
 import com.thimbleware.jmemcached.util.BitSet;
 
 /**
@@ -141,10 +141,13 @@ public class ByteBufferBlockStore {
 
     /**
      * Allocate a region in the block storage
+     *
      * @param desiredSize size (in bytes) desired for the region
+     * @param expiry expiry time in ms since epoch
+     *@param timestamp allocation timestamp of the entry
      * @return the region descriptor
      */
-    public Region alloc(int desiredSize) {
+    public Region alloc(int desiredSize, long expiry, long timestamp) {
         final long desiredBlockSize = roundUp(desiredSize, blockSizeBytes);
         int numBlocks = (int) (desiredBlockSize / blockSizeBytes);
 
@@ -159,7 +162,7 @@ public class ByteBufferBlockStore {
         slice.writerIndex(0);
         slice.readerIndex(0);
 
-        return new Region(desiredSize, numBlocks, pos, slice);
+        return new Region(desiredSize, numBlocks, pos, slice, expiry, timestamp);
     }
 
     public ChannelBuffer get(int startBlock, int size) {
