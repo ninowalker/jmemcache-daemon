@@ -4,8 +4,8 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.*;
+import com.thimbleware.jmemcached.util.BitSet;
 
 /**
  * Memory mapped block storage mechanism with a free-list maintained by TreeMap
@@ -84,6 +84,7 @@ public class ByteBufferBlockStore {
 
         allocated = new BitSet(storeSizeBytes / blockSizeBytes);
         allocated.set((int) (roundUp(storeSizeBytes, blockSizeBytes) / blockSizeBytes), false);
+
         clear();
     }
 
