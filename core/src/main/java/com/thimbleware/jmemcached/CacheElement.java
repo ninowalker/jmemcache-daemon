@@ -9,13 +9,13 @@ import java.nio.ByteBuffer;
 /**
  */
 public interface CacheElement extends Serializable, SizedItem {
-    public final static int THIRTY_DAYS = 2592000;
+    public final static long THIRTY_DAYS = 2592000000L;
 
     int size();
 
     int hashCode();
 
-    int getExpire();
+    long getExpire();
 
     int getFlags();
 

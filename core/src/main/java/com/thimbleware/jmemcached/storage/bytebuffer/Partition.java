@@ -87,7 +87,7 @@ public final class Partition {
                 ChannelBuffer rkey = regions.readBytes(rkeySize);
 
                 if (rkeySize != key.bytes.capacity() || !rkey.equals(key.bytes)) {
-                    ChannelBuffer outbuf = ChannelBuffers.directBuffer(16 + rkey.capacity());
+                    ChannelBuffer outbuf = ChannelBuffers.directBuffer(24 + rkey.capacity());
                     outbuf.writeInt(rsize);
                     outbuf.writeInt(rusedBlocks);
                     outbuf.writeInt(rstartBlock);
@@ -112,7 +112,7 @@ public final class Partition {
     }
 
     public Region add(Key key, LocalCacheElement e) {
-        Region region = blockStore.alloc(e.bufferSize(), e.getExpire() * 1000, System.currentTimeMillis());
+        Region region = blockStore.alloc(e.bufferSize(), e.getExpire(), System.currentTimeMillis());
         e.writeToBuffer(region.slice);
         int bucket = findBucketNum(key);
 

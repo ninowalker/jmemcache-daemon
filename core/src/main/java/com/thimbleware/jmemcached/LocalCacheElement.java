@@ -29,8 +29,8 @@ import java.nio.ByteBuffer;
 /**
  * Represents information about a cache entry.
  */
-public final class LocalCacheElement implements CacheElement, Externalizable {
-    private int expire ;
+public final class LocalCacheElement implements CacheElement {
+    private long expire ;
     private int flags;
     private ChannelBuffer data;
     private Key key;
@@ -45,7 +45,7 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         this.key = key;
     }
 
-    public LocalCacheElement(Key key, int flags, int expire, long casUnique) {
+    public LocalCacheElement(Key key, int flags, long expire, long casUnique) {
         this.key = key;
         this.flags = flags;
         this.expire = expire;
@@ -145,18 +145,18 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         if (casUnique != that.casUnique) return false;
         if (expire != that.expire) return false;
         if (flags != that.flags) return false;
-        if (!data.equals(that.data)) return false;
-        if (!key.equals(that.key)) return false;
+        if (data != null ? !data.equals(that.data) : that.data != null) return false;
+        if (key != null ? !key.equals(that.key) : that.key != null) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        int result = expire;
+        int result = (int) (expire ^ (expire >>> 32));
         result = 31 * result + flags;
         result = 31 * result + (data != null ? data.hashCode() : 0);
-        result = 31 * result + key.hashCode();
+        result = 31 * result + (key != null ? key.hashCode() : 0);
         result = 31 * result + (int) (casUnique ^ (casUnique >>> 32));
         result = 31 * result + (blocked ? 1 : 0);
         result = 31 * result + (int) (blockedUntil ^ (blockedUntil >>> 32));
@@ -167,7 +167,7 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         return new LocalCacheElement(key);
     }
 
-    public int getExpire() {
+    public long getExpire() {
         return expire;
     }
 
@@ -211,34 +211,15 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         this.data = data;
     }
 
-
-    public void readExternal(ObjectInput in) throws IOException{
-        byte[] keyBytes = new byte[in.readInt()];
-        in.read(keyBytes);
-        expire = in.readInt() ;
-        flags = in.readInt();
-
-        final int length = in.readInt();
-        int readSize = 0;
-        byte[] dataArrary = new byte[length];
-        while( readSize < length)
-            readSize += in.read(dataArrary, readSize, length - readSize);
-        data = ChannelBuffers.wrappedBuffer(dataArrary);
-
-
-        key = new Key(ChannelBuffers.wrappedBuffer(keyBytes));
-        casUnique = in.readLong();
-        blocked = in.readBoolean();
-        blockedUntil = in.readLong();
-    }
-
     public static LocalCacheElement readFromBuffer(ChannelBuffer in) {
+        int bufferSize = in.readInt();
+        long expiry = in.readLong();
         int keyLength = in.readInt();
         ChannelBuffer key = in.slice(in.readerIndex(), keyLength);
         in.skipBytes(keyLength);
         LocalCacheElement localCacheElement = new LocalCacheElement(new Key(key));
 
-        localCacheElement.expire = in.readInt();
+        localCacheElement.expire = expiry;
         localCacheElement.flags = in.readInt();
 
         int dataLength = in.readInt();
@@ -253,13 +234,14 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
     }
 
     public int bufferSize() {
-        return 4 + key.bytes.capacity() + 4 + 4 + 4 + data.capacity() + 8 + 1 + 8;
+        return 4 + 8 + 4 + key.bytes.capacity() + 4 + 4 + 4 + data.capacity() + 8 + 1 + 8;
     }
 
     public void writeToBuffer(ChannelBuffer out) {
+        out.writeInt(bufferSize());
+        out.writeLong(expire) ;
         out.writeInt(key.bytes.capacity());
         out.writeBytes(key.bytes);
-        out.writeInt(expire) ;
         out.writeInt(flags);
         out.writeInt(data.capacity());
         out.writeBytes(data);
@@ -268,16 +250,4 @@ public final class LocalCacheElement implements CacheElement, Externalizable {
         out.writeLong(blockedUntil);
     }
 
-    public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeInt(key.bytes.capacity());
-        out.write(key.bytes.copy().array());
-        out.writeInt(expire) ;
-        out.writeInt(flags);
-        byte[] dataArray = data.copy().array();
-        out.writeInt(dataArray.length);
-        out.write(dataArray);
-        out.writeLong(casUnique);
-        out.writeBoolean(blocked);
-        out.writeLong(blockedUntil);
-    }
 }

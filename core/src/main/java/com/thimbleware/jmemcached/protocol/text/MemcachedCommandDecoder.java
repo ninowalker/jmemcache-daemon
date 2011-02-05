@@ -203,7 +203,7 @@ public final class MemcachedCommandDecoder extends FrameDecoder {
 
                 // Fill in all the elements of the command
                 int size = BufferUtils.atoi(parts.get(4));
-                int expire = BufferUtils.atoi(parts.get(3));
+                long expire = BufferUtils.atoi(parts.get(3)) * 1000;
                 int flags = BufferUtils.atoi(parts.get(MIN_BYTES_LINE));
                 cmd.element = new LocalCacheElement(new Key(parts.get(1).slice()), flags, expire != 0 && expire < CacheElement.THIRTY_DAYS ? LocalCacheElement.Now() + expire : expire, 0L);
 

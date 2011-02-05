@@ -150,7 +150,7 @@ public class MemcachedBinaryCommandDecoder extends FrameDecoder {
                     cmdType == Op.PREPEND)
             {
                 // TODO these are backwards from the spec, but seem to be what spymemcached demands -- which has the mistake?!
-                short expire = (short) (extrasBuffer.capacity() != 0 ? extrasBuffer.readUnsignedShort() : 0);
+                long expire = ((short) (extrasBuffer.capacity() != 0 ? extrasBuffer.readUnsignedShort() : 0)) * 1000;
                 short flags = (short) (extrasBuffer.capacity() != 0 ? extrasBuffer.readUnsignedShort() : 0);
 
                 // the remainder of the message -- that is, totalLength - (keyLength + extraLength) should be the payload

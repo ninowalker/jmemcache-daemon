@@ -31,7 +31,7 @@ public abstract class AbstractCache<CACHE_ELEMENT extends CacheElement> implemen
      * @return the current time in seconds (from epoch), used for expiries, etc.
      */
     public static int Now() {
-        return (int) (System.currentTimeMillis() / 1000);
+        return (int) (System.currentTimeMillis());
     }
 
     protected abstract Set<Key> keys();
