@@ -141,7 +141,7 @@ public class Main {
             binary = true;
         }
 
-        int blockSize = 64;
+        int blockSize = 8;
         if (!memoryMapped && (cmdline.hasOption("bs") || cmdline.hasOption("block-size"))) {
             System.out.println("WARN : block size option is only valid for memory mapped external heap storage; ignoring");
         } else if (cmdline.hasOption("bs")) {
@@ -180,11 +180,11 @@ public class Main {
         if (blockStore) {
             BlockStoreFactory blockStoreFactory = ByteBufferBlockStore.getFactory();
 
-            storage = new BlockStorageCacheStorage(16, (int)ceiling, blockSize, maxBytes, max_size, blockStoreFactory);
+            storage = new BlockStorageCacheStorage(8, (int)ceiling, blockSize, maxBytes, max_size, blockStoreFactory);
         }  else if (memoryMapped) {
             BlockStoreFactory blockStoreFactory = MemoryMappedBlockStore.getFactory();
 
-            storage = new BlockStorageCacheStorage(16, (int)ceiling, blockSize, maxBytes, max_size, blockStoreFactory);
+            storage = new BlockStorageCacheStorage(8, (int)ceiling, blockSize, maxBytes, max_size, blockStoreFactory);
         }
         else  {
             storage = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, max_size, maxBytes);

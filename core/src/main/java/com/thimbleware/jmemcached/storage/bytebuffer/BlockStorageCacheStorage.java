@@ -209,11 +209,9 @@ public final class BlockStorageCacheStorage implements CacheStorage<Key, LocalCa
         Key key = (Key) okey;
         Partition partition = pickPartition(key);
 
-        Region region;
         try {
             partition.storageLock.readLock().lock();
-            region = partition.find(key);
-            return region != null;
+            return partition.has(key);
         } finally {
             partition.storageLock.readLock().unlock();
         }

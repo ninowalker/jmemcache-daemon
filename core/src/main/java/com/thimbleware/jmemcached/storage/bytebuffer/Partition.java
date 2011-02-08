@@ -11,7 +11,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  */
 public final class Partition {
-    private static final int NUM_BUCKETS = 65536;
+    private static final int NUM_BUCKETS = 32768;
 
     ReentrantReadWriteLock storageLock = new ReentrantReadWriteLock();
 
@@ -28,36 +28,56 @@ public final class Partition {
     public Region find(Key key) {
         int bucket = findBucketNum(key);
 
-        ChannelBuffer regions = buckets[bucket];
-        if (regions == null) return null;
+        if (buckets[bucket] == null) return null;
+        ChannelBuffer regions = buckets[bucket].slice();
 
         regions.readerIndex(0);
         while (regions.readableBytes() > 0) {
-            // read key portion then region portion
-            boolean valid = regions.readByte() == 1;
             int totsize = regions.readInt();
-            if (valid) {
-                int rsize = regions.readInt();
-                int rusedBlocks = regions.readInt();
-                int rstartBlock = regions.readInt();
-                long expiry = regions.readLong();
-                long timestamp = regions.readLong();
-                int rkeySize = regions.readInt();
+            int rsize = regions.readInt();
+            int rusedBlocks = regions.readInt();
+            int rstartBlock = regions.readInt();
+            long expiry = regions.readLong();
+            long timestamp = regions.readLong();
+            int rkeySize = regions.readInt();
 
-                if (rkeySize == key.bytes.capacity()) {
-                    ChannelBuffer rkey = regions.readSlice(rkeySize);
+            if (rkeySize == key.bytes.capacity()) {
+                ChannelBuffer rkey = regions.readSlice(rkeySize);
 
-                    key.bytes.readerIndex(0);
-                    if (rkey.equals(key.bytes)) return new Region(rsize, rusedBlocks, rstartBlock, blockStore.get(rstartBlock, rsize), expiry, timestamp);
-                } else {
-                    regions.skipBytes(rkeySize);
-                }
+                key.bytes.readerIndex(0);
+                if (rkey.equals(key.bytes)) return new Region(rsize, rusedBlocks, rstartBlock, blockStore.get(rstartBlock, rsize), expiry, timestamp);
             } else {
-                regions.skipBytes(totsize);
+                regions.skipBytes(rkeySize);
             }
         }
 
         return null;
+    }
+
+    public boolean has(Key key) {
+        int bucket = findBucketNum(key);
+
+        if (buckets[bucket] == null) return false;
+        ChannelBuffer regions = buckets[bucket].slice();
+
+
+        regions.readerIndex(0);
+        while (regions.readableBytes() > 0) {
+            int totsize = regions.readInt();
+            regions.skipBytes(28);
+            int rkeySize = regions.readInt();
+
+            if (rkeySize == key.bytes.capacity()) {
+                ChannelBuffer rkey = regions.readSlice(rkeySize);
+
+                key.bytes.readerIndex(0);
+                if (rkey.equals(key.bytes)) return true;
+            } else {
+                regions.skipBytes(rkeySize);
+            }
+        }
+
+        return false;
     }
 
     private int findBucketNum(Key key) {
@@ -69,40 +89,20 @@ public final class Partition {
         int bucket = findBucketNum(key);
 
         ChannelBuffer newRegion = ChannelBuffers.dynamicBuffer(128);
-        ChannelBuffer regions = buckets[bucket];
+        ChannelBuffer regions = buckets[bucket].slice();
         if (regions == null) return;
 
         regions.readerIndex(0);
         while (regions.readableBytes() > 0) {
             // read key portion then region portion
-            boolean valid = regions.readByte() != 0;
+            int pos = regions.readerIndex();
             int totsize = regions.readInt();
-            if (valid) {
-                int rsize = regions.readInt();
-                int rusedBlocks = regions.readInt();
-                int rstartBlock = regions.readInt();
-                long expiry = regions.readLong();
-                long timestamp = regions.readLong();
-                int rkeySize = regions.readInt();
-                ChannelBuffer rkey = regions.readBytes(rkeySize);
+            regions.skipBytes(28);
+            int rkeySize = regions.readInt();
+            ChannelBuffer rkey = regions.readBytes(rkeySize);
 
-                if (rkeySize != key.bytes.capacity() || !rkey.equals(key.bytes)) {
-                    ChannelBuffer outbuf = ChannelBuffers.directBuffer(24 + rkey.capacity());
-                    outbuf.writeInt(rsize);
-                    outbuf.writeInt(rusedBlocks);
-                    outbuf.writeInt(rstartBlock);
-                    outbuf.writeLong(expiry);
-                    outbuf.writeLong(timestamp);
-                    outbuf.writeInt(rkeySize);
-                    rkey.readerIndex(0);
-                    outbuf.writeBytes(rkey);
-
-                    newRegion.writeByte(1);
-                    newRegion.writeInt(outbuf.capacity());
-                    newRegion.writeBytes(outbuf);
-                }
-            } else {
-                regions.skipBytes(totsize);
+            if (rkeySize != key.bytes.capacity() || !rkey.equals(key.bytes)) {
+                newRegion.writeBytes(regions.slice(pos, regions.readerIndex()));
             }
         }
 
@@ -132,7 +132,6 @@ public final class Partition {
             buckets[bucket] = regions;
         }
 
-        regions.writeByte(1);
         regions.writeInt(outbuf.capacity());
         regions.writeBytes(outbuf);
 
@@ -153,22 +152,18 @@ public final class Partition {
     public Collection<Key> keys() {
         Set<Key> keys = new HashSet<Key>();
 
-        for (ChannelBuffer regions : buckets) {
-            if (regions != null) {
+        for (ChannelBuffer regionsa : buckets) {
+            if (regionsa != null) {
+                ChannelBuffer regions = regionsa.slice();
                 regions.readerIndex(0);
                 while (regions.readableBytes() > 0) {
                     // read key portion then region portion
-                    boolean valid = regions.readByte() != 0;
                     int totsize = regions.readInt();
-                    if (valid) {
-                        regions.skipBytes(28);;
-                        int rkeySize = regions.readInt();
-                        ChannelBuffer rkey = regions.readBytes(rkeySize);
+                    regions.skipBytes(28);
+                    int rkeySize = regions.readInt();
+                    ChannelBuffer rkey = regions.readBytes(rkeySize);
 
-                        keys.add(new Key(rkey));
-                    } else {
-                        regions.skipBytes(totsize);
-                    }
+                    keys.add(new Key(rkey));
                 }
             }
         }

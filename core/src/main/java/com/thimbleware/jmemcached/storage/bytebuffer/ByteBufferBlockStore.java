@@ -1,11 +1,10 @@
 package com.thimbleware.jmemcached.storage.bytebuffer;
 
+import com.thimbleware.jmemcached.util.OpenBitSet;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 
 import java.io.IOException;
-
-import com.thimbleware.jmemcached.util.BitSet;
 
 /**
  * Memory mapped block storage mechanism with a free-list maintained by TreeMap
@@ -24,7 +23,7 @@ public class ByteBufferBlockStore {
     private long storeSizeBytes;
     private final int blockSizeBytes;
 
-    private BitSet allocated;
+    private OpenBitSet allocated;
     private static final ByteBufferBlockStoreFactory BYTE_BUFFER_BLOCK_STORE_FACTORY = new ByteBufferBlockStoreFactory();
 
 
@@ -44,7 +43,7 @@ public class ByteBufferBlockStore {
 
         public ByteBufferBlockStore manufacture(long sizeBytes, int blockSizeBytes) {
             try {
-                ChannelBuffer buffer = ChannelBuffers.directBuffer((int) sizeBytes);
+                ChannelBuffer buffer = ChannelBuffers.buffer((int) sizeBytes);
                 return new ByteBufferBlockStore(buffer, sizeBytes, blockSizeBytes);
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -82,8 +81,7 @@ public class ByteBufferBlockStore {
         // clear the buffer
         storageBuffer.clear();
 
-        allocated = new BitSet(storeSizeBytes / blockSizeBytes);
-        allocated.set((int) (roundUp(storeSizeBytes, blockSizeBytes) / blockSizeBytes), false);
+        allocated = new OpenBitSet(storeSizeBytes / blockSizeBytes);
 
         clear();
     }
@@ -118,25 +116,16 @@ public class ByteBufferBlockStore {
         // noop
     }
 
-    private int findPos(int numBlocks) {
-        int startPos = 0;
-        while (startPos < allocated.size()) {
-            int clearSpot = allocated.nextClearBit(startPos);
-            int endSpot = allocated.nextSetBit(clearSpot);
-            if ( (endSpot - clearSpot) >= numBlocks || endSpot == -1)
-                return clearSpot;
-            else
-                startPos = endSpot;
-        }
-        throw new BadAllocationException("unable to allocate room; all blocks consumed");
+    private int markPos(int numBlocks) {
+        int mark = allocated.mark(numBlocks);
+        if (mark == -1) throw new BadAllocationException("unable to allocate room; all blocks consumed");
+        return mark;
     }
 
-    private void markPos(int start, int numBlocks) {
-        allocated.set(start, start + numBlocks);
-    }
+
 
     private void clear(int start, int numBlocks) {
-        allocated.set(start, start + numBlocks, false);
+        allocated.clear(start, start + numBlocks);
     }
 
     /**
@@ -151,8 +140,7 @@ public class ByteBufferBlockStore {
         final long desiredBlockSize = roundUp(desiredSize, blockSizeBytes);
         int numBlocks = (int) (desiredBlockSize / blockSizeBytes);
 
-        int pos = findPos(numBlocks);
-        markPos(pos, numBlocks);
+        int pos = markPos(numBlocks);
 
         freeBytes -= desiredBlockSize;
 
@@ -180,7 +168,7 @@ public class ByteBufferBlockStore {
     public void clear()
     {
         // say goodbye to the region list
-        allocated.clear();
+        allocated = new OpenBitSet(allocated.size());
 
         // reset the # of free bytes back to the max size
         freeBytes = storeSizeBytes;
