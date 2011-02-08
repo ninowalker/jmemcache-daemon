@@ -78,6 +78,8 @@ public class OpenBitSet implements Cloneable, Serializable {
 
     private static final int ELM_SIZE = 1 << OFFSET;
 
+    private final static long ALLSET = 0xFFFFFFFFFFFFFFFFL;
+
     private static final long[] TWO_N_ARRAY = new long[] { 0x1L, 0x2L, 0x4L,
             0x8L, 0x10L, 0x20L, 0x40L, 0x80L, 0x100L, 0x200L, 0x400L, 0x800L,
             0x1000L, 0x2000L, 0x4000L, 0x8000L, 0x10000L, 0x20000L, 0x40000L,
@@ -633,30 +635,6 @@ public class OpenBitSet implements Cloneable, Serializable {
         return -1;
     }
 
-    private static long ALLSET = 0xFFFFFFFFFFFFFFFFL;
-
-/* returns bit position within a 64 bit long, where
-   a region of contiguous zero bits can be found whose
-   count is equal to or greater than width. it returns
-   -1 on failure.
-*/
-    int binary_width_fit( int width, long val )
-    {
-        int offset = 64;
-        int mask;
-        long b;
-
-        while(offset >= width)
-        {
-            mask = ((1 << width) - 1) << (offset - width);
-            b = val & mask;
-            if (b == 0)
-                return offset;
-            offset = BitUtil.ntz(b);
-        }
-        return -1;
-    }
-
     public int mark(int blocks_needed)
     {
         int count;
@@ -666,17 +644,18 @@ public class OpenBitSet implements Cloneable, Serializable {
 
         boolean over_the_top = false;
 
-        while (true) {
+        int wdth = wlen * 64;
 
-            if (b < wlen && bits[b >>> OFFSET] == ALLSET) {
+        while (true) {
+            if (b < wdth && bits[b >>> OFFSET] == ALLSET) {
                 /* 64 full blocks. Let's run away from this! */
                 b = (b & ~0x3f) + 64;
-                while (b < wlen && bits[b >>> OFFSET] == ALLSET) {
+                while (b < wdth && bits[b >>> OFFSET] == ALLSET) {
                     b += 64;
                 }
             }
 
-            if (b >= wlen) {
+            if (b >= wdth) {
                 /* Only wrap around once. */
                 if (!over_the_top) {
                     b = 0;
@@ -693,7 +672,7 @@ public class OpenBitSet implements Cloneable, Serializable {
                 if ((bits[b >>> OFFSET] & (1 << (b & 0x3f))) != 0)
                     break;
                 b++;
-                if (b >= wlen) {
+                if (b >= wdth) {
                     /* time to wrap around if we still haven't */
                     if (!over_the_top) {
                         b=0;
