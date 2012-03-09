@@ -29,16 +29,16 @@ import java.util.concurrent.*;
  */
 public class CacheImpl extends AbstractCache<LocalCacheElement> implements Cache<LocalCacheElement> {
 
-    final CacheStorage<Key, LocalCacheElement> storage;
-    final DelayQueue<DelayedMCElement> deleteQueue;
-    private final ScheduledExecutorService scavenger;
+    protected CacheStorage<Key, LocalCacheElement> storage;
+    protected DelayQueue<DelayedMCElement> deleteQueue;
+    protected ScheduledExecutorService scavenger;
 
     /**
      * @inheritDoc
      */
-    public CacheImpl(CacheStorage<Key, LocalCacheElement> storage) {
+    public CacheImpl(CacheStorage<Key, ? extends LocalCacheElement> storage) {
         super();
-        this.storage = storage;
+        this.storage = (CacheStorage<Key, LocalCacheElement>) storage;
         deleteQueue = new DelayQueue<DelayedMCElement>();
 
         scavenger = Executors.newScheduledThreadPool(1);
@@ -287,7 +287,7 @@ public class CacheImpl extends AbstractCache<LocalCacheElement> implements Cache
      * Delayed key blocks get processed occasionally.
      */
     protected static class DelayedMCElement implements Delayed {
-        private CacheElement element;
+        protected CacheElement element;
 
         public DelayedMCElement(CacheElement element) {
             this.element = element;
