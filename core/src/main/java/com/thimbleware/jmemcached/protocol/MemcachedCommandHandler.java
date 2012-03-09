@@ -20,8 +20,8 @@ import com.thimbleware.jmemcached.Cache;
 import com.thimbleware.jmemcached.CacheElement;
 import com.thimbleware.jmemcached.Key;
 import com.thimbleware.jmemcached.protocol.exceptions.UnknownCommandException;
-import org.jboss.netty.channel.*;
-import org.jboss.netty.channel.group.DefaultChannelGroup;
+import io.netty.channel.*;
+import io.netty.channel.group.DefaultChannelGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

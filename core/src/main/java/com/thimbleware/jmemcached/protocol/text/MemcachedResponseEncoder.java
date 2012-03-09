@@ -6,9 +6,9 @@ import com.thimbleware.jmemcached.protocol.Op;
 import com.thimbleware.jmemcached.protocol.ResponseMessage;
 import com.thimbleware.jmemcached.protocol.exceptions.ClientException;
 import com.thimbleware.jmemcached.util.BufferUtils;
-import org.jboss.netty.channel.*;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.buffer.ChannelBuffer;
+import io.netty.channel.*;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ChannelBuffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

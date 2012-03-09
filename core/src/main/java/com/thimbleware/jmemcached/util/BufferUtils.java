@@ -1,7 +1,7 @@
 package com.thimbleware.jmemcached.util;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
 
 import java.nio.ByteBuffer;
 

@@ -1,7 +1,7 @@
 package com.thimbleware.jmemcached;
 
 import com.thimbleware.jmemcached.storage.hash.SizedItem;
-import org.jboss.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffer;
 
 import java.io.Serializable;
 import java.nio.ByteBuffer;

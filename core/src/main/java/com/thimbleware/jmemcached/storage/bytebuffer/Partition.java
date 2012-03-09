@@ -2,8 +2,8 @@ package com.thimbleware.jmemcached.storage.bytebuffer;
 
 import com.thimbleware.jmemcached.Key;
 import com.thimbleware.jmemcached.LocalCacheElement;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
 
 import java.util.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;

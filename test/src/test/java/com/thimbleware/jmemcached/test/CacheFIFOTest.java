@@ -1,7 +1,7 @@
 package com.thimbleware.jmemcached.test;
 
 import com.thimbleware.jmemcached.*;
-import org.jboss.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ChannelBuffers;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;

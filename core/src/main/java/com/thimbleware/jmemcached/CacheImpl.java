@@ -16,7 +16,7 @@
 package com.thimbleware.jmemcached;
 
 import com.thimbleware.jmemcached.storage.CacheStorage;
-import org.jboss.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ChannelBuffers;
 
 import java.io.IOException;
 

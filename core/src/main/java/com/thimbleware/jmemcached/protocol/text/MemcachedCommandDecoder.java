@@ -11,11 +11,11 @@ import com.thimbleware.jmemcached.protocol.exceptions.InvalidProtocolStateExcept
 import com.thimbleware.jmemcached.protocol.exceptions.MalformedCommandException;
 import com.thimbleware.jmemcached.protocol.exceptions.UnknownCommandException;
 import com.thimbleware.jmemcached.util.BufferUtils;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferIndexFinder;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.*;
-import org.jboss.netty.handler.codec.frame.FrameDecoder;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBufferIndexFinder;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.*;
+import io.netty.handler.codec.frame.FrameDecoder;
 
 import java.util.ArrayList;
 import java.util.List;

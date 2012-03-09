@@ -1,8 +1,8 @@
 package com.thimbleware.jmemcached.storage.bytebuffer;
 
 import com.thimbleware.jmemcached.util.OpenBitSet;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
 
 import java.io.IOException;
 

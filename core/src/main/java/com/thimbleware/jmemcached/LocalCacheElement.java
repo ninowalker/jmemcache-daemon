@@ -16,8 +16,8 @@
 package com.thimbleware.jmemcached;
 
 import com.thimbleware.jmemcached.util.BufferUtils;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
 
 import java.io.Externalizable;
 import java.io.IOException;
@@ -29,14 +29,14 @@ import java.nio.ByteBuffer;
 /**
  * Represents information about a cache entry.
  */
-public final class LocalCacheElement implements CacheElement {
-    private long expire ;
-    private int flags;
-    private ChannelBuffer data;
-    private Key key;
-    private long casUnique = 0L;
-    private boolean blocked = false;
-    private long blockedUntil;
+public class LocalCacheElement implements CacheElement {
+    protected long expire ;
+    protected int flags;
+    protected ChannelBuffer data;
+    protected Key key;
+    protected long casUnique = 0L;
+    protected boolean blocked = false;
+    protected long blockedUntil;
 
     public LocalCacheElement() {
     }

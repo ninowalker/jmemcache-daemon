@@ -17,7 +17,7 @@ package com.thimbleware.jmemcached.protocol;
 
 import com.thimbleware.jmemcached.CacheElement;
 import com.thimbleware.jmemcached.Key;
-import org.jboss.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffer;
 
 import java.io.Serializable;
 import java.util.ArrayList;

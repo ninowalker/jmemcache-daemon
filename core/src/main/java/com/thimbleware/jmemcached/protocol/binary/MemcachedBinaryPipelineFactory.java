@@ -2,10 +2,10 @@ package com.thimbleware.jmemcached.protocol.binary;
 
 import com.thimbleware.jmemcached.Cache;
 import com.thimbleware.jmemcached.protocol.MemcachedCommandHandler;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.group.DefaultChannelGroup;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPipelineFactory;
+import io.netty.channel.Channels;
+import io.netty.channel.group.DefaultChannelGroup;
 
 
 public class MemcachedBinaryPipelineFactory implements ChannelPipelineFactory {
