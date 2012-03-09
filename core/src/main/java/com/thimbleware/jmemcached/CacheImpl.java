@@ -27,7 +27,7 @@ import java.util.concurrent.*;
 /**
  * Default implementation of the cache handler, supporting local memory cache elements.
  */
-public final class CacheImpl extends AbstractCache<LocalCacheElement> implements Cache<LocalCacheElement> {
+public class CacheImpl extends AbstractCache<LocalCacheElement> implements Cache<LocalCacheElement> {
 
     final CacheStorage<Key, LocalCacheElement> storage;
     final DelayQueue<DelayedMCElement> deleteQueue;
