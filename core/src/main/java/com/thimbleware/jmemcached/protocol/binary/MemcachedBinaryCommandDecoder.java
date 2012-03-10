@@ -1,5 +1,6 @@
 package com.thimbleware.jmemcached.protocol.binary;
 
+import com.thimbleware.jmemcached.CacheElementFactory;
 import com.thimbleware.jmemcached.Key;
 import com.thimbleware.jmemcached.LocalCacheElement;
 import com.thimbleware.jmemcached.CacheElement;
@@ -84,6 +85,12 @@ public class MemcachedBinaryCommandDecoder extends FrameDecoder {
 
     }
 
+	private CacheElementFactory factory;
+    
+    public MemcachedBinaryCommandDecoder(CacheElementFactory factory) {
+    	this.factory = factory;
+    }
+
     protected Object decode(ChannelHandlerContext channelHandlerContext, Channel channel, ChannelBuffer channelBuffer) throws Exception {
 
         // need at least 24 bytes, to get header
@@ -156,7 +163,7 @@ public class MemcachedBinaryCommandDecoder extends FrameDecoder {
                 // the remainder of the message -- that is, totalLength - (keyLength + extraLength) should be the payload
                 int size = totalBodyLength - keyLength - extraLength;
 
-                cmdMessage.element = new LocalCacheElement(new Key(keyBuffer.slice()), flags, expire != 0 && expire < CacheElement.THIRTY_DAYS ? LocalCacheElement.Now() + expire : expire, 0L);
+                cmdMessage.element = factory.newInstance(new Key(keyBuffer.slice()), flags, expire != 0 && expire < CacheElement.THIRTY_DAYS ? LocalCacheElement.Now() + expire : expire, 0L);
                 ChannelBuffer data = ChannelBuffers.buffer(size);
                 channelBuffer.readBytes(data);
                 cmdMessage.element.setData(data);

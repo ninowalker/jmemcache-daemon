@@ -1,6 +1,7 @@
 package com.thimbleware.jmemcached.protocol.text;
 
 import com.thimbleware.jmemcached.Cache;
+import com.thimbleware.jmemcached.CacheElementFactory;
 import com.thimbleware.jmemcached.protocol.MemcachedCommandHandler;
 import com.thimbleware.jmemcached.protocol.SessionStatus;
 import io.netty.channel.ChannelPipeline;
@@ -26,9 +27,12 @@ public final class MemcachedPipelineFactory implements ChannelPipelineFactory {
 
     private final MemcachedCommandHandler memcachedCommandHandler;
 
+	private CacheElementFactory factory;
 
-    public MemcachedPipelineFactory(Cache cache, String version, boolean verbose, int idleTime, int frameSize, DefaultChannelGroup channelGroup) {
-        this.cache = cache;
+
+    public MemcachedPipelineFactory(CacheElementFactory factory, Cache cache, String version, boolean verbose, int idleTime, int frameSize, DefaultChannelGroup channelGroup) {
+        this.factory = factory;
+    	this.cache = cache;
         this.version = version;
         this.verbose = verbose;
         this.idleTime = idleTime;
@@ -41,7 +45,7 @@ public final class MemcachedPipelineFactory implements ChannelPipelineFactory {
         SessionStatus status = new SessionStatus().ready();
 
         return Channels.pipeline(
-                new MemcachedCommandDecoder(status),
+                new MemcachedCommandDecoder(factory, status),
                 memcachedCommandHandler,
                 memcachedResponseEncoder);
     }

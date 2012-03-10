@@ -1,6 +1,7 @@
 package com.thimbleware.jmemcached.protocol.text;
 
 import com.thimbleware.jmemcached.CacheElement;
+import com.thimbleware.jmemcached.CacheElementFactory;
 import com.thimbleware.jmemcached.Key;
 import com.thimbleware.jmemcached.LocalCacheElement;
 import com.thimbleware.jmemcached.protocol.CommandMessage;
@@ -30,12 +31,14 @@ public final class MemcachedCommandDecoder extends FrameDecoder {
 
     private static final int MIN_BYTES_LINE = 2;
     private SessionStatus status;
+	private CacheElementFactory factory;
 
     private static final ChannelBuffer NOREPLY = ChannelBuffers.wrappedBuffer("noreply".getBytes());
 
 
-    public MemcachedCommandDecoder(SessionStatus status) {
+    public MemcachedCommandDecoder(CacheElementFactory factory, SessionStatus status) {
         this.status = status;
+        this.factory = factory;
     }
 
     /**
@@ -205,7 +208,7 @@ public final class MemcachedCommandDecoder extends FrameDecoder {
                 int size = BufferUtils.atoi(parts.get(4));
                 long expire = BufferUtils.atoi(parts.get(3)) * 1000;
                 int flags = BufferUtils.atoi(parts.get(MIN_BYTES_LINE));
-                cmd.element = new LocalCacheElement(new Key(parts.get(1).slice()), flags, expire != 0 && expire < CacheElement.THIRTY_DAYS ? LocalCacheElement.Now() + expire : expire, 0L);
+                cmd.element = factory.newInstance(new Key(parts.get(1).slice()), flags, expire != 0 && expire < CacheElement.THIRTY_DAYS ? LocalCacheElement.Now() + expire : expire, 0L);
 
                 // look for cas and "noreply" elements
                 if (numParts > 5) {

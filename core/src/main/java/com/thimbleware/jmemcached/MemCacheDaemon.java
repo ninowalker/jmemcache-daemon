@@ -47,6 +47,7 @@ public class MemCacheDaemon<CACHE_ELEMENT extends CacheElement> {
     private int idleTime;
     private InetSocketAddress addr;
     private Cache<CACHE_ELEMENT> cache;
+	private CacheElementFactory elementFactory;
 
     private boolean running = false;
     private ServerSocketChannelFactory channelFactory;
@@ -94,12 +95,12 @@ public class MemCacheDaemon<CACHE_ELEMENT extends CacheElement> {
 
     protected ChannelPipelineFactory createMemcachedBinaryPipelineFactory(
             Cache cache, String memcachedVersion, boolean verbose, int idleTime, DefaultChannelGroup allChannels) {
-        return new MemcachedBinaryPipelineFactory(cache, memcachedVersion, verbose, idleTime, allChannels);
+        return new MemcachedBinaryPipelineFactory(elementFactory, cache, memcachedVersion, verbose, idleTime, allChannels);
     }
 
     protected ChannelPipelineFactory createMemcachedPipelineFactory(
             Cache cache, String memcachedVersion, boolean verbose, int idleTime, int receiveBufferSize, DefaultChannelGroup allChannels) {
-        return new MemcachedPipelineFactory(cache, memcachedVersion, verbose, idleTime, receiveBufferSize, allChannels);
+        return new MemcachedPipelineFactory(elementFactory, cache, memcachedVersion, verbose, idleTime, receiveBufferSize, allChannels);
     }
 
     public void stop() {
@@ -153,4 +154,12 @@ public class MemCacheDaemon<CACHE_ELEMENT extends CacheElement> {
     public void setBinary(boolean binary) {
         this.binary = binary;
     }
+
+	public CacheElementFactory getElementFactory() {
+		return elementFactory;
+	}
+
+	public void setElementFactory(CacheElementFactory elementFactory) {
+		this.elementFactory = elementFactory;
+	}
 }
